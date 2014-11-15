@@ -1,0 +1,5 @@
+Package: cln
+Priority: optional
+Section: net
+Description: cln - Remote Authorization Daemon
+Depends: libopenssl

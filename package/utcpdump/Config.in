@@ -1,0 +1,10 @@
+config BR2_PACKAGE_UTCPDUMP
+	prompt "utcpdump.......................... Network monitoring and data acquisition tool (lite)"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBPCAP
+	help
+	  A tool for network monitoring and data acquisition.
+	  
+	  http://ftp.chg.ru/pub/Linux/trinux/boot/utcpdump-0.1.tgz
+

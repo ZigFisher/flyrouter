@@ -1,0 +1,86 @@
+--- ./Makefile.in	2000-12-30 20:17:48.000000000 +0500
++++ ./Makefile.in.new	2007-03-03 20:00:37.000000000 +0500
+@@ -55,6 +55,8 @@
+ LIBS = @LIBS@
+ 
+ INSTALL = @INSTALL@
++INSTALL_PROGRAM = ${INSTALL}
++INSTALL_DATA = ${INSTALL} -m 644
+ 
+ # Explicitly define compilation rule since SunOS 4's make doesn't like gcc.
+ # Also, gcc does not remove the .o before forking 'as', which can be a
+@@ -98,7 +100,7 @@
+ $(PROG): $(OBJ) @V_PCAPDEP@
+ 	@rm -f $@
+ 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(OBJ) $(LIBS)
+-	strip $@
++#	strip $@
+ 	ls -al $@
+ 
+ version.o: version.c
+@@ -106,15 +108,24 @@
+ 	@rm -f $@
+ 	sed -e 's/.*/char version[] = "&";/' $(srcdir)/VERSION > $@
+ 
+-install: force
+-	$(INSTALL) -m 550 -o bin -g @V_GROUP@ $(PROG) \
+-	    $(DESTDIR)$(BINDEST)/$(PROG)
+-
+-install-man: force
+-	$(INSTALL) -m 444 -o bin -g bin $(srcdir)/$(PROG).1 \
+-	    $(DESTDIR)$(MANDEST)/man1/$(PROG).1
++#install: force
++#	$(INSTALL) -m 550 -o bin -g @V_GROUP@ $(PROG) \
++#	    $(DESTDIR)$(BINDEST)/$(PROG)
++#
++#install-man: force
++#	$(INSTALL) -m 444 -o bin -g bin $(srcdir)/$(PROG).1 \
++#	    $(DESTDIR)$(MANDEST)/man1/$(PROG).1
++install:
++	[ -d $(DESTDIR)$(BINDEST) ] || (mkdir -p $(DESTDIR)$(BINDEST); chmod 755 $(DESTDIR)$(BINDEST))
++	$(INSTALL_PROGRAM) $(PROG) $(DESTDIR)$(BINDEST)/$(PROG)
++
++uninstall: 
++	rm -f $(DESTDIR)$(BINDEST)/$(PROG)
++	rm -f $(DESTDIR)$(mandir)/man1/$(PROG).1
++       
+ 
+-lint: $(GENSRC) force
++#lint: $(GENSRC) force
++lint: $(GENSRC)
+ 	lint -hbxn $(SRC) | \
+ 	    grep -v 'struct/union .* never defined' | \
+ 	    grep -v 'possible pointer alignment problem'
+@@ -124,14 +135,17 @@
+ 
+ distclean:
+ 	rm -f $(CLEANFILES) Makefile config.cache config.log config.status \
+-	    gnuc.h os-proto.h
++#	    gnuc.h os-proto.h
++	    config.h gnuc.h os-proto.h stamp-h stamp-h.in
+ 
+ tags: $(TAGFILES)
+ 	ctags -wtd $(TAGFILES)
+ 
+-tar: force
++#tar: force
++tar:
+ 	@cwd=`pwd` ; dir=`basename $$cwd` ; name=$(PROG)-`cat VERSION` ; \
+-	    list="" ; tar="tar chFFf" ; \
++#	    list="" ; tar="tar chFFf" ; \
++	    list="" ; tar="tar chf" ; \
+ 	    for i in `cat FILES` ; do list="$$list $$name/$$i" ; done; \
+ 	    echo \
+ 	    "rm -f ../$$name; ln -s $$dir ../$$name" ; \
+@@ -143,6 +157,8 @@
+ 	    "rm -f ../$$name" ; \
+ 	     rm -f ../$$name
+ 
+-force: /tmp
+-depend: $(GENSRC) force
+-	./mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
++#force: /tmp
++#depend: $(GENSRC) force
++#	./mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)
++depend: $(GENSRC)
++	${srcdir}/mkdep -c $(CC) $(DEFS) $(INCLS) $(SRC)

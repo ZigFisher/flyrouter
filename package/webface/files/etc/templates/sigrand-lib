@@ -1,0 +1,60 @@
+#!/bin/sh
+
+kdb="kdb"
+os_ifdir="/sys/class/net"
+
+_sg_if_refresh(){
+	name_tmpl="$1"
+	kdb_tmpl="$2"
+	echo "finding ifaces ${name_tmpl}"
+	echo "ifs: "`$kdb get ${kdb_tmpl}_ifaces`
+	# delete missing ifaces
+	for iface in `$kdb get ${kdb_tmpl}_ifaces`; do	
+	        if [ ! -d "$os_ifdir/$iface" ]; then
+		# non existing interface
+			# delete all interface hardware settings
+	                kdb rm ${kdb_tmpl}_${iface}*
+			# delete device from sybsystem list
+			ifaces=`$kdb get ${kdb_tmpl}_ifaces`
+			ifaces=`echo $ifaces | sed "s/${iface}//"`
+			$kdb set ${kdb_tmpl}_ifaces="$ifaces"
+			# delete device from net ifs list			
+			ifaces=`$kdb get sys_ifaces`
+			ifaces=`echo $ifaces | sed "s/${iface}//"`
+			$kdb set sys_ifaces="$ifaces"
+	        fi
+	done
+	
+	# add new ifaces if one
+	ifaces=`ls $os_ifdir/ | grep ${name_tmpl}`
+	ifaces_old=`$kdb get ${kdb_tmpl}_ifaces`
+#	echo "Actual interfaces: $ifaces"
+	for iface in $ifaces; do
+		check=`echo ${ifaces_old} | grep $iface`
+		if [ -z "$check" ]; then
+#			echo "Add new interface"
+			# add device to subsystem list
+			$kdb set ${kdb_tmpl}_ifaces="${ifaces_old} $iface"
+			ifaces_old=`$kdb get ${kdb_tmpl}_ifaces`
+			# add device to ifaces list
+			net_ifs_old=`$kdb get sys_ifaces`
+			check=`echo ${net_ifs_old} | grep $iface`
+			[ -z "$check" ] && $kdb set sys_ifaces="${net_ifs_old} $iface"
+			$kdb set sys_iface_${iface}_valid=1
+			$kdb set sys_iface_${iface}_proto=ether			
+		fi
+	done
+	
+	return 0;
+}
+
+_sg_dsl_set_mtypes(){
+
+    for iface in `$kdb get ${kdb_tmpl}_ifaces`; do	
+        if [ -d "$os_ifdir/$iface/sg17_private" ]; then
+	    $kdb set ${kdb_tmpl}_${iface}_mtype="mr17h"
+	elif [ -d "/sys/bus/pci/drivers/sg16lan/${iface}/" ]; then
+	    $kdb set ${kdb_tmpl}_${iface}_mtype="mr16h"	
+	fi
+    done
+}

@@ -1,0 +1,5 @@
+#!/bin/sh
+
+[ -f /proc/version ] || /bin/mount -t proc proc /proc
+/bin/mount -a
+

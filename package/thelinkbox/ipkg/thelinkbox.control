@@ -1,0 +1,5 @@
+Package: thelinkbox
+Section: hamradio
+Priority: optional
+Description: thelinkbox - AmateurRadio VoIP system for *NIX
+Depends: libgcc libstdc++

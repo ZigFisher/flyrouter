@@ -1,0 +1,68 @@
+diff -Naur hotplug-2004_09_23_old/etc/hotplug/pci.agent hotplug-2004_09_23/etc/hotplug/pci.agent
+--- hotplug-2004_09_23_old/etc/hotplug/pci.agent	2004-09-21 04:43:37.000000000 +0700
++++ hotplug-2004_09_23/etc/hotplug/pci.agent	2007-05-25 11:41:57.000000000 +0700
+@@ -100,21 +100,23 @@
+ 	: checkmatch $module
+ 
+ 	: vendor $vendor $pci_id_vendor
+-	if [ $vendor -ne $PCI_ANY ] && [ $vendor -ne $pci_id_vendor ]; then
++#	if [ $vendor -ne $PCI_ANY ] && [ $vendor -ne $pci_id_vendor ]; then
++	if [ $vendor -ne $pci_id_vendor ]; then
+ 	    continue
+ 	fi
+ 	: device $device $pci_id_device
+-	if [ $device -ne $PCI_ANY ] && [ $device -ne $pci_id_device ]; then
+-	    continue
+-	fi
+-	: sub-vendor $subvendor $pci_subid_vendor
+-	if [ $subvendor -ne $PCI_ANY ] && [ $subvendor -ne $pci_subid_vendor ]; then
+-	    continue
+-	fi
+-	: sub-device $subdevice $pci_subid_device
+-	if [ $subdevice -ne $PCI_ANY ] && [ $subdevice -ne $pci_subid_device ]; then
++#	if [ $device -ne $PCI_ANY ] && [ $device -ne $pci_id_device ]; then
++	if [ $device -ne $pci_id_device ]; then
+ 	    continue
+ 	fi
++#	: sub-vendor $subvendor $pci_subid_vendor
++#	if [ $subvendor -ne $PCI_ANY ] && [ $subvendor -ne $pci_subid_vendor ]; then
++#	    continue
++#	fi
++#	: sub-device $subdevice $pci_subid_device
++#	if [ $subdevice -ne $PCI_ANY ] && [ $subdevice -ne $pci_subid_device ]; then
++#	    continue
++#	fi
+ 
+ 	class_temp=$(($pci_class & $class_mask))
+ 	if [ $class_temp -eq $class ]; then
+diff -Naur hotplug-2004_09_23_old/etc/rc.d/init.d/hotplug hotplug-2004_09_23/etc/rc.d/init.d/hotplug
+--- hotplug-2004_09_23_old/etc/rc.d/init.d/hotplug	2003-03-28 06:25:03.000000000 +0600
++++ hotplug-2004_09_23/etc/rc.d/init.d/hotplug	2007-05-26 10:15:43.000000000 +0700
+@@ -10,9 +10,10 @@
+ #
+ # $Id: hotplug,v 1.3 2002/12/03 02:01:48 dbrownell Exp $
+ #
+-
++NAME=hotplug
+ PATH=/sbin:/bin:/usr/sbin:/usr/bin
+ 
++mkdir -p /var/lock/subsys
+ # source function library
+ if [ -f /etc/init.d/functions ]; then
+ 	. /etc/init.d/functions
+@@ -22,6 +23,7 @@
+ 
+ case "$1" in
+     start|restart|status)
++	echo "Starting $NAME: "
+ 	for RC in /etc/hotplug/*.rc
+ 	do
+ 	    $RC $1
+@@ -29,6 +31,7 @@
+ 	touch /var/lock/subsys/hotplug
+ 	;;
+     stop)
++	echo "Stopping $NAME: "
+ 	for RC in /etc/hotplug/*.rc
+         do
+             $RC stop

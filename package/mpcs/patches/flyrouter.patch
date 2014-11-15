@@ -1,0 +1,35 @@
+diff -ur mpcs_13m03/Maketype mpcs-13m03_flyrouter/Maketype
+--- mpcs_13m03/Maketype	2006-11-21 15:48:32.000000000 +0000
++++ mpcs-13m03_flyrouter/Maketype	2007-02-28 10:04:56.000000000 +0000
+@@ -66,7 +66,7 @@
+ $(OBJECTS1):	$(GENERAL)
+ 
+ .c.a:
+-		$(CC) $(CFLAGS) -Icsctapi $<
++		$(CC) $(CFLAGS) -Icsctapi $< -c
+ 		$(AR) $(ARFLAGS) $@ $*.o
+ 		-@rm -f $*.o
+ 
+diff -ur mpcs_13m03/cscrypt/Makefile mpcs-13m03_flyrouter/cscrypt/Makefile
+--- mpcs_13m03/cscrypt/Makefile	2006-09-26 10:53:04.000000000 +0000
++++ mpcs-13m03_flyrouter/cscrypt/Makefile	2007-02-28 10:06:03.000000000 +0000
+@@ -30,7 +30,7 @@
+ $(OBJECTS1):	$(GENERAL)
+ 
+ .c.a:
+-		$(CC) $(CFLAGS) $<
++		$(CC) $(CFLAGS) $< -c
+ 		$(AR) $(ARFLAGS) $@ $*.o
+ 		-@rm -f $*.o
+ 
+diff -ur mpcs_13m03/csctapi/Makefile mpcs-13m03_flyrouter/csctapi/Makefile
+--- mpcs_13m03/csctapi/Makefile	2005-05-10 22:20:30.000000000 +0000
++++ mpcs-13m03_flyrouter/csctapi/Makefile	2007-02-28 10:06:12.000000000 +0000
+@@ -27,7 +27,7 @@
+ $(OBJECTS1):	$(GENERAL)
+ 
+ .c.a:
+-		$(CC) $(CFLAGS) $<
++		$(CC) $(CFLAGS) $< -c
+ 		$(AR) $(ARFLAGS) $@ $*.o
+ 		-@rm -f $*.o

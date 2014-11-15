@@ -1,0 +1,5 @@
+Package: kmod-fuse
+Priority: optional
+Section: kernel
+Depends: kernel (2.4.32-adm5120-)
+Description: Filesystem in Userspace (kernel module)

@@ -1,0 +1,4456 @@
+diff -Naur net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/channel_db.c net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/channel_db.c
+--- net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/channel_db.c	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/channel_db.c	2007-05-10 18:13:02.000000000 +0000
+@@ -0,0 +1,400 @@
++#include "channel_db.h"
++#include <sys/types.h>
++#include <dirent.h>
++#include <string.h>
++#include <sys/stat.h>
++#include <errno.h>
++#include <fcntl.h>
++#include <stdio.h>
++#include <math.h>
++
++#include <net-snmp/net-snmp-config.h>
++
++#include <string.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <ctype.h>
++#include <net-snmp/net-snmp-includes.h>
++#include <net-snmp/agent/net-snmp-agent-includes.h>
++#include <net-snmp/agent/auto_nlist.h>
++
++#include "struct.h"
++#include "util_funcs.h"
++#include "../sysORTable.h"
++#include "../interfaces.h"
++
++#include "shdsl.h"
++#include "channel_db.h"
++
++
++int
++hash(char *str)
++{
++    int i;
++    int sum = 0;
++    for(i=0;str[i]!='\0';i++)
++	sum += str[i];
++    return (sum % 200);
++}
++
++
++int eocd_init( struct eocd_if *c)
++{
++    char *path="/sys/class/net";
++    DIR *dir = opendir(path);
++    struct dirent *ent;
++    int i;
++    
++    c->ch_num = 0;
++    for(i=0;i<MAX_DSL_CHANS;i++)
++	c->ch[i] = NULL;
++    while( (ent = readdir(dir)) ){
++	if( strstr(ent->d_name,"dsl") ){
++	    struct dsl_channel *ch;
++	    char cfg_dir[256];
++	    DIR *dir1;
++	    c->ch[c->ch_num] = malloc( sizeof(struct dsl_channel) );
++	    ch = c->ch[c->ch_num];
++	    snprintf(cfg_dir,256,"/sys/class/net/%s/sg17_private",ent->d_name);
++	    if( dir1 = opendir(cfg_dir) ){
++		ch->cfg_dir = strdup(cfg_dir);
++		ch->type = SG17;
++		closedir(dir1);
++	    }else { 
++	        snprintf(cfg_dir,256,"/sys/bus/pci/drivers/sg16lan/%s",ent->d_name);
++		if( dir1 = opendir(cfg_dir) ){
++		    ch->cfg_dir = strdup(cfg_dir);
++		    ch->type = SG16;
++		    closedir(dir1);
++		}else{
++		    free(ch);
++		    continue;
++		}
++	    }
++	    ch->if_name = strdup(ent->d_name);
++	    c->ch_num++;        
++	}
++    }
++    closedir(dir);
++/*
++
++	for( i=0;i<10;i++){
++	    struct dsl_channel *ch;
++	    char cfg_dir[256];
++	    c->ch[c->ch_num] = malloc( sizeof(struct dsl_channel) );
++	    ch = c->ch[c->ch_num];
++		sprintf(cfg_dir,"/root/snmp/cfg/dsl%d",i);		
++		if( i < 5 ){
++			ch->cfg_dir = strdup(cfg_dir);
++			ch->type = SG17;
++	    }else { 
++		    ch->cfg_dir = strdup(cfg_dir);
++		    ch->type = SG16;
++		}
++		sprintf(cfg_dir,"dsl%d",i);				
++	    ch->if_name = strdup(cfg_dir);
++	    c->ch_num++;        
++	}
++*/
++}
++
++int
++eocd_chan_num(struct eocd_if *r){
++    return r->ch_num;
++}
++
++
++int 
++eocd_chan_light_descr(struct eocd_if *r,char *ifs_name[20])
++{	
++    int i;
++    for(i=0;i<r->ch_num;i++){
++	ifs_name[i] = strdup(r->ch[i]->if_name);
++    }
++    return r->ch_num;
++}
++
++int
++get_field(char *from,char *to)
++{
++    char *ptr = from;
++    char *dptr = to;
++
++    while( *ptr == ' ' ){
++	ptr++;
++    }
++    while( *ptr != '\0' && (*ptr != ' ') ){
++	*dptr = *ptr;
++	dptr++;
++	ptr++;
++    }
++    *dptr = 0;
++    return (ptr-from);
++}
++
++int
++eocd_read_static_conf(char *name,struct channel_conf *cfg)
++{
++    FILE *s = fopen("/etc/eocd/eocd.conf","r");
++    char str[256], *ptr;
++    char field[256];
++    int readed = 0;
++    int i = 0;
++
++    if( !s ){
++//	DEBUGMSGTL(("mibII/shdsl", "Cannot open config file, errno = %s\n", strerror(errno)));    
++	return -1;
++    }
++
++    while( !feof(s) ){
++	fgets(str,256,s);
++	if( str[0] == '#' )
++	    continue;
++	ptr = str;
++	i = 0;
++        memset(cfg,0,sizeof(struct channel_conf) );
++        cfg->ndevs = 2;	
++	while( readed = get_field(ptr,field) ){
++	    ptr += readed;
++	    if( strlen(field) ){
++		switch( i ){
++		case 0:
++		    cfg->name = strdup(field);
++		    break;
++		case 1:
++		    cfg->ndevs += atoi(field);
++		    break;
++		case 2:
++		    cfg->max_att_lrate = atoi(field);
++		    break;
++		case 3:
++		    cfg->pwr_src = atoi(field);
++		    break;
++		default:
++		    break;
++		}
++		i++;
++	    }
++	}
++	if( !strcmp(name,cfg->name) ){
++	    fclose(s);
++	    return 0;
++	}
++    }
++//    DEBUGMSGTL(("mibII/shdsl", "Have not find if(%s)\n",name));        
++    fclose(s);
++    return -1;    
++}
++
++
++int
++eocd_read_conf_1(char *name,struct eocd_if *r,struct channel_conf *cfg)
++{
++    int ret=0,i;
++    char fname[256], temp[256];
++    FILE *s;
++    
++    if( (ret = eocd_read_static_conf(name,cfg)) < 0 ){
++//	DEBUGMSGTL(("mibII/shdsl", "(%s)Error in eocd_read_static_conf\n", name));
++	return ret;
++    }
++    
++    for(i=0;i<r->ch_num;i++){
++	if( !strcmp(name,r->ch[i]->if_name) ){
++	    snprintf(fname,256,"%s/rate",r->ch[i]->cfg_dir);
++	    if( !(s = fopen(fname,"r")) ){
++//	    	DEBUGMSGTL(("mibII/shdsl", "Cannot open %s\n",fname));
++		return -1;
++	    }
++	    fscanf(s,"%d",&cfg->act_lrate);
++	    fclose(s);
++
++	    snprintf(fname,256,"%s/annex",r->ch[i]->cfg_dir);
++	    if( !(s = fopen(fname,"r")) ){
++//	    	DEBUGMSGTL(("mibII/shdsl", "Cannot open %s\n",fname));
++		return -1;
++	    }
++	    fscanf(s,"%s",temp);
++	    fclose(s);
++	    memset(&cfg->annex,0,sizeof(cfg->annex));
++	    if( !strcmp(temp,"Annex=B") )
++		cfg->annex.region2 = 1;
++	    else
++		cfg->annex.region1 = 1;
++	    return 0;
++	}
++    }
++//    DEBUGMSGTL(("mibII/shdsl", "Have not finded iface %s\n",name));    
++    return -1;
++}
++
++
++int
++eocd_read_conf(char *name,struct eocd_if *r,struct channel_conf *cfg)
++{
++    char fname[256];
++    unsigned char carrier = 0;
++    int ret;
++    FILE *s;
++
++    if( (ret=eocd_read_conf_1(name,r,cfg)) )
++	return ret;
++
++    snprintf(fname,256,"/sys/class/net/%s/carrier",name);
++    if( (s = fopen(fname,"r")) ){
++	fscanf(s,"%d",&carrier);
++	fclose(s);
++    }
++//    printf("%s: carrier = %d",name,carrier);	    
++    if( !carrier ){
++	cfg->act_lrate = 0;
++	cfg->max_att_lrate = 0;
++	cfg->ndevs = 1;
++    }
++//    printf("NDEVS=%d\n",cfg->ndevs);    
++    return 0;
++}
++
++int
++eocd_unit_info(int if_ind,int unit_ind,struct eocd_if *r,shdsl_unit_t *info)
++{
++    char tmp[256];
++    struct dsl_channel *ch = r->ch[if_ind];
++    
++    memset(info,0,sizeof(*info));
++    // Vendor ID
++    strncpy(info->vID,"SIGRAND",8);
++    // Model Number
++    switch( ch->type ){
++    case SG16:
++	if( unit_ind <= 2 ) 
++	    strncpy(info->vModelN,"MR16H",12);
++	else
++	    strncpy(info->vModelN,"SG16E",12);
++	break;
++    case SG17:
++	if( unit_ind <= 2 ) 
++	    strncpy(info->vModelN,"MR17H",12);
++	else
++	    strncpy(info->vModelN,"SG17E",12);
++	break;
++    }	
++    // vendor Serial Number
++    sprintf(tmp,"%d%d",hash(ch->if_name),unit_ind);
++    strncpy(info->vSerN,tmp,12);
++    // vendor EOC software version
++    info->vEOCSwVer  = 1;
++    info->StandardVer = 0x08;
++    // vendor list number
++    strcpy(info->vListNum,"1.0");
++    // issue number
++    strcpy(info->vIssueNum,"");
++    // software ver
++    strcpy(info->vSwVer,"1.0.0");    
++    // CLEI
++    *info->EqCode = '\0';
++    //Other 
++    *info->vOther = '\0';
++    // Transmission capabilities
++    info->TransModeCpb = 0xC0;
++    return 0;
++}
++
++int
++eocd_unit_maint(int if_ind,int unit_ind,struct eocd_if *r,shdsl_unit_maint_t *info)
++{
++    char tmp[256];
++    struct dsl_channel *ch = r->ch[if_ind];
++    struct channel_conf cfg;
++
++    eocd_read_conf(ch->if_name,r,&cfg);
++
++
++    info->lpb_to = 1024;
++    if( cfg.pwr_src ){
++	info->pwr_src = span;
++    }else{
++	info->pwr_src = local;
++    }
++    return 0;
++}
++
++int
++eocd_endp_maint(int if_ind,int unit_num,struct eocd_if *r,
++		shdsl_endp_maint_t *info)
++{
++    info->lpb_cfg = noLoopback;
++    info->ring_rev = normal;
++    info->pwr_backoff = default_mode;
++    info->soft_rst = ready;
++    return 0;
++}
++
++int
++prof_conf_names(char prof_names[256][32])
++{
++    strcpy(prof_names[0],"DEFAULT");
++    strcpy(prof_names[1],"sigrand1");
++    strcpy(prof_names[2],"sigrand2");    
++    strcpy(prof_names[3],"sigrand3");
++    strcpy(prof_names[4],"sigrand4");    
++
++    return 5;
++}
++
++int prof_conf_getrow(int row_ind,struct eocd_if *r,shdsl_conf_prof_t *info)
++{
++    struct channel_conf cfg;
++    char if_name[256];
++    
++    memset(info,0,sizeof(*info));    
++    if( row_ind ){
++        sprintf(if_name,"dsl%d",row_ind-1);
++//	DEBUGMSGTL(("mibII/shdsl", "Sigrand profsm if=%s\n",if_name));
++	if( eocd_read_conf_1(if_name,r,&cfg) ){
++//	    DEBUGMSGTL(("mibII/shdsl", "Error reading static conf for %s\n",if_name));	
++	    return -1;
++	}
++	info->wire_if = twoWire;
++        info->min_lrate = (64 + 8) * 1000;
++	info->max_lrate = (cfg.max_att_lrate + 8) * 1000;
++        info->psd = symmetric;
++	info->transm_mode = cfg.annex;
++        info->rem_conf = disabled;
++	if( cfg.pwr_src )
++            info->pwr_feed = powerFeed;
++	else
++	    info->pwr_feed = noPower;
++    
++        info->cur_cond_down = 0;
++	info->worst_case_down = -10;
++        info->cur_cond_up = 0;
++	info->worst_case_up = 15;
++        info->used_margins.cur_cond_down = 1;
++	info->used_margins.worst_case_down = 1;
++        info->used_margins.cur_cond_up = 1;
++        info->used_margins.worst_case_up = 1;
++    
++	info->ref_clk = localClk; //???//
++        info->line_probe = disable;
++	info->status = active;
++	return 0;
++    } else {
++	info->wire_if = twoWire;
++        info->min_lrate = 1552000;
++	info->max_lrate = 1552000;
++        info->psd = symmetric;
++	info->transm_mode.region1 = 1;
++        info->rem_conf = enabled;
++        info->pwr_feed = noPower;
++        info->cur_cond_down = 0;
++	info->worst_case_down = 0;
++        info->cur_cond_up = 0;
++	info->worst_case_up = 0;
++        info->used_margins.cur_cond_down = 1;
++	info->ref_clk = localClk;
++        info->line_probe = disable;
++	info->status = active;
++	return 0;
++    }
++}
+diff -Naur net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/channel_db.h net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/channel_db.h
+--- net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/channel_db.h	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/channel_db.h	2007-05-10 17:46:57.000000000 +0000
+@@ -0,0 +1,138 @@
++#ifndef SIGRAND_CHANNEL_INIT_H
++#define SIGRAND_CHANNEL_INIT_H
++
++#define MAX_DSL_CHANS 20
++
++#define TERM_DEV_NUM 2
++#define STU_C 1
++#define STU_R 2
++#define SRU1 3
++#define SRU2 4
++#define SRU3 5
++#define SRU4 6
++#define SRU5 7
++#define SRU6 8
++#define SRU7 9
++#define SRU8 10
++
++#define NETWORK_SIDE 1
++#define CUSTOMER_SIDE 2
++
++#define WIRE_PAIR_1 1
++#define WIRE_PAIR_2 2
++#define WIRE_PAIR_3 3
++#define WIRE_PaIR_4 4
++
++
++enum chan_type { SG16,SG17 };
++
++struct dsl_channel{
++    enum chan_type type;
++    char *cfg_dir;
++    char *if_name;    
++};
++
++struct eocd_if {
++    int ch_num;
++    struct dsl_channel *ch[MAX_DSL_CHANS];
++};
++
++struct annex_t{
++    unsigned char region8:1;
++    unsigned char region7:1;    
++    unsigned char region6:1;
++    unsigned char region5:1;    
++    unsigned char region4:1;
++    unsigned char region3:1;    
++    unsigned char region2:1;
++    unsigned char region1:1;    
++};
++
++struct channel_conf {
++    char *name;
++    int ndevs;
++    int max_att_lrate;
++    int act_lrate;    
++    struct annex_t annex;
++    int pwr_src;
++};
++
++// data types
++// Note: sizes with respect to '\0' symbol
++typedef struct {
++    int index;
++    char vID[9];
++    char vModelN[14];
++    char vSerN[14];
++    int vEOCSwVer;
++    int StandardVer;
++    char vListNum[4];
++    char vIssueNum[3];
++    char vSwVer[7];
++    char EqCode[11];
++    char vOther[14];
++    char TransModeCpb;
++} shdsl_unit_t;
++
++
++typedef struct {
++    int lpb_to;
++    enum { local=1,span } pwr_src ;
++} shdsl_unit_maint_t;
++
++
++typedef struct {
++    enum { noLoopback=1,normalLoopback,specialLoopback } lpb_cfg;
++    enum { normal=1,reversed } ring_rev;
++    enum { default_mode=1,enchanced_mode } pwr_backoff;
++    enum { ready=1,restart } soft_rst;
++} shdsl_endp_maint_t;
++						    
++
++struct used_target_margins {
++    unsigned char :4;
++    unsigned char worst_case_up :1;
++    unsigned char cur_cond_up :1;    
++    unsigned char worst_case_down :1;    
++    unsigned char cur_cond_down :1;      
++};
++
++enum row_status { active=1,notInService,notReady,createAndGo,createAndWait,destroy };
++
++typedef struct {
++    char name[32];
++    enum { twoWire=1,fourWire,sixWire,eightWire } wire_if;
++    unsigned int min_lrate;
++    unsigned int max_lrate;
++    enum { symmetric=1,asymmetric } psd;
++    struct annex_t transm_mode;
++    enum { enabled=1,disabled } rem_conf;
++    enum { noPower=1,powerFeed,wettingCurrent } pwr_feed;
++    int cur_cond_down;
++    int worst_case_down;
++    int cur_cond_up;
++    int worst_case_up;
++    struct used_target_margins used_margins;
++    enum { localClk=1,networkClk,dataOrNetworkClk,dataClk } ref_clk;
++    enum { disable=1,enable } line_probe;
++    enum row_status status;
++} shdsl_conf_prof_t;
++
++int eocd_init(struct eocd_if *c);
++int eocd_chan_num(struct eocd_if *r);
++int eocd_chan_light_descr(struct eocd_if *r,char *ifs_name[20]);
++int eocd_read_conf(char *name,struct eocd_if *r,struct channel_conf *cfg);
++int eocd_unit_info(int if_ind,int unit_num,struct eocd_if *r,shdsl_unit_t *info);
++int eocd_unit_maint(int if_ind,int unit_num,struct eocd_if *r,
++			shdsl_unit_maint_t *info);
++int eocd_endp_maint(int if_ind,int unit_num,struct eocd_if *r,
++			shdsl_endp_maint_t *info);
++			
++
++int prof_conf_names(char prof_names[256][32]);
++int prof_conf_getrow(int row_ind,struct eocd_if *r,shdsl_conf_prof_t *info);
++
++
++
++#endif
++
+diff -Naur net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/shdsl.c net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/shdsl.c
+--- net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/shdsl.c	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/shdsl.c	2007-05-10 18:12:46.000000000 +0000
+@@ -0,0 +1,1118 @@
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <errno.h>
++#include <fcntl.h>
++
++#include <net-snmp/net-snmp-config.h>
++
++#include <string.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <ctype.h>
++#include <net-snmp/net-snmp-includes.h>
++#include <net-snmp/agent/net-snmp-agent-includes.h>
++#include <net-snmp/agent/auto_nlist.h>
++
++#include "shdsl.h"
++#include "struct.h"
++#include "util_funcs.h"
++#include "../sysORTable.h"
++#include "../interfaces.h"
++
++#include "channel_db.h"
++
++struct eocd_if eocd;
++char interface_ind;
++char interface_name[256];
++int unit_index = 0;
++int endp_index = 0;
++
++
++/*---- global vars ----*/
++char driver_dir_path[]="/root/snmp/";
++
++//------- DEBUG ------------//
++void
++dbg_oid(char *comment,char *name, int length)
++{
++    DEBUGMSGTL(("mibII/shdsl", comment));
++    DEBUGMSGOID(("mibII/shdsl", name, length));
++    DEBUGMSG(("mibII/shdsl", "\n"));    
++}
++
++
++/*------------------------------ mib registration data -----------------------------------*/
++
++oid hdsl2Shdsl_variables_oid[] = { SNMP_OID_MIB2, 10, 48, 1 };
++struct variable3 shdsl_spanconf[] = {
++    { CONF_NREPS, ASN_GAUGE,RWRITE, var_SpanConfEntry, 3, {1,1,1} },
++    { CONF_PRFL, ASN_OCTET_STR, RWRITE, var_SpanConfEntry, 3, {1,1,2} },    
++    { CONF_ALARMPRFL, ASN_OCTET_STR, RWRITE, var_SpanConfEntry, 3, {1,1,3} },    
++};
++
++struct variable3 shdsl_spanstat[] = {
++    { STATUS_NAVAILREPS, ASN_UNSIGNED, RONLY, var_SpanStatusEntry, 3, {2,1,1} },
++    { STATUS_MAXATTLRATE, ASN_UNSIGNED, RONLY, var_SpanStatusEntry, 3, {2,1,2} },    
++    { STATUS_ACTLRATE, ASN_UNSIGNED, RONLY, var_SpanStatusEntry, 3, {2,1,3} },    
++    { STATUS_TRNSMSNMODCUR, ASN_BIT_STR, RONLY, var_SpanStatusEntry, 3, {2,1,4} },
++    { STATUS_MAXATTPRATE, ASN_UNSIGNED, RONLY, var_SpanStatusEntry, 3, {2,1,5} },    
++    { STATUS_ACTPRATE, ASN_UNSIGNED, RONLY, var_SpanStatusEntry, 3, {2,1,6} },        
++};
++
++struct variable3 shdsl_inventory[] = {
++    {INV_INDEX, ASN_INTEGER, NOACCESS, var_InventoryEntry, 3, {3,1,1}},
++    {INV_VID, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,2}},    
++    {INV_VMODELNUM, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,3}},    
++    {INV_VSERNUM, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,4}},
++    {INV_VEOCSV, ASN_INTEGER, RONLY, var_InventoryEntry, 3, {3,1,5}},    
++    {INV_STANDARDV, ASN_INTEGER, RONLY, var_InventoryEntry, 3, {3,1,6}},    
++    {INV_VLISTNUM, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,7}},        
++    {INV_VISSUENUM, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,8}},    
++    {INV_VSOFTWV,ASN_OCTET_STR , RONLY, var_InventoryEntry, 3, {3,1,9}},
++    {INV_EQCODE, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,10}},    
++    {INV_VOTHER, ASN_OCTET_STR, RONLY, var_InventoryEntry, 3, {3,1,11}},
++    {INV_TRNSMODECPB, ASN_BIT_STR, RONLY, var_InventoryEntry, 3, {3,1,12}}    
++};
++
++struct variable3 shdsl_endp_conf[] = {
++    {ENDP_CONF_PROF, ASN_OCTET_STR, RONLY, var_EndpointConfEntry, 3, {4,1,3}},    
++};
++
++/*
++struct variable3 shdsl_endp_currstat[] = {
++    {ENDP_STAT_CUR_ATN, ASN_INTEGER, RONLY, var_EndpointCurrEntry, 3, {5,1,3}},
++    {ENDP_STAT_CUR_SNRMGN, ASN_INTEGER, RONLY, var_EndpointCurrEntry, 3, {5,1,4}},
++    {ENDP_STAT_CUR_STATUS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,5}},
++    {ENDP_STAT_CUR_ES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,6}},
++    {ENDP_STAT_CUR_SES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,7}},
++    {ENDP_STAT_CUR_CRC,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,8}},
++    {ENDP_STAT_CUR_LOSWS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,9}},
++    {ENDP_STAT_CUR_UAS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,10}},
++    {ENDP_STAT_CUR_15MEL,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,11}},
++    {ENDP_STAT_CUR_15M_ES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,12}},
++    {ENDP_STAT_CUR_15M_SES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,13}},
++    {ENDP_STAT_CUR_15M_CRC,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,14}},
++    {ENDP_STAT_CUR_15M_LOSWS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,15}},
++    {ENDP_STAT_CUR_15M_UAS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,16}},
++    {ENDP_STAT_CUR_1DEL,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,17}},
++    {ENDP_STAT_CUR_1D_ES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,18}},
++    {ENDP_STAT_CUR_1D_SES,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,19}},
++    {ENDP_STAT_CUR_1D_CRC,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,20}},
++    {ENDP_STAT_CUR_1D_LOSWS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,21}},
++    {ENDP_STAT_CUR_1D_UAS,ASN_UNSIGNED,RONLY, var_EndpointCurrEntry, 3, {5,1,22}},
++};
++
++*/
++struct variable3 shdsl_endp_maint[] = {
++    {ENDP_MAINT_LOOPBACK, ASN_INTEGER, RWRITE, var_EndpointMaintEntry, 3, {8,1,1}},
++    {ENDP_MAINT_TIPRINGREV, ASN_INTEGER, RONLY, var_EndpointMaintEntry, 3, {8,1,2}},
++    {ENDP_MAINT_PWRBACKOFF, ASN_INTEGER, RWRITE, var_EndpointMaintEntry, 3, {8,1,3}},
++    {ENDP_MAINT_SOFTRESTART, ASN_INTEGER, RWRITE, var_EndpointMaintEntry, 3, {8,1,4}},
++};
++
++
++struct variable3 shdsl_unit_maint[] = {
++    {UNIT_MAINT_LPB_TO, ASN_INTEGER, RWRITE, var_UnitMaintEntry, 3, {9,1,1}},
++    {UNIT_MAINT_PWR_SRC, ASN_INTEGER, RONLY, var_UnitMaintEntry, 3, {9,1,2}},
++};
++
++struct variable3 shdsl_conf_prof[] = {
++    {CONF_WIRE_IFACE, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,2}},
++    {CONF_MIN_LRATE, ASN_UNSIGNED, RWRITE, var_SpanConfProfEntry, 3, {10,1,3}},
++    {CONF_MAX_LRATE, ASN_UNSIGNED, RWRITE, var_SpanConfProfEntry, 3, {10,1,4}},
++    {CONF_PSD, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,5}},
++    {CONF_TRNSM_MODE, ASN_BIT_STR, RWRITE, var_SpanConfProfEntry, 3, {10,1,6}},
++    {CONF_REM_ENABLE, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,7}},
++    {CONF_PWR_FEED, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,8}},
++    {CONF_CURR_DOWN, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,9}},
++    {CONF_WORST_DOWN, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,10}},
++    {CONF_CURR_UP, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,11}},
++    {CONF_WORST_UP, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,12}},
++    {CONF_USED_MARG, ASN_BIT_STR, RWRITE, var_SpanConfProfEntry, 3, {10,1,13}},
++    {CONF_REF_CLK, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,14}},
++    {CONF_LPROBE, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,15}},
++    {CONF_ROW_ST, ASN_INTEGER, RWRITE, var_SpanConfProfEntry, 3, {10,1,16}},
++};
++
++void
++init_shdsl(void)
++{
++    /*
++     * register ourselves with the agent to handle our mib tree 
++     */
++    REGISTER_MIB("mibII/hdsl2ShdslSpanConf", shdsl_spanconf, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslSpanStatus", shdsl_spanstat, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslInventory", shdsl_inventory, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslEndpointConf", shdsl_endp_conf, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslEndpointMaint", shdsl_endp_maint, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslUnitMaint", shdsl_unit_maint, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++    REGISTER_MIB("mibII/hdsl2shdslSpanConf", shdsl_conf_prof, variable3,
++                 hdsl2Shdsl_variables_oid);
++
++//    DEBUGMSGTL(("mibII/hdsl2Shdsl","register variables"));
++}
++
++
++/*
++ * header_dslIfIndex(...
++ * Arguments:
++ * vp     IN      - pointer to variable entry that points here
++ * name    IN/OUT  - IN/name requested, OUT/name found
++ * length  IN/OUT  - length of IN/OUT oid's 
++ * exact   IN      - TRUE if an exact match was requested
++ * var_len OUT     - length of variable or 0 if function returned
++ * write_method
++ */
++static int
++header_ifIndex(struct variable *vp,
++               oid * name, size_t * length, int exact,
++	       size_t * var_len, WriteMethod ** write_method)
++{
++    oid newname[MAX_OID_LEN];
++    int base_compare;
++    int ifs_num;
++    int oid_min = (vp->namelen > *length) ? *length : vp->namelen;
++    int min_ind = -1, min_i = 0;
++    int i;
++    char *ifs_name[20];
++    int ifs_ind[20];
++
++    // Init ifs database
++    eocd_init(&eocd);
++    ifs_num = eocd_chan_light_descr(&eocd,ifs_name);
++
++    DEBUGMSGTL(("mibII/shdsl", "DSL indexes:\n"));    
++    for( i=0;i<ifs_num;i++){
++	ifs_ind[i] = Interface_Index_By_Name(ifs_name[i],strlen(ifs_name[i]));
++	DEBUGMSGTL(("mibII/shdsl", "%s: index=%d\n",ifs_name[i],ifs_ind[i]));	
++	if(min_ind > ifs_ind[i] || (min_ind==-1) ){
++	    min_ind = ifs_ind[i];
++	    min_i = i;
++	}
++    }
++
++//    DEBUGMSGTL(("mibII/shdsl", "dslIfIndex, exact = %d, ifs_num=%d\n",exact,ifs_num));
++//    dbg_oid("Input OID: ",name,*length);
++//    dbg_oid("Local OID: ",vp->name,vp->namelen);
++/*    DEBUGMSGTL(("mibII/shdsl", "namelen=%d,length=%d\n",vp->namelen,*length));    
++
++    DEBUGMSGTL(("mibII/shdsl", "input OID print\n"));
++    for(i=0;i<*length;i++)
++	DEBUGMSGTL(("mibII/shdsl", "name[%d]=%d\n",i,name[i]));
++*/    
++    
++    memcpy((char *) newname, (char *) vp->name,
++           (int) vp->namelen * sizeof(oid));
++
++    if( (base_compare = snmp_oid_compare(name,oid_min,newname,oid_min)) > 0){
++	DEBUGMSGTL(("mibII/shdsl", "GETNEXT with greater OID than base OID\n"));  
++	return MATCH_FAILED;
++    }
++    
++    if( exact ){
++	if( base_compare || (*length < vp->namelen+1) )
++	    return MATCH_FAILED;
++	// check that name[vp->namelen] is DSL index
++	for(i=0;i<ifs_num;i++){
++	    if( name[vp->namelen] == ifs_ind[i] ){
++		interface_ind = i;
++		strcpy(interface_name,ifs_name[i]);
++		break;
++	    }
++	}
++	if( i == ifs_num )
++	    return MATCH_FAILED;
++    } else {
++	DEBUGMSGTL(("mibII/shdsl", "Not exact, base_compare=%d\n",base_compare)); 
++	// 1. OID for GETNEXT > vp base OID
++	// 2. Index of GETNEXT > max index
++	if( base_compare < 0 || ( !base_compare && *length<=vp->namelen) ){
++	     DEBUGMSGTL(("mibII/shdsl", "base_compare < 0\n",base_compare));
++	    memcpy((char *) name, (char *) newname,
++    		   ((int) vp->namelen + 1) * sizeof(oid));
++	    *length = vp->namelen + 1;
++	    if( !ifs_num )
++		return MATCH_FAILED;
++	    name[vp->namelen] = min_ind;
++	    strcpy(interface_name,ifs_name[min_i]);
++	    interface_ind  = min_i;
++	} else if( !base_compare ){
++	    DEBUGMSGTL(("mibII/shdsl", "(base_compare=0), name[vp->namelen]=%d \n",name[vp->namelen]));
++	    min_ind = -1;
++	    min_i = -1;
++	    for( i=0;i<ifs_num;i++){
++		DEBUGMSGTL(("mibII/shdsl", "Check index %d\n",ifs_ind[i]));
++		if( ifs_ind[i] > name[vp->namelen] ){
++		    DEBUGMSGTL(("mibII/shdsl", "ind > input ind\n"));		
++		    if( min_ind > ifs_ind[i] || min_ind == -1){
++			min_ind = ifs_ind[i];
++			min_i = i;
++		    }
++		}
++	    }
++	    DEBUGMSGTL(("mibII/shdsl", "Result min_ind = %d, min_i=%d\n",min_ind,min_i));
++	    if( (min_ind > 0) && (min_ind > name[vp->namelen]) ){
++	    	DEBUGMSGTL(("mibII/shdsl", "Apply new ind min_ind = %d, min_i=%d\n",min_ind,min_i));
++	        strcpy(interface_name,ifs_name[min_i]);
++		interface_ind = min_i;
++		name[vp->namelen] = min_ind;
++	    }else{
++	    	DEBUGMSGTL(("mibII/shdsl", "FAIL TO MATCH min_ind = %d, min_i=%d\n",min_ind,min_i));	    
++		return MATCH_FAILED;
++	    }
++	} else
++	    return MATCH_FAILED;
++    }
++    *write_method = 0;
++    *var_len = sizeof(long); 
++    dbg_oid("Result_oid",name,*length);
++    return name[vp->namelen];
++}
++
++
++/*
++ * Span Configuration Group 
++ */
++
++u_char *
++var_SpanConfEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    int iface, ind;
++    struct channel_conf cfg;     
++    static char ConfProfile[200]="DEFVAL";
++    static char ConfAlarmProfile[200]="DEFVAL";
++/*
++    DEBUGMSGTL(("mibII/shdsl", "var_SpanConfEntry: *lenght=%d namelen=%d \n",*length,vp->namelen));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\nexact= %d\n", exact));
++*/		
++
++    if ( ( iface=header_ifIndex(vp, name, length, exact, var_len,write_method) )
++	     == MATCH_FAILED || (*length != vp->namelen+1)){
++//	DEBUGMSG(("mibII/shdsl", "MATCH_FAILED\n"));	
++        return NULL;
++    }
++//    DEBUGMSGTL(("mibII/shdsl", "iface= %d\n", iface));
++
++    if( eocd_read_conf(interface_name,&eocd,&cfg) ){
++//	DEBUGMSG(("mibII/shdsl", "Error retreiving configuration info for if=%s\n",interface_name));	
++	return NULL;
++    }
++//    DEBUGMSG(("mibII/shdsl", "Form response\n"));	
++    switch (vp->magic) {
++    case CONF_NREPS:
++	*var_len=sizeof(int);
++	long_return=(cfg.ndevs > 2) ? cfg.ndevs-2 : 0;
++	return (u_char *) & long_return;
++    case CONF_PRFL:
++	sscanf(interface_name,"dsl%d",&ind);
++	sprintf(ConfProfile,"sigrand%d",ind);
++	*var_len=strlen(ConfProfile);
++	return (u_char *)ConfProfile;	
++    case CONF_ALARMPRFL:
++	*var_len=strlen(ConfAlarmProfile);
++	return (u_char *)ConfAlarmProfile;	
++    default:
++//        DEBUGMSGTL(("snmpd", "unknown sub-id %d in var_interfaces\n",
++//                    vp->magic));
++	break;
++    }
++    return NULL;
++}
++
++
++/*
++ * Span Status Group 
++ */
++
++u_char *
++var_SpanStatusEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    int iface;
++    struct channel_conf cfg;
++    
++/*
++    DEBUGMSGTL(("mibII/shdsl", "var_SpanStatusEntry: \n"));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\nexact= %d\n", exact));
++*/		
++    // check conditions 
++
++    if ( ( iface=header_ifIndex(vp, name, length, exact, var_len,write_method) )
++		== MATCH_FAILED ){
++//	DEBUGMSG(("mibII/shdsl", "MaTH_FAILED\n"));	
++        return NULL;
++    }
++//    DEBUGMSG(("mibII/shdsl", "iface= %d\n", iface));
++
++    if( eocd_read_conf(interface_name,&eocd,&cfg) ){
++//	printf("failed\n");
++	return NULL;
++    }
++    
++    //---- ack ----//
++    switch (vp->magic) {
++    case STATUS_NAVAILREPS:
++	long_return=(cfg.ndevs > 2) ? cfg.ndevs-2 : 0;    
++	return (u_char *) & long_return;
++    case STATUS_MAXATTLRATE:
++	if( cfg.max_att_lrate ){
++	    long_return = (cfg.max_att_lrate + 8) * 1000;
++	} else {
++	    long_return = 0;
++	}
++	return (u_char *) & long_return;
++    case STATUS_ACTLRATE:
++	if( cfg.act_lrate ){
++	    long_return = (cfg.act_lrate + 8) * 1000;
++	} else {
++	    long_return = 0;	
++	}
++	return (u_char *) & long_return;
++    case STATUS_TRNSMSNMODCUR:
++	long_return = *((unsigned char*)&cfg.annex);
++	*var_len = sizeof(char);
++	return (u_char *)&long_return;
++    case STATUS_MAXATTPRATE:
++	long_return = cfg.max_att_lrate * 1000;
++	return (u_char *) & long_return;
++    case STATUS_ACTPRATE:
++	long_return = cfg.act_lrate * 1000;
++	return (u_char *) & long_return;
++    default:
++	break;
++    }
++    
++    return NULL;
++}
++
++/*
++ * Unit Inventory Group
++ */
++
++static int
++header_unitIndex(struct variable *vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    int iface = 0;
++    int length_bkp = *length;
++    *write_method = 0;
++    *var_len = sizeof(long);    // default to 'long' results //
++    struct channel_conf cfg;
++    
++
++//DEBUGMSGTL(("mibII/shdsl", "\n-------------------------------\nheader_InvIndex: \n"));
++/*
++DEBUGMSGOID(("mibII/shdsl", name, *length));		    
++DEBUGMSGTL(("mibII/shdsl", "\nheader_InvIndex: "));
++DEBUGMSGOID(("mibII/shdsl", vp->name, vp->namelen));		    
++DEBUGMSGTL(("mibII/shdsl", "\n"));
++
++*/    // If OID is belong to Inventory Table
++    if( (iface = header_ifIndex(vp, name, length,1/*exact = 1*/, var_len,write_method)) 
++	    != MATCH_FAILED ){ 	// OID belongs to Invetory table and ifIdex is valid
++// DEBUGMSGTL(("mibII/shdsl", "\nOID belong to Inv Table\n"));
++        if( eocd_read_conf(interface_name,&eocd,&cfg) ){
++//		DEBUGMSG(("mibII/shdsl", "Error retreiving configuration info for if=%s\n",interface_name));	
++		return MATCH_FAILED;
++        }
++// DEBUGMSGTL(("mibII/shdsl", "Get conf - Ok\n"));
++	if( exact ){ // Need exact MATCH
++// DEBUGMSGTL(("mibII/shdsl", "Exact Match\n"));
++	    if( (*length >= vp->namelen+2) && 
++		    (name[vp->namelen+1] > 0) && 
++		    (name[vp->namelen+1]<= cfg.ndevs) ){
++// DEBUGMSGTL(("mibII/shdsl", "Unit #%d\n",name[vp->namelen+1]));
++		return name[vp->namelen+1];
++	    } else {
++// DEBUGMSGTL(("mibII/shdsl", "Exact MISMATCH\n"));
++		return MATCH_FAILED;
++	    }
++	} else { // Need next regenerator index
++// DEBUGMSGTL(("mibII/shdsl", "Nonexact Match\n"));
++	    if( *length >= vp->namelen+2 &&
++		    (name[vp->namelen+1]+1 > 0) &&
++		    (name[vp->namelen+1]+1 <= cfg.ndevs) ){
++// DEBUGMSGTL(("mibII/shdsl", "Next unit after %d\n",name[vp->namelen+1]));
++		name[vp->namelen+1]++;
++		return name[vp->namelen+1];
++	    }else if( *length == vp->namelen + 1 ){
++		name[vp->namelen+1] = STU_C;
++// DEBUGMSGTL(("mibII/shdsl", "First unit \n"));
++		*length = vp->namelen+2;
++		return name[vp->namelen+1];
++	    }
++	}
++    }
++    
++// DEBUGMSGTL(("mibII/shdsl", "OID does not belong to Inventory Table OR NO next regenerator\n"));
++    // OID does not belong to Inventory Table OR NO next regenerator 
++    if( exact ){
++	return MATCH_FAILED;
++    }
++    
++    if( (iface=header_ifIndex(vp, name, length, exact, var_len,write_method)) 
++		== MATCH_FAILED ){ // No next interface or In OID is lager than Inventory Table OIDs
++	return MATCH_FAILED;
++    }
++
++// DEBUGMSGTL(("mibII/shdsl", "Next iface = %d \n",iface));
++    if( eocd_read_conf(interface_name,&eocd,&cfg) ){ // Error getting configuration about channel
++//	DEBUGMSG(("mibII/shdsl", "Error retreiving configuration info for if=%s\n",interface_name));	
++	return MATCH_FAILED;
++    }
++// DEBUGMSGTL(("mibII/shdsl", "Getting config - OK\n"));
++    name[vp->namelen+1] = STU_C;
++    *length = vp->namelen + 2;
++//DEBUGMSGTL(("mibII/shdsl", "Result: unit #%d\n",name[vp->namelen+1]));
++    return name[vp->namelen+1];
++}
++
++
++u_char *
++var_InventoryEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    shdsl_unit_t Info, *info = &Info;
++    int unit;
++    size_t length1;
++/*
++    DEBUGMSGTL(("mibII/shdsl", "var_InventoryEntry: \n"));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\nexact= %d\n", exact));
++*/		
++    if ( ( unit = header_unitIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++    
++    if( eocd_unit_info(interface_ind,unit,&eocd,info) ){
++//	DEBUGMSG(("mibII/shdsl", "Error retreiving UNIT configuration info for if=%s, unit=%d\n",interface_name,unit));	
++	return NULL;
++    }
++
++    
++//    DEBUGMSGTL(("mibII/shdsl", " Result unit = %d\n",unit));
++    //---- ack ----//
++  switch (vp->magic) {
++    case INV_VID:
++	strcpy(return_buf,info->vID);    
++	*var_len = strlen(info->vID);
++	return (u_char *)return_buf;
++    case INV_VMODELNUM:
++	strcpy(return_buf,info->vModelN);    
++	*var_len = strlen(info->vModelN);
++	return (u_char *)return_buf;
++    case INV_VSERNUM:
++	strcpy(return_buf,info->vSerN);    
++	*var_len = strlen(info->vSerN);
++	return (u_char *)return_buf;
++    case INV_VEOCSV:
++	*var_len = sizeof(info->vEOCSwVer);
++	long_return=info->vEOCSwVer;
++	return (u_char *)&long_return;
++    case INV_STANDARDV:
++	long_return=info->StandardVer;
++	*var_len = sizeof(info->StandardVer);
++	return (u_char *)&long_return;
++    case INV_VLISTNUM:
++	strcpy(return_buf,info->vListNum);
++	*var_len = strlen(info->vListNum);
++	return (u_char *)return_buf;
++    case INV_VISSUENUM:
++	strcpy(return_buf,info->vIssueNum);
++	*var_len = strlen(info->vIssueNum);
++	return (u_char *)return_buf;
++    case INV_EQCODE:
++	strcpy(return_buf,info->EqCode);
++	*var_len = strlen(info->EqCode);
++	return (u_char *)return_buf;
++    case INV_VOTHER:
++	strcpy(return_buf,info->vOther);    
++	*var_len = strlen(info->vOther);
++	return (u_char *)return_buf;
++    case INV_TRNSMODECPB:
++	*var_len = sizeof(info->TransModeCpb);
++	long_return=info->TransModeCpb;
++	return (u_char *)&long_return;
++    }
++
++    return NULL;
++}
++
++/*
++ * ------------ Segment Endpoint Group --------------------
++ */
++ 
++ 
++/*
++ * header_endpIndex:
++ * 	Defines propriate endpoint index for incoming OID
++ */
++static int 
++header_endpIndex(struct variable *vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method )
++{
++    int unit = 0;
++    int length_bkp = *length;
++    *write_method = 0;
++    *var_len = sizeof(long);    // default to 'long' results //
++    struct channel_conf cfg;
++    
++/*
++DEBUGMSGTL(("mibII/shdsl", "\n---------------------------------\nheader_endpIndex: \n"));
++DEBUGMSGTL(("mibII/shdsl", "Input OID: "));
++DEBUGMSGOID(("mibII/shdsl", name, *length));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++DEBUGMSGTL(("mibII/shdsl", "Local OID: "));
++DEBUGMSGOID(("mibII/shdsl", vp->name, vp->namelen));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++*/
++    if ( ( unit = header_unitIndex(vp,name,length, 1 /*exact = 1*/,var_len,write_method) )
++	    != MATCH_FAILED ){
++
++	unit_index = unit;
++
++	if( exact ){ // Need exact MATCH
++//	    DEBUGMSGTL(("mibII/shdsl", "Exact Match\n"));
++	    if( (*length >= vp->namelen+3) ){
++		switch( unit ){
++		case STU_C:
++		    if( name[vp->namelen+2] != NETWORK_SIDE )
++			return MATCH_FAILED;
++		    else
++			return name[vp->namelen+2];
++		    break;
++		case STU_R:
++		    if( name[vp->namelen+2] != CUSTOMER_SIDE )		
++			return MATCH_FAILED;
++		    else
++			return name[vp->namelen+2];
++		    break;
++		case SRU1:
++		case SRU2:
++		case SRU3:
++		case SRU4:
++		case SRU5:
++		case SRU6:
++		case SRU7:
++		case SRU8:
++		    if( name[vp->namelen+2] == CUSTOMER_SIDE || 
++			name[vp->namelen+2] == NETWORK_SIDE )
++			return name[vp->namelen+2];
++		    else
++			return MATCH_FAILED;
++		default:
++		    return MATCH_FAILED;
++		}
++	    } else
++		return MATCH_FAILED;
++	} else { // Nonexact match
++	    if( unit >= SRU1 && unit <=SRU8 ){
++		if( *length >= vp->namelen+3 ){
++		    if( name[vp->namelen+2] == NETWORK_SIDE ){
++			name[vp->namelen+2] = CUSTOMER_SIDE;
++			return name[vp->namelen+2];
++		    }
++		}else if( *length == vp->namelen+2 ){
++		    name[vp->namelen+2] == NETWORK_SIDE;
++		    *length = vp->namelen+3;
++    		    return name[vp->namelen+2];	
++		}
++	    }
++	}
++    }
++	
++//    DEBUGMSGTL(("mibII/shdsl", "OID does not belong to Inventory Table OR NO next regenerator\n"));
++    // OID does not belong to Inventory Table OR NO next regenerator 
++    if( exact ){
++	return MATCH_FAILED;
++    }
++    
++    if( (unit=header_unitIndex(vp, name, length, exact, var_len,write_method)) 
++	    == MATCH_FAILED ){ // No next interface or In OID is lager than Inventory Table OIDs
++	return MATCH_FAILED;
++    }
++//    DEBUGMSGTL(("mibII/shdsl", "Next unit = %d \n",unit));
++
++    switch( unit ){
++    case STU_C:
++	name[vp->namelen+2] = NETWORK_SIDE;
++	break;
++    case STU_R:
++	name[vp->namelen+2] = CUSTOMER_SIDE;    
++	break;
++    case SRU1:
++    case SRU2:
++    case SRU3:
++    case SRU4:
++    case SRU5:
++    case SRU6:
++    case SRU7:
++    case SRU8:
++	name[vp->namelen+2] = NETWORK_SIDE;
++	break;
++    default:
++	return MATCH_FAILED;
++    }
++    *length = vp->namelen + 3;
++//    DEBUGMSGTL(("mibII/shdsl", "Result: unit #%d\n",name[vp->namelen+1]));
++    return name[vp->namelen+2];
++}
++
++/*
++ * header_wirePairIndex:
++ * 	Defines propriate Wire pair index for incoming OID
++ *	(by now only 1 pair supported)
++ */
++
++static int 
++header_wirePairIndex(struct variable *vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method )
++{
++    int endp = 0;
++    *write_method = 0;
++    *var_len = sizeof(long);    // default to 'long' results //
++    struct channel_conf cfg;
++    
++/*
++DEBUGMSGTL(("mibII/shdsl", "\n---------------------------------\nheader_wirePairIndex:\n"));
++DEBUGMSGTL(("mibII/shdsl", "Input OID: "));
++DEBUGMSGOID(("mibII/shdsl", name, *length));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++DEBUGMSGTL(("mibII/shdsl", "Local OID: "));
++DEBUGMSGOID(("mibII/shdsl", vp->name, vp->namelen));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++*/
++    if ( ( endp = header_endpIndex(vp,name,length, 1 /*exact = 1*/,var_len,write_method) )
++	    != MATCH_FAILED ){
++
++	endp_index = endp;
++
++	if( exact ){ // Need exact MATCH
++//	    DEBUGMSGTL(("mibII/shdsl", "Exact Match\n"));
++	    if( (*length >= vp->namelen+4) && (name[vp->namelen+3] == 1) ){
++		return name[vp->namelen+3];
++	    } else
++		return MATCH_FAILED;
++	} else { // Nonexact match
++	    // Because we hawe only one wire pair - we change it only 
++	    // if field is empty
++	    if( *length == vp->namelen+3 ){
++	        name[vp->namelen+3] = WIRE_PAIR_1;
++	        *length = vp->namelen+4;
++	    }
++	}
++    }
++	
++//    DEBUGMSGTL(("mibII/shdsl", "OID does not belong to Inventory Table OR NO next regenerator\n"));
++    // OID does not belong to Inventory Table OR NO next regenerator 
++    if( exact ){
++	return MATCH_FAILED;
++    }
++    
++    if( (endp = header_endpIndex(vp, name, length, exact, var_len,write_method)) 
++	    == MATCH_FAILED ){ // No next interface or In OID is lager than Inventory Table OIDs
++	return MATCH_FAILED;
++    }
++//    DEBUGMSGTL(("mibII/shdsl", "Next unit = %d \n",endp));
++
++    name[ vp->namelen+3] = WIRE_PAIR_1;
++    *length = vp->namelen + 4;
++//    DEBUGMSGTL(("mibII/shdsl", "Result: PAIR #%d\n",name[vp->namelen+3]));
++    return name[vp->namelen+2];
++}
++
++/*
++ * Segment Endpoint Configuration Group
++ */
++u_char *
++var_EndpointConfEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    shdsl_unit_t Info, *info = &Info;
++    int pair;
++/*
++    DEBUGMSGTL(("mibII/shdsl", "\n-----------------------START----------------------------\n"
++			"var_EndpointConfEntry. exact= %d\n",exact));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\n"));    
++*/    
++    if ( ( pair = header_wirePairIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++    
++//    DEBUGMSGTL(("mibII/shdsl", "Result pair = %d\n-------------------END------------------------\n",pair));
++    //---- ack ----//
++    switch (vp->magic) {
++    case ENDP_CONF_PROF:
++	strcpy(return_buf,"DEFAULT");    
++	*var_len = strlen(return_buf);
++	return (u_char *)return_buf;
++    }    
++    return NULL;
++}
++
++/*
++ * Segment Endpoint Current Status/Performance Group
++ */
++/*
++u_char *
++var_EndpointConfEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    shdsl_unit_t Info, *info = &Info;
++    int pair;
++    DEBUGMSGTL(("mibII/shdsl", "\n-----------------------START----------------------------\n"
++			"var_EndpointConfEntry. exact= %d\n",exact));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\n"));    
++    
++    if ( ( pair = header_wirePairIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++    
++    DEBUGMSGTL(("mibII/shdsl", "Result pair = %d\n-------------------END------------------------\n",pair));
++    //---- ack ----//
++    switch (vp->magic) {
++    case ENDP_STAT_CUR_ATN:
++	break;
++    case ENDP_STAT_CUR_SNRMGN:
++	break;
++    case ENDP_STAT_CUR_STATUS:
++	break;
++    case ENDP_STAT_CUR_ES:
++	break;
++    case ENDP_STAT_CUR_SES:
++	break;
++    case ENDP_STAT_CUR_CRC:
++	break;
++    case ENDP_STAT_CUR_LOSWS:
++	break;
++    case ENDP_STAT_CUR_UAS:
++	break;
++    case ENDP_STAT_CUR_15MEL:
++	break;
++    case ENDP_STAT_CUR_15M_ES:
++	break;
++    case ENDP_STAT_CUR_15M_SES:
++	break;
++    case ENDP_STAT_CUR_15M_CRC:
++	break;
++    case ENDP_STAT_CUR_15M_LOSWS:
++	break;
++    case ENDP_STAT_CUR_15M_UAS:
++	break;
++    case ENDP_STAT_CUR_1DEL:
++	break;
++    case ENDP_STAT_CUR_1D_ES:
++	break;
++    case ENDP_STAT_CUR_1D_SES:
++	break;
++    case ENDP_STAT_CUR_1D_CRC:
++	break;
++    case ENDP_STAT_CUR_1D_LOSWS:
++	break;
++    case ENDP_STAT_CUR_1D_UAS:
++	break;
++    default:
++	break;
++    }
++    
++    return NULL;
++}
++
++
++
++/*
++ *
++ * ---------------------- Maintenance Group  ------------------------
++ *
++ */
++
++u_char *
++var_EndpointMaintEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    shdsl_endp_maint_t Info, *info = &Info;
++    int pair;
++/*
++    DEBUGMSGTL(("mibII/shdsl", "\n-----------------------START----------------------------\n"
++			"var_EndpointConfEntry. exact= %d\n",exact));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\n"));    
++*/    
++    if ( ( pair = header_endpIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++    
++    eocd_endp_maint(interface_ind,unit_index,&eocd,info);    
++    
++//    DEBUGMSGTL(("mibII/shdsl", "Result pair = %d\n-------------------END------------------------\n",pair));
++    //---- ack ----//
++    switch (vp->magic) {
++    case ENDP_MAINT_LOOPBACK:
++	long_return= info->lpb_cfg;
++	return (u_char *) & long_return;
++    case ENDP_MAINT_TIPRINGREV:
++	long_return= info->ring_rev;
++	return (u_char *) & long_return;
++    case ENDP_MAINT_PWRBACKOFF:
++	long_return= info->pwr_backoff;
++	return (u_char *) & long_return;
++    case ENDP_MAINT_SOFTRESTART:
++	long_return= info->soft_rst;
++	return (u_char *) & long_return;
++    }
++    return NULL;
++}
++
++u_char *
++var_UnitMaintEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    shdsl_unit_maint_t Info, *info = &Info;
++    int unit;
++/*
++    DEBUGMSGTL(("mibII/shdsl", "\n-----------------------START----------------------------\n"
++			"var_UnitMaintEntry. exact= %d\n",exact));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));
++    DEBUGMSG(("mibII/shdsl", "\n"));    
++*/    
++    if ( ( unit = header_unitIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++    
++    eocd_unit_maint(interface_ind,unit_index,&eocd,info);    
++    
++//    DEBUGMSGTL(("mibII/shdsl", "Result unit = %d\n-------------------END------------------------\n",unit));
++    //---- ack ----//
++    switch (vp->magic) {
++    case ENDP_MAINT_LOOPBACK:
++	long_return= info->lpb_to;
++	return (u_char *) & long_return;
++    case ENDP_MAINT_TIPRINGREV:
++	long_return= info->pwr_src;
++	return (u_char *) & long_return;
++    }
++    return NULL;
++}
++
++
++/*
++ *
++ * ---------------------- PROFILES ------------------- 
++ *
++ */
++
++
++/*
++ * header_wirePairIndex:
++ * 	Defines propriate Wire pair index for incoming OID
++ *	(by now only 1 pair supported)
++ */
++
++char prof_names[256][32];
++
++static int 
++header_confProfIndex(struct variable *vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method )
++{
++    oid newname[MAX_OID_LEN];
++    oid tmpname[MAX_OID_LEN];    
++    int newlen=0, tmplen=0, sublen=0;
++    int i, k, cnt, min_i=-1;
++    int result;
++    
++    
++    *write_method = 0;
++    *var_len = sizeof(long);    // default to 'long' results //
++/*
++DEBUGMSGTL(("mibII/shdsl", "\n---------------------------------\nheader_confProfIndex:\n"));
++DEBUGMSGTL(("mibII/shdsl", "Input OID: "));
++DEBUGMSGOID(("mibII/shdsl", name, *length));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++DEBUGMSGTL(("mibII/shdsl", "Local OID: "));
++DEBUGMSGOID(("mibII/shdsl", vp->name, vp->namelen));		    
++DEBUGMSG(("mibII/shdsl", "\n"));
++
++*/    
++
++    memcpy((char *) newname, (char *) vp->name,
++           (int) vp->namelen * sizeof(oid));
++    newlen = vp->namelen;
++    memcpy((char *) tmpname, (char *) vp->name,
++           (int) vp->namelen * sizeof(oid));
++    tmplen = vp->namelen;
++
++    cnt = prof_conf_names(prof_names);
++    
++    for(i=0;i<cnt;i++){
++//	DEBUGMSGTL(("mibII/shdsl", "Analyse Profile: %s\n",prof_names[i]));
++	sublen = strlen(prof_names[i]);
++	for(k=0;k<sublen;k++)
++	    newname[newlen+k] = prof_names[i][k];
++//	DEBUGMSGTL(("mibII/shdsl", "Builded OID: "));
++//	DEBUGMSGOID(("mibII/shdsl", newname, newlen+sublen));		    
++//	DEBUGMSG(("mibII/shdsl", "\n"));
++	
++	result = snmp_oid_compare(newname,newlen+sublen,name,*length);
++//	DEBUGMSGTL(("mibII/shdsl", "Result of comparision: %d\n",result));
++	if( exact && !result ){
++//	    DEBUGMSGTL(("mibII/shdsl", "Exact ok\n"));
++	    return i;
++	} else if( !exact && result>0 ){
++//	    DEBUGMSGTL(("mibII/shdsl", "NonExact\n"));
++	    if( tmplen == vp->namelen ){
++//		DEBUGMSGTL(("mibII/shdsl", "First tmpname init\n"));
++		memcpy((char *)tmpname, (char *)newname,(newlen+sublen)*sizeof(oid) );
++		tmplen = newlen+sublen;
++/*		DEBUGMSGTL(("mibII/shdsl", "tmpname OID: "));
++		DEBUGMSGOID(("mibII/shdsl", tmpname, tmplen));		    
++		DEBUGMSG(("mibII/shdsl", "\n"));
++*/		min_i = i;
++	    } else {
++/*		DEBUGMSGTL(("mibII/shdsl", "Compare newname with tmpname\n"));	    
++		DEBUGMSGTL(("mibII/shdsl", "tmpname OID: "));
++		DEBUGMSGOID(("mibII/shdsl", tmpname, tmplen));		    
++		DEBUGMSG(("mibII/shdsl", "\n"));
++*/	    	result = snmp_oid_compare(newname,newlen+sublen,tmpname,tmplen);
++//		DEBUGMSGTL(("mibII/shdsl", "Result of comparision: %d\n",result));
++		if( result < 0 ){
++//		    DEBUGMSGTL(("mibII/shdsl", "Save new candidate in tmpname\n"));		
++		    memcpy((char *)tmpname, (char *)newname,(newlen+sublen)*sizeof(oid) );		    
++		    tmplen = newlen+sublen;
++		    min_i = i;
++		}
++	    }
++	}
++    }
++    if(min_i < 0){
++	return MATCH_FAILED;
++    }
++    memcpy((char *)name, (char *)tmpname,(tmplen)*sizeof(oid) );		    
++    *length = tmplen;
++/*
++    DEBUGMSGTL(("mibII/shdsl", "Result OID: "));
++    DEBUGMSGOID(("mibII/shdsl", name, *length));		    
++    DEBUGMSG(("mibII/shdsl", "\n"));
++*/
++    
++    return min_i;
++}
++
++
++
++u_char *
++var_SpanConfProfEntry(struct variable * vp,
++               oid * name,
++               size_t * length,
++               int exact, size_t * var_len, WriteMethod ** write_method)
++{
++    int prof_ind;
++    shdsl_conf_prof_t Info, *info=&Info;
++    
++    if ( ( prof_ind = header_confProfIndex(vp,name,length,exact,var_len,write_method) )
++	    == MATCH_FAILED )
++        return NULL;
++
++    eocd_init(&eocd);
++    if( prof_conf_getrow(prof_ind,&eocd,info) ){
++//	DEBUGMSGTL(("mibII/shdsl", "Error gettong conf row\n"));
++	return NULL;
++    }
++    
++//    DEBUGMSGTL(("mibII/shdsl", "Result prof_ind = %d\n-------------------END------------------------\n",prof_ind));
++    //---- ack ----//
++    switch (vp->magic) {
++    case CONF_WIRE_IFACE:
++	long_return= info->wire_if;
++	return (u_char *) & long_return;
++    case CONF_MIN_LRATE:
++	long_return = info->min_lrate;
++	return (u_char *) & long_return;
++    case CONF_MAX_LRATE:
++	long_return = info->max_lrate;
++	return (u_char *) & long_return;
++    case CONF_PSD:
++	long_return= info->psd;
++	return (u_char *) & long_return;
++    case CONF_TRNSM_MODE:
++	*var_len = sizeof(char);
++	long_return = *((unsigned char*)&info->transm_mode);
++	return (u_char *) & long_return;
++    case CONF_REM_ENABLE:
++	long_return= info->rem_conf;
++	return (u_char *) & long_return;
++    case CONF_PWR_FEED:
++	long_return= info->pwr_feed;
++	return (u_char *) & long_return;
++    case CONF_CURR_DOWN:
++	long_return= info->cur_cond_down;
++	return (u_char *) & long_return;
++    case CONF_WORST_DOWN:
++	long_return= info->worst_case_down;
++	return (u_char *) & long_return;
++    case CONF_CURR_UP:
++	long_return= info->cur_cond_up;
++	return (u_char *) & long_return;
++    case CONF_WORST_UP:
++	long_return= info->worst_case_up;
++	return (u_char *) & long_return;
++    case CONF_USED_MARG:
++	*var_len = sizeof(char);
++	long_return= *((unsigned char*)&info->used_margins);
++	return (u_char *) & long_return;
++    case CONF_REF_CLK:
++	long_return= info->ref_clk;
++	return (u_char *) & long_return;
++    case CONF_LPROBE:
++	long_return= info->line_probe;
++	return (u_char *) & long_return;
++    case CONF_ROW_ST:
++	long_return= info->status;
++	return (u_char *) & long_return;
++    }
++    return NULL;
++}
++	
+diff -Naur net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/shdsl.h net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/shdsl.h
+--- net-snmp-5.1.2-old/agent/mibgroup/mibII/shdsl/shdsl.h	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/agent/mibgroup/mibII/shdsl/shdsl.h	2007-05-10 16:26:11.000000000 +0000
+@@ -0,0 +1,209 @@
++/*
++ *  hdsl2,shdsl MIB (rfc- interfaces.h
++ */
++
++#ifndef _MIBGROUP_HDSL2SHDSL_H
++#define _MIBGROUP_HDSL2SHDSL_H
++
++/* local constants */
++#define SHDSL_MX_FILE_NAME_SIZE 256
++#define SHDSL_MX_STR_SIZE 256
++#define SHDSL_SYS_STRING_LEN 256
++
++// data types 
++typedef struct shdsl_unit_s {
++    int index;
++    u_char vID[9];//[8];
++    u_char vModelN[14];//[12];
++    u_char vSerN[14];//[12];
++    int vEOCSwVer;
++    int    StandardVer;
++    u_char vListNum[4];//[3];
++    u_char vIssueNum[3];//[2];
++    u_char vSwVer[7];//[6];
++    u_char EqCode[11];//[10];
++    u_char vOther[14];//[12];
++    u_char TransModeCpb;
++    struct shdsl_unit_s *next;
++} shdsl_unit;
++
++
++//---- initialisation ----//
++config_require(mibII/shdsl/channel_db);
++config_add_mib( HDSL2-SHDSL-LINE-MIB );
++void init_shdsl(void);
++//---- header functions ----//
++static int header_dslIfIndex(struct variable*, oid *,size_t *,
++				int,size_t*,WriteMethod**,int *);
++
++/*---- callbacks ----*/
++extern FindVarMethod var_SpanConfEntry;
++extern FindVarMethod var_SpanStatusEntry;
++extern FindVarMethod var_InventoryEntry;
++extern FindVarMethod var_EndpointConfEntry;
++extern FindVarMethod var_EndpointCurrEntry;
++extern FindVarMethod var_15MinIntervalEntry;
++extern FindVarMethod var_1DayIntervalEntry;
++extern FindVarMethod var_EndpointMaintEntry;
++extern FindVarMethod var_UnitMaintEntry;
++// profiles
++extern FindVarMethod var_SpanConfProfEntry;
++
++/*
++extern FindVarMethod var_EndpointAlermEntry;
++extern FindVarMethod var_NotificationEntry;
++*/
++
++/*---- Magic values ----*/
++/*
++ * var_SpanConfEntry Magic numbers 
++ * Represents hdsl2ShdslSpanConfTable:
++ * - table indexed by {ifIndex}
++ * - each entry represents the complete span in single SHDSL line
++ * - information is persistant
++ */
++#define CONF_NREPS	0	
++#define CONF_PRFL	1	
++#define CONF_ALARMPRFL	2
++
++/*
++ * var_SpanStatusEntry Magic numbers 
++ * Represents hdsl2ShdslSpanStatusTable:
++ * - table indexed by {ifIndex},
++ * - each entry represents the complete span in single SHDSL line
++ * - information is NOT persistent
++ */
++#define STATUS_NAVAILREPS	0
++#define STATUS_MAXATTLRATE	1
++#define STATUS_ACTLRATE		2
++#define STATUS_TRNSMSNMODCUR	3
++#define STATUS_MAXATTPRATE	4
++#define STATUS_ACTPRATE		5
++
++/*
++ * var_InventoryEntry Magic numbers 
++ * Represents hdsl2ShdslInventoryTable:
++ * - table indexed by {ifIndex,hdsl2ShdslInvIndex}
++ * - info retreive via EOC from units in SHDSL line
++ * - each entry represents inventory information for a single unit in 
++     SHDSL line
++ * - information is NOT persistent
++ */
++#define INV_INDEX	0
++#define INV_VID		1
++#define INV_VMODELNUM	2
++#define INV_VSERNUM	3
++#define INV_VEOCSV	4
++#define INV_STANDARDV	5
++#define INV_VLISTNUM	6
++#define INV_VISSUENUM	7
++#define INV_VSOFTWV	8
++#define INV_EQCODE	9
++#define INV_VOTHER	10
++#define INV_TRNSMODECPB	11
++
++
++/*
++ * var_EndpointConfEntry Magic numbers 
++ * Represents hdsl2ShdslEndpointConfTable:
++ * - table indexed by 
++ 	{ifIndex, hdsl2ShdslInvIndex,hdsl2ShdslEndpointSide,
++	 hdsl2ShdslEndpointWirePair}
++ * - Configuration of alarm profile is setted by user
++ * - represents a single segment endpoint in an HDSL2/SHDSL line
++ * - information is persistent
++ */
++#define ENDP_SIDE	1
++#define ENDP_PAIR	2
++#define ENDP_CONF_PROF	3
++
++
++/*
++ * var_EndpointStatEntry Magic numbers 
++ * Represents hdsl2ShdslEndpointCurrTable:
++ * - table indexed by 
++ 	{ifIndex, hdsl2ShdslInvIndex,hdsl2ShdslEndpointSide,
++	 hdsl2ShdslEndpointWirePair}
++ * - contains current status and performance information
++     for segment endpoints in HDSL2/SHDSL lines
++ * - information is persistent
++ */
++ 
++#define ENDP_STAT_CUR_ATN	3
++#define ENDP_STAT_CUR_SNRMGN	4
++#define ENDP_STAT_CUR_STATUS	5
++#define ENDP_STAT_CUR_ES	6
++#define ENDP_STAT_CUR_SES	7
++#define ENDP_STAT_CUR_CRC	8
++#define ENDP_STAT_CUR_LOSWS	9
++#define ENDP_STAT_CUR_UAS	10
++#define ENDP_STAT_CUR_15MEL	11
++#define ENDP_STAT_CUR_15M_ES	12
++#define ENDP_STAT_CUR_15M_SES	13
++#define ENDP_STAT_CUR_15M_CRC	14
++#define ENDP_STAT_CUR_15M_LOSWS	15
++#define ENDP_STAT_CUR_15M_UAS	16
++#define ENDP_STAT_CUR_1DEL	17
++#define ENDP_STAT_CUR_1D_ES	18
++#define ENDP_STAT_CUR_1D_SES	19
++#define ENDP_STAT_CUR_1D_CRC	20
++#define ENDP_STAT_CUR_1D_LOSWS	21
++#define ENDP_STAT_CUR_1D_UAS	22
++
++
++/*
++ * var_EndpointMaintEntry Magic numbers 
++ * Represents hdsl2ShdslEndpointMaintTable:
++ * - table indexed by 
++ *	{ifIndex, hdsl2ShdslInvIndex,hdsl2ShdslEndpointSide}
++ * - supports maintenance operations (e.g., loopbacks)
++ *   to be performed on HDSL2/SHDSL segment endpoints
++ * - information is persistent
++ */
++ 
++#define ENDP_MAINT_LOOPBACK 	1
++#define ENDP_MAINT_TIPRINGREV	2
++#define ENDP_MAINT_PWRBACKOFF	3
++#define ENDP_MAINT_SOFTRESTART	4
++
++/*
++ * var_UnitMaintEntry Magic numbers 
++ * Represents hdsl2ShdslEndpointMaintTable:
++ * - table indexed by 
++ *	{ ifIndex,hdsl2ShdslInvIndex }
++ * - supports maintenance operations (e.g., loopbacks)
++ *   to be performed on HDSL2/SHDSL segment unit
++ * - information is persistent
++ */
++ 
++#define UNIT_MAINT_LPB_TO 	1
++#define UNIT_MAINT_PWR_SRC	2
++
++
++/*
++ * var_SpanConfProfEntry Magic numbers 
++ * Represents hdsl2ShdslSpanConfProfileTable
++ * - table indexed by 
++ *	{ hdsl2ShdslSpanConfProfileName }
++ * - SHDSL Line configuration profile table to be 
++ *   performed on HDSL2/SHDSL segment unit
++ * - information is persistent
++ */
++
++#define CONF_WIRE_IFACE 	1
++#define CONF_MIN_LRATE	 	2
++#define CONF_MAX_LRATE	 	3
++#define CONF_PSD	 	4
++#define CONF_TRNSM_MODE 	5
++#define CONF_REM_ENABLE 	6
++#define CONF_PWR_FEED	 	7
++#define CONF_CURR_DOWN	 	8
++#define CONF_WORST_DOWN 	9
++#define CONF_CURR_UP	 	10
++#define CONF_WORST_UP	 	11
++#define CONF_USED_MARG	 	12
++#define CONF_REF_CLK	 	13
++#define CONF_LPROBE	 	14
++#define CONF_ROW_ST	 	15
++
++#endif                          /* _MIBGROUP_HDSL2SHDSL_H */
+diff -Naur net-snmp-5.1.2-old/agent/mibgroup/mibII.h net-snmp-5.1.2/agent/mibgroup/mibII.h
+--- net-snmp-5.1.2-old/agent/mibgroup/mibII.h	2002-04-20 07:30:00.000000000 +0000
++++ net-snmp-5.1.2/agent/mibgroup/mibII.h	2007-05-10 18:08:24.000000000 +0000
+@@ -13,3 +13,4 @@
+ config_require(mibII/udp)
+ config_require(mibII/vacm_vars)
+ config_require(mibII/setSerialNo)
++config_require(mibII/shdsl/shdsl)
+diff -Naur net-snmp-5.1.2-old/compile net-snmp-5.1.2/compile
+--- net-snmp-5.1.2-old/compile	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/compile	2007-05-10 18:15:24.000000000 +0000
+@@ -0,0 +1,5 @@
++#!/bin/sh
++
++STAGING_DIR=../../../staging_dir_mipsel/
++make LDFLAGS="-L${STAGING_DIR}/usr/lib -L${STAGING_DIR}/lib -static" INSTALL_PREFIX="/root/net_snmp" all install
++
+diff -Naur net-snmp-5.1.2-old/mibs/HDSL2-SHDSL-LINE-MIB-rfc4319.txt net-snmp-5.1.2/mibs/HDSL2-SHDSL-LINE-MIB-rfc4319.txt
+--- net-snmp-5.1.2-old/mibs/HDSL2-SHDSL-LINE-MIB-rfc4319.txt	1970-01-01 00:00:00.000000000 +0000
++++ net-snmp-5.1.2/mibs/HDSL2-SHDSL-LINE-MIB-rfc4319.txt	2007-05-10 18:08:24.000000000 +0000
+@@ -0,0 +1,2541 @@
++-- extracted from rfc4319.txt
++-- at Thu Dec 15 06:40:11 2005
++
++   HDSL2-SHDSL-LINE-MIB DEFINITIONS ::= BEGIN
++
++   IMPORTS
++      MODULE-IDENTITY,
++      OBJECT-TYPE,
++      Counter32,
++      Unsigned32,
++      Gauge32,
++      NOTIFICATION-TYPE,
++      Integer32,
++      transmission
++         FROM SNMPv2-SMI
++      RowStatus,
++      TEXTUAL-CONVENTION
++         FROM SNMPv2-TC
++      ifIndex
++         FROM IF-MIB
++      PerfCurrentCount,
++      PerfIntervalCount
++         FROM PerfHist-TC-MIB
++      SnmpAdminString
++         FROM SNMP-FRAMEWORK-MIB
++      MODULE-COMPLIANCE,
++      OBJECT-GROUP,
++      NOTIFICATION-GROUP
++         FROM SNMPv2-CONF;
++
++   hdsl2ShdslMIB MODULE-IDENTITY
++      LAST-UPDATED "200512070000Z" -- December 7, 2005
++      ORGANIZATION "ADSLMIB Working Group"
++      CONTACT-INFO "WG-email:  adslmib@ietf.org
++         WG-URL:
++            http://www.ietf.org/html.charters/adslmib-charter.html
++         Info:       https://www1.ietf.org/mailman/listinfo/adslmib
++         Chair:      Mike Sneed
++                     Sand Channel Systems
++         Postal:     1210-203 Westview Ln
++                     Raleigh NC 27605  USA
++         Email:      sneedmike@hotmail.com
++         Phone:     +1 206 600 7022
++
++         Co-Chair    Bob Ray
++                     PESA Switching Systems, Inc.
++
++         Postal      330-A Wynn Drive
++                     Huntsville, AL 35805 USA
++         Phone       +1 256 726 9200 ext. 142
++
++         Co-editor:  Clay Sikes
++                     Zhone Technologies, Inc.
++         Postal:     8545 126th Ave. N.
++                     Largo, FL 33772 USA
++         Email:      csikes@zhone.com
++         Phone:      +1 727 530 8257
++
++         Co-editor:  Bob Ray
++                     PESA Switching Systems, Inc.
++         Postal:     330-A Wynn Drive
++                     Huntsville, AL 35805 USA
++         Email:      rray@pesa.com
++         Phone:      +1 256 726 9200 ext. 142
++
++         Co-editor:  Rajesh Abbi
++                     Alcatel USA
++         Postal:     2301 Sugar Bush Road
++                     Raleigh, NC 27612-3339 USA
++
++         Email:      Rajesh.Abbi@alcatel.com
++         Phone:      +1 919 850 6194"
++
++   DESCRIPTION
++        "This MIB module defines a collection of objects for managing
++         HDSL2/SHDSL lines.  An agent may reside at either end of the
++         line; however, the MIB module is designed to require no
++         management communication between the modems beyond that
++         inherent in the low-level EOC line protocol as defined in
++         ANSI T1E1.4/2000-006 (for HDSL2 lines) or in ITU G.991.2
++         (for SHDSL lines).
++
++         Copyright (C) The Internet Society (2005).  This version of
++         this MIB module is part of RFC 4319; see the RFC itself for
++         full legal notices."
++
++   REVISION    "200512070000Z" -- December 7, 2005
++   DESCRIPTION "This version, published as RFC 4319.
++         The following changes have been made in this version:
++           1.  Added a 3rd and 4th wire pair.
++           2.  Modified all rates such that their rates are only
++               constrained by an unsigned 32-bit value and not by
++               what today's perceived technology limitations are.
++
++           3.  Clarified that the rates from RFC 3276 include
++               payload and any applicable framing and added
++               objects for payload-only rates.
++           4.  Added an object to indicate whether the
++               tip and ring are reversed on a wire pair.
++           5.  Added an object to display the activation state
++               of a wire pair.
++           6.  Added references as necessary for clarification.
++           7.  Added display hints to textual conventions as
++               necessary.
++           8.  Updated conformance statements as necessary.
++           9.  Some changes were due to IETF requirements and
++               RFC generation tools."
++
++   REVISION    "200205090000Z" -- May 9, 2002
++   DESCRIPTION "Initial version, published as RFC 3276."
++
++   ::= { transmission 48 }
++
++   hdsl2ShdslMibObjects OBJECT IDENTIFIER ::= { hdsl2ShdslMIB 1 }
++
++   -- Textual Conventions used in this MIB module
++   --
++
++   Hdsl2ShdslPerfCurrDayCount ::= TEXTUAL-CONVENTION
++      DISPLAY-HINT "d"
++      STATUS    current
++      DESCRIPTION
++        "A gauge associated with interface performance measurements in
++         a current 1-day (24 hour) measurement interval.
++
++         The value of this gauge starts at zero at the beginning of an
++         interval and is increased when associated events occur, until
++         the end of the 1-day interval.  At that time, the value of the
++         gauge is stored in the previous 1-day history interval, as
++         defined in a companion object of type
++         Hdsl2Shdsl1DayIntevalCount, and the current interval gauge
++         is restarted at zero.
++
++         In the case where the agent has no valid data available for
++         this interval, the corresponding object instance is not
++         available, and upon a retrieval request, a corresponding error
++         message shall be returned to indicate that this instance does
++         not exist.  Please note that zero is a valid value."
++      SYNTAX  Gauge32
++
++   Hdsl2Shdsl1DayIntervalCount ::= TEXTUAL-CONVENTION
++      DISPLAY-HINT "d"
++      STATUS    current
++      DESCRIPTION
++        "A counter associated with interface performance measurements
++         during the most previous 1-day (24 hour) measurement interval.
++         The value of this gauge is equal to the value of the current
++         day gauge, as defined in a companion object of type
++         Hdsl2ShdslPerfCurrDayCount, at the end of its most recent
++         interval.
++
++         In the case where the agent has no valid data available for
++         this interval, the corresponding object instance is not
++         available, and upon a retrieval request, a corresponding error
++         message shall be returned to indicate that this instance does
++         not exist."
++      SYNTAX  Gauge32
++
++   Hdsl2ShdslPerfTimeElapsed ::= TEXTUAL-CONVENTION
++      DISPLAY-HINT "d"
++      STATUS    current
++      DESCRIPTION
++        "The number of seconds that have elapsed since the beginning of
++         the current measurement period.  If, for some reason, such as
++         an adjustment in the system's time-of-day clock or the addition
++         of a leap second, the current interval exceeds the maximum
++         value, the agent will return the maximum value.
++
++         For 15-minute intervals, the range is limited to (0..899).
++         For 24-hour intervals, the range is limited to (0..86399)."
++      SYNTAX    Unsigned32(0..86399)
++
++   Hdsl2ShdslPerfIntervalThreshold ::= TEXTUAL-CONVENTION
++      DISPLAY-HINT "d"
++      STATUS    current
++      DESCRIPTION
++        "This convention defines a range of values that may be set in
++         a fault threshold alarm control.  As the number of seconds in
++         a 15-minute interval numbers at most 900, objects of this type
++         may have a range of 0...900, where the value of 0 disables the
++         alarm."
++      SYNTAX    Unsigned32(0..900)
++
++   Hdsl2ShdslUnitId ::= TEXTUAL-CONVENTION
++      STATUS    current
++      DESCRIPTION
++        "This is the unique identification for all units in an
++         HDSL2/SHDSL span.  It is based on the EOC unit addressing
++         scheme with reference to the xtuC."
++      SYNTAX    INTEGER
++              {
++              xtuC(1),
++              xtuR(2),
++              xru1(3),
++              xru2(4),
++              xru3(5),
++              xru4(6),
++              xru5(7),
++              xru6(8),
++              xru7(9),
++              xru8(10)
++              }
++
++   Hdsl2ShdslUnitSide ::= TEXTUAL-CONVENTION
++      STATUS    current
++      DESCRIPTION
++        "This is the referenced side of an HDSL2/SHDSL unit - Network
++         or Customer side.  The side facing the Network is the Network
++         side, while the side facing the Customer is the Customer side."
++      SYNTAX    INTEGER
++              {
++              networkSide(1),
++              customerSide(2)
++              }
++
++   Hdsl2ShdslWirePair ::= TEXTUAL-CONVENTION
++      STATUS    current
++      DESCRIPTION
++        "This is the referenced pair of wires in an HDSL2/SHDSL segment.
++         HDSL2 only supports a single pair (wirePair1 or two wire),
++         SHDSL lines support an optional second pair (wirePair2 or four
++         wire), and G.shdsl.bis support an optional third pair
++         (wirePair3 or six wire) and an optional fourth pair
++         (wirePair4 or eight wire)."
++      SYNTAX    INTEGER
++              {
++              wirePair1(1),    -- two wire
++              wirePair2(2),    -- four wire
++              wirePair3(3),    -- six wire
++              wirePair4(4)     -- eight wire
++              }
++
++   Hdsl2ShdslTransmissionModeType ::= TEXTUAL-CONVENTION
++      STATUS    current
++      DESCRIPTION
++        "Contains the regional setting of the HDSL2/SHDSL span,
++         represented as a bit-map of possible settings.  The various
++         bit positions are as follows:
++         Bit   Meaning      Description
++         1     region 1     Indicates ITU-T G.991.2 Annex A.
++         2     region 2     Indicates ITU-T G.991.2 Annex B."
++      SYNTAX      BITS
++              {
++              region1(0),
++              region2(1)
++              }
++
++   Hdsl2ShdslClockReferenceType ::= TEXTUAL-CONVENTION
++      STATUS    current
++      DESCRIPTION
++        "The various STU-C symbol clock references for the
++         HDSL2/SHDSL span, represented as an enumeration."
++      SYNTAX    INTEGER
++             {
++             localClk(1),          -- Mode-1 per G991.2
++             networkClk(2),        -- Mode-2 per G991.2
++             dataOrNetworkClk(3),  -- Mode-3a per G991.2
++             dataClk(4)            -- Mode-3b per G991.2
++             }
++
++   -- Span Configuration Group
++   --
++
++   hdsl2ShdslSpanConfTable OBJECT-TYPE
++      SYNTAX     SEQUENCE OF Hdsl2ShdslSpanConfEntry
++      MAX-ACCESS not-accessible
++      STATUS     current
++
++      DESCRIPTION
++        "This table supports overall configuration of HDSL2/SHDSL
++         spans.  Entries in this table MUST be maintained in a
++         persistent manner."
++      ::= { hdsl2ShdslMibObjects 1 }
++
++   hdsl2ShdslSpanConfEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslSpanConfEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslSpanConfTable.  Each entry
++         represents the complete span in a single HDSL2/SHDSL line.
++         It is indexed by the ifIndex of the associated HDSL2/SHDSL
++         line."
++      INDEX { ifIndex }
++      ::= { hdsl2ShdslSpanConfTable 1 }
++
++   Hdsl2ShdslSpanConfEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslSpanConfNumRepeaters          Unsigned32,
++      hdsl2ShdslSpanConfProfile               SnmpAdminString,
++      hdsl2ShdslSpanConfAlarmProfile          SnmpAdminString
++      }
++
++      hdsl2ShdslSpanConfNumRepeaters OBJECT-TYPE
++      SYNTAX      Unsigned32(0..8)
++      UNITS       "repeaters"
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object provisions the number of repeaters/regenerators
++         in this HDSL2/SHDSL span."
++      ::= { hdsl2ShdslSpanConfEntry 1 }
++
++   hdsl2ShdslSpanConfProfile OBJECT-TYPE
++      SYNTAX      SnmpAdminString (SIZE(1..32))
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object is a pointer to a span configuration profile in
++         the hdsl2ShdslSpanConfProfileTable, which applies to this
++         span.  The value of this object is the index of the referenced
++         profile in the hdsl2ShdslSpanConfProfileTable.  Note that span
++         configuration profiles are only applicable to SHDSL lines.
++
++         HDSL2 lines MUST reference the default profile, 'DEFVAL'.
++         By default, this object will have the value 'DEFVAL'
++         (the index of the default profile).
++
++         Any attempt to set this object to a value that is not the value
++         of the index for an active entry in the profile table,
++         hdsl2ShdslSpanConfProfileTable, MUST be rejected."
++      ::= { hdsl2ShdslSpanConfEntry 2 }
++
++   hdsl2ShdslSpanConfAlarmProfile OBJECT-TYPE
++      SYNTAX      SnmpAdminString (SIZE(1..32))
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object is a pointer to an alarm configuration profile in
++         the hdsl2ShdslEndpointAlarmConfProfileTable.  The value of
++         this object is the index of the referenced profile in the
++         hdsl2ShdslEndpointAlarmConfProfileTable.  The alarm
++         threshold configuration in the referenced profile will be
++         used by default for all segment endpoints in this span.
++         Individual endpoints may override this profile by explicitly
++         specifying some other profile in the
++         hdsl2ShdslEndpointConfTable.  By default, this object will
++         have the value 'DEFVAL' (the index of the default
++         profile).
++
++         Any attempt to set this object to a value that is not the value
++         of the index for an active entry in the profile table,
++         hdsl2ShdslEndpointAlarmConfProfileTable, MUST be rejected."
++      ::= { hdsl2ShdslSpanConfEntry 3 }
++
++   -- Span Status Group
++   --
++
++   hdsl2ShdslSpanStatusTable OBJECT-TYPE
++      SYNTAX     SEQUENCE OF Hdsl2ShdslSpanStatusEntry
++      MAX-ACCESS not-accessible
++      STATUS     current
++      DESCRIPTION
++        "This table provides overall status information of
++         HDSL2/SHDSL spans.  This table contains live data from
++         equipment.  As such, it is NOT persistent."
++      ::= { hdsl2ShdslMibObjects 2 }
++
++   hdsl2ShdslSpanStatusEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslSpanStatusEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslSpanStatusTable.  Each entry
++         represents the complete span in a single HDSL2/SHDSL line.
++         It is indexed by the ifIndex of the associated HDSL2/SHDSL
++         line."
++      INDEX { ifIndex }
++      ::= { hdsl2ShdslSpanStatusTable 1 }
++
++   Hdsl2ShdslSpanStatusEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslStatusNumAvailRepeaters        Unsigned32,
++      hdsl2ShdslStatusMaxAttainableLineRate    Unsigned32,
++      hdsl2ShdslStatusActualLineRate           Unsigned32,
++      hdsl2ShdslStatusTransmissionModeCurrent
++                           Hdsl2ShdslTransmissionModeType,
++      hdsl2ShdslStatusMaxAttainablePayloadRate Unsigned32,
++      hdsl2ShdslStatusActualPayloadRate        Unsigned32
++      }
++
++   hdsl2ShdslStatusNumAvailRepeaters OBJECT-TYPE
++      SYNTAX      Unsigned32(0..8)
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the actual number of repeaters/regenerators
++         discovered in this HDSL2/SHDSL span."
++      ::= { hdsl2ShdslSpanStatusEntry 1 }
++
++   hdsl2ShdslStatusMaxAttainableLineRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the maximum attainable line rate in this HDSL2/SHDSL
++         span.  This object provides the maximum rate the line is
++         capable of achieving.  This is based upon measurements made
++         during line probing.  This rate includes payload (user data)
++         and any applicable framing overhead."
++      ::= { hdsl2ShdslSpanStatusEntry 2 }
++
++   hdsl2ShdslStatusActualLineRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the actual line rate in this HDSL2/SHDSL span.  This
++         SHOULD equal ifSpeed.  This rate includes payload (user data)
++         and any applicable framing overhead"
++      ::= { hdsl2ShdslSpanStatusEntry 3 }
++
++   hdsl2ShdslStatusTransmissionModeCurrent OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslTransmissionModeType
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the current Power Spectral Density (PSD) regional
++         setting of the HDSL2/SHDSL span."
++      ::= { hdsl2ShdslSpanStatusEntry 4 }
++
++   hdsl2ShdslStatusMaxAttainablePayloadRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the maximum attainable payload (user data)
++         line rate in this HDSL2/SHDSL span.  This object provides
++         the maximum rate the line is capable of achieving.  This
++         is based upon measurements made during line probing.  Any
++         framing overhead is not included."
++      ::= { hdsl2ShdslSpanStatusEntry 5 }
++
++   hdsl2ShdslStatusActualPayloadRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the actual line rate in this HDSL2/SHDSL span.  Any
++         framing overhead is not included."
++      ::= { hdsl2ShdslSpanStatusEntry 6 }
++
++   -- Unit Inventory Group
++   --
++
++   hdsl2ShdslInventoryTable OBJECT-TYPE
++      SYNTAX     SEQUENCE OF Hdsl2ShdslInventoryEntry
++      MAX-ACCESS not-accessible
++      STATUS     current
++      DESCRIPTION
++        "This table supports retrieval of unit inventory information
++         available via the EOC from units in an HDSL2/SHDSL line.
++
++         Entries in this table are dynamically created during the
++         line discovery process.  The life cycle for these entries
++         is as follows:
++
++            - xtu discovers a device, either a far-end xtu or an xru
++            - an inventory table entry is created for the device
++            - the line goes down for whatever reason
++            - inventory table entries for unreachable devices are
++              destroyed
++
++         As these entries are created/destroyed dynamically, they
++         are NOT persistent."
++      ::= { hdsl2ShdslMibObjects 3 }
++
++   hdsl2ShdslInventoryEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslInventoryEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslInventoryTable.  Each entry
++         represents inventory information for a single unit in an
++         HDSL2/SHDSL line.  It is indexed by the ifIndex of the
++         HDSL2/SHDSL line and the Hdsl2ShdslUnitId of the
++         associated unit."
++      INDEX { ifIndex, hdsl2ShdslInvIndex }
++      ::= { hdsl2ShdslInventoryTable 1 }
++
++   Hdsl2ShdslInventoryEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslInvIndex                      Hdsl2ShdslUnitId,
++      hdsl2ShdslInvVendorID                   OCTET STRING,
++      hdsl2ShdslInvVendorModelNumber          OCTET STRING,
++      hdsl2ShdslInvVendorSerialNumber         OCTET STRING,
++      hdsl2ShdslInvVendorEOCSoftwareVersion   Integer32,
++      hdsl2ShdslInvStandardVersion            Integer32,
++      hdsl2ShdslInvVendorListNumber           OCTET STRING,
++      hdsl2ShdslInvVendorIssueNumber          OCTET STRING,
++      hdsl2ShdslInvVendorSoftwareVersion      OCTET STRING,
++      hdsl2ShdslInvEquipmentCode              OCTET STRING,
++      hdsl2ShdslInvVendorOther                OCTET STRING,
++      hdsl2ShdslInvTransmissionModeCapability
++                            Hdsl2ShdslTransmissionModeType
++      }
++
++   hdsl2ShdslInvIndex OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslUnitId
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "Each entry in this table corresponds to a physical element
++         in an HDSL2/SHDSL span.  It is based on the EOC unit addressing
++         scheme with reference to the xtuC."
++      ::= { hdsl2ShdslInventoryEntry 1 }
++
++   hdsl2ShdslInvVendorID OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(8))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor ID as reported in an Inventory Response message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 25-32."
++      ::= { hdsl2ShdslInventoryEntry 2 }
++
++   hdsl2ShdslInvVendorModelNumber OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(12))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor model number as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 33-44."
++      ::= { hdsl2ShdslInventoryEntry 3 }
++
++   hdsl2ShdslInvVendorSerialNumber OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(12))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor serial number as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 45-56."
++      ::= { hdsl2ShdslInventoryEntry 4 }
++
++   hdsl2ShdslInvVendorEOCSoftwareVersion OBJECT-TYPE
++      SYNTAX      Integer32
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor EOC version as reported in a Discovery Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.2, Discovery response - Message ID
++         129, Octet 12."
++      ::= { hdsl2ShdslInventoryEntry 5 }
++
++   hdsl2ShdslInvStandardVersion OBJECT-TYPE
++      SYNTAX      Integer32
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Version of the HDSL2/SHDSL standard implemented, as reported
++         in an Inventory Response message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octet 2."
++      ::= { hdsl2ShdslInventoryEntry 6 }
++
++   hdsl2ShdslInvVendorListNumber OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(3))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor list number as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 3-5."
++      ::= { hdsl2ShdslInventoryEntry 7 }
++
++   hdsl2ShdslInvVendorIssueNumber OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(2))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor issue number as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 6-7."
++      ::= { hdsl2ShdslInventoryEntry 8 }
++
++   hdsl2ShdslInvVendorSoftwareVersion OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(6))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Vendor software version as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 8-13."
++      ::= { hdsl2ShdslInventoryEntry 9 }
++
++   hdsl2ShdslInvEquipmentCode OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(10))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Equipment code conforming to ANSI T1.213, Coded Identification
++         of Equipment Entities."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 14-23."
++      ::= { hdsl2ShdslInventoryEntry 10 }
++
++   hdsl2ShdslInvVendorOther OBJECT-TYPE
++      SYNTAX      OCTET STRING(SIZE(12))
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Other vendor information as reported in an Inventory Response
++         message."
++      REFERENCE
++        "G.991.2, Section 9.5.5.7.4, Inventory response - Message ID
++         130, Octets 57-68."
++      ::= { hdsl2ShdslInventoryEntry 11 }
++
++   hdsl2ShdslInvTransmissionModeCapability OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslTransmissionModeType
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the transmission mode capability of the SHDSL unit."
++      ::= { hdsl2ShdslInventoryEntry 12 }
++
++   -- Segment Endpoint Configuration Group
++   --
++
++   hdsl2ShdslEndpointConfTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslEndpointConfEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table supports configuration parameters for segment
++         endpoints in an HDSL2/SHDSL line.  As this table is indexed
++         by ifIndex, it MUST be maintained in a persistent manner."
++      ::= { hdsl2ShdslMibObjects 4 }
++
++   hdsl2ShdslEndpointConfEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslEndpointConfEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslEndpointConfTable.  Each entry
++         represents a single segment endpoint in an HDSL2/SHDSL line.
++         It is indexed by the ifIndex of the HDSL2/SHDSL line, the
++         UnitId of the associated unit, the side of the unit, and the
++         wire pair of the associated modem."
++      INDEX { ifIndex, hdsl2ShdslInvIndex, hdsl2ShdslEndpointSide,
++              hdsl2ShdslEndpointWirePair}
++      ::= { hdsl2ShdslEndpointConfTable 1 }
++
++   Hdsl2ShdslEndpointConfEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslEndpointSide                   Hdsl2ShdslUnitSide,
++      hdsl2ShdslEndpointWirePair               Hdsl2ShdslWirePair,
++      hdsl2ShdslEndpointAlarmConfProfile       SnmpAdminString
++      }
++
++   hdsl2ShdslEndpointSide OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslUnitSide
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "The side of the unit associated with this segment endpoint --
++         Network/Customer side -- as per the Hdsl2ShdslUnitSide textual
++         convention."
++      ::= { hdsl2ShdslEndpointConfEntry 1 }
++
++   hdsl2ShdslEndpointWirePair OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslWirePair
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "The wire pair of the modem associated with this segment
++         endpoint as per the Hdsl2ShdslWirePair textual convention."
++      ::= { hdsl2ShdslEndpointConfEntry 2 }
++
++   hdsl2ShdslEndpointAlarmConfProfile OBJECT-TYPE
++      SYNTAX      SnmpAdminString (SIZE(0..32))
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object configures the alarm threshold values to be used
++         for this segment endpoint.  The values are obtained from the
++         alarm configuration profile referenced by this object.  The
++         value of this object is the index of the referenced profile in
++         the hdsl2ShdslEndpointAlarmConfProfileTable, or NULL (a
++         zero-length SnmpAdminString).  If the value is a zero-length
++         SnmpAdminString, the endpoint uses the default Alarm
++         Configuration Profile for the associated span as per the
++         hdsl2ShdslSpanConfAlarmProfile object in the
++         hdsl2ShdslSpanConfTable.  The default value of this object is
++         a zero-length SnmpAdminString.
++
++         Any attempt to set this object to a value that is not the value
++         of the index for an active entry in the profile table,
++         hdsl2ShdslEndpointAlarmConfProfileTable, MUST be rejected."
++      ::= { hdsl2ShdslEndpointConfEntry 3 }
++
++   -- Segment Endpoint Current Status/Performance Group
++   --
++   hdsl2ShdslEndpointCurrTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslEndpointCurrEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table contains current status and performance information
++         for segment endpoints in HDSL2/SHDSL lines.  As with other
++         tables in this MIB module indexed by ifIndex, entries in this
++         table MUST be maintained in a persistent manner."
++      ::= { hdsl2ShdslMibObjects 5 }
++
++   hdsl2ShdslEndpointCurrEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslEndpointCurrEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslEndpointCurrTable.  Each entry
++         contains status and performance information relating to a
++         single segment endpoint.  It is indexed by the ifIndex of the
++         HDSL2/SHDSL line, the UnitId of the associated unit, the side
++         of the unit, and the wire pair of the associated modem."
++      INDEX { ifIndex, hdsl2ShdslInvIndex, hdsl2ShdslEndpointSide,
++              hdsl2ShdslEndpointWirePair }
++      ::= { hdsl2ShdslEndpointCurrTable 1 }
++
++   Hdsl2ShdslEndpointCurrEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslEndpointCurrAtn                Integer32,
++      hdsl2ShdslEndpointCurrSnrMgn             Integer32,
++      hdsl2ShdslEndpointCurrStatus             BITS,
++      hdsl2ShdslEndpointES                     Counter32,
++      hdsl2ShdslEndpointSES                    Counter32,
++      hdsl2ShdslEndpointCRCanomalies           Counter32,
++      hdsl2ShdslEndpointLOSWS                  Counter32,
++      hdsl2ShdslEndpointUAS                    Counter32,
++      hdsl2ShdslEndpointCurr15MinTimeElapsed
++                               Hdsl2ShdslPerfTimeElapsed,
++      hdsl2ShdslEndpointCurr15MinES            PerfCurrentCount,
++      hdsl2ShdslEndpointCurr15MinSES           PerfCurrentCount,
++      hdsl2ShdslEndpointCurr15MinCRCanomalies  PerfCurrentCount,
++      hdsl2ShdslEndpointCurr15MinLOSWS         PerfCurrentCount,
++      hdsl2ShdslEndpointCurr15MinUAS           PerfCurrentCount,
++      hdsl2ShdslEndpointCurr1DayTimeElapsed
++                                      Hdsl2ShdslPerfTimeElapsed,
++      hdsl2ShdslEndpointCurr1DayES
++                                     Hdsl2ShdslPerfCurrDayCount,
++      hdsl2ShdslEndpointCurr1DaySES
++                                     Hdsl2ShdslPerfCurrDayCount,
++      hdsl2ShdslEndpointCurr1DayCRCanomalies
++                                     Hdsl2ShdslPerfCurrDayCount,
++      hdsl2ShdslEndpointCurr1DayLOSWS
++                                     Hdsl2ShdslPerfCurrDayCount,
++      hdsl2ShdslEndpointCurr1DayUAS
++                                     Hdsl2ShdslPerfCurrDayCount,
++      hdsl2ShdslEndpointCurrTipRingReversal    INTEGER,
++      hdsl2ShdslEndpointCurrActivationState    INTEGER
++      }
++
++   hdsl2ShdslEndpointCurrAtn OBJECT-TYPE
++      SYNTAX      Integer32(-127..128)
++      UNITS       "dB"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "The current loop attenuation for this endpoint as reported in
++         a Network or Customer Side Performance Status message."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 1 }
++
++   hdsl2ShdslEndpointCurrSnrMgn OBJECT-TYPE
++      SYNTAX      Integer32(-127..128)
++      UNITS       "dB"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "The current SNR margin for this endpoint as reported in a
++         Status Response/SNR message."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 2 }
++
++   hdsl2ShdslEndpointCurrStatus OBJECT-TYPE
++      SYNTAX      BITS
++                  {
++                  noDefect(0),
++                  powerBackoff(1),
++                  deviceFault(2),
++                  dcContinuityFault(3),
++                  snrMarginAlarm(4),
++                  loopAttenuationAlarm(5),
++                  loswFailureAlarm(6),
++                  configInitFailure(7),
++                  protocolInitFailure(8),
++                  noNeighborPresent(9),
++                  loopbackActive(10)
++                  }
++
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Contains the current state of the endpoint.  This is a
++         bit-map of possible conditions.  The various bit positions
++         are as follows:
++
++         noDefect               There are no defects on the line.
++
++         powerBackoff           Indicates enhanced Power Backoff.
++
++         deviceFault            Indicates that a vendor-dependent
++                                diagnostic or self-test fault
++                                has been detected.
++
++         dcContinuityFault      Indicates vendor-dependent
++                                conditions that interfere with
++                                span powering such as short and
++                                open circuits.
++
++         snrMarginAlarm         Indicates that the SNR margin
++                                has dropped below the alarm threshold.
++
++         loopAttenuationAlarm   Indicates that the loop attenuation
++                                exceeds the alarm threshold.
++
++         loswFailureAlarm       Indicates a forward LOSW alarm.
++
++         configInitFailure      Endpoint failure during initialization
++                                due to paired endpoint not able to
++                                support requested configuration.
++
++         protocolInitFailure    Endpoint failure during initialization
++                                due to incompatible protocol used by
++                                the paired endpoint.
++
++         noNeighborPresent      Endpoint failure during initialization
++                                due to no activation sequence detected
++                                from paired endpoint.
++
++         loopbackActive         A loopback is currently active at this
++                                segment endpoint.
++
++         This is intended to supplement ifOperStatus.  Note that there
++         is a 1:1 relationship between the status bits defined in this
++         object and the notification thresholds defined elsewhere in
++         this MIB module."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 3 }
++
++   hdsl2ShdslEndpointES OBJECT-TYPE
++      SYNTAX      Counter32
++      UNITS       "seconds"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of Errored Seconds (ES) on this endpoint since the xU
++         was last restarted."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 4 }
++
++   hdsl2ShdslEndpointSES OBJECT-TYPE
++      SYNTAX       Counter32
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Severely Errored Seconds (SES) on this endpoint
++         since the xU was last restarted."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 5 }
++
++   hdsl2ShdslEndpointCRCanomalies OBJECT-TYPE
++      SYNTAX       Counter32
++      UNITS        "detected CRC Anomalies"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of CRC anomalies on this endpoint since the xU was
++         last restarted."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 6 }
++
++   hdsl2ShdslEndpointLOSWS OBJECT-TYPE
++      SYNTAX       Counter32
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Loss of Sync Word (LOSW) Seconds on this endpoint
++         since the xU was last restarted."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 7 }
++
++   hdsl2ShdslEndpointUAS OBJECT-TYPE
++      SYNTAX       Counter32
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Unavailable Seconds (UAS) on this endpoint since
++         the xU was last restarted."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 8 }
++
++   hdsl2ShdslEndpointCurr15MinTimeElapsed OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfTimeElapsed
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Total elapsed seconds in the current 15-minute interval."
++      ::= { hdsl2ShdslEndpointCurrEntry 9 }
++
++   hdsl2ShdslEndpointCurr15MinES OBJECT-TYPE
++      SYNTAX       PerfCurrentCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Errored Seconds (ES) in the current 15-minute
++         interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 10 }
++
++   hdsl2ShdslEndpointCurr15MinSES OBJECT-TYPE
++      SYNTAX       PerfCurrentCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Severely Errored Seconds (SES) in the current
++         15-minute interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 11 }
++
++   hdsl2ShdslEndpointCurr15MinCRCanomalies OBJECT-TYPE
++      SYNTAX       PerfCurrentCount
++      UNITS        "detected CRC Anomalies"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of CRC anomalies in the current 15-minute interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 12 }
++
++   hdsl2ShdslEndpointCurr15MinLOSWS OBJECT-TYPE
++      SYNTAX       PerfCurrentCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Loss of Sync Word (LOSW) Seconds in the current
++         15-minute interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 13 }
++
++   hdsl2ShdslEndpointCurr15MinUAS OBJECT-TYPE
++      SYNTAX       PerfCurrentCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Unavailable Seconds (UAS) in the current 15-minute
++         interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 14 }
++
++   hdsl2ShdslEndpointCurr1DayTimeElapsed OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfTimeElapsed
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Number of seconds that have elapsed since the beginning of
++         the current 1-day interval."
++      ::= { hdsl2ShdslEndpointCurrEntry 15 }
++
++   hdsl2ShdslEndpointCurr1DayES OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfCurrDayCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Errored Seconds (ES) during the current day as
++         measured by hdsl2ShdslEndpointCurr1DayTimeElapsed."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 16 }
++
++   hdsl2ShdslEndpointCurr1DaySES OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfCurrDayCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Severely Errored Seconds (SES) during the current
++         day as measured by hdsl2ShdslEndpointCurr1DayTimeElapsed."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 17 }
++
++   hdsl2ShdslEndpointCurr1DayCRCanomalies OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfCurrDayCount
++      UNITS        "detected CRC Anomalies"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of CRC anomalies during the current day as measured
++         by hdsl2ShdslEndpointCurr1DayTimeElapsed."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 18 }
++
++   hdsl2ShdslEndpointCurr1DayLOSWS OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfCurrDayCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Loss of Sync Word (LOSW) Seconds during the current
++         day as measured by hdsl2ShdslEndpointCurr1DayTimeElapsed."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 19 }
++
++   hdsl2ShdslEndpointCurr1DayUAS OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfCurrDayCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Unavailable Seconds (UAS) during the current day as
++         measured by hdsl2ShdslEndpointCurr1DayTimeElapsed."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2ShdslEndpointCurrEntry 20 }
++
++   hdsl2ShdslEndpointCurrTipRingReversal OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  normal(1),
++                  reversed(2)
++                  }
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "This object indicates the state of the tip/ring for the
++         wire pair."
++      ::= { hdsl2ShdslEndpointCurrEntry 21 }
++
++   hdsl2ShdslEndpointCurrActivationState OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  preActivation(1),  -- PreTrain
++                  activation(2),     -- Training
++                  data(3)            -- Trained
++                  }
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "This object indicates the activation or training state of
++         the wire pair."
++      REFERENCE   "ITU-T G.991.2, Section 6.2 PMD Activation Sequence"
++      ::= { hdsl2ShdslEndpointCurrEntry 22 }
++
++   -- Segment Endpoint 15-Minute Interval Status/Performance Group
++   --
++
++   hdsl2Shdsl15MinIntervalTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2Shdsl15MinIntervalEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table provides one row for each HDSL2/SHDSL endpoint
++         performance data collection interval.  This table contains
++         live data from equipment.  As such, it is NOT persistent."
++      ::= { hdsl2ShdslMibObjects 6 }
++
++   hdsl2Shdsl15MinIntervalEntry OBJECT-TYPE
++      SYNTAX      Hdsl2Shdsl15MinIntervalEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2Shdsl15MinIntervalTable."
++      INDEX { ifIndex, hdsl2ShdslInvIndex, hdsl2ShdslEndpointSide,
++              hdsl2ShdslEndpointWirePair, hdsl2Shdsl15MinIntervalNumber}
++      ::= { hdsl2Shdsl15MinIntervalTable 1 }
++
++   Hdsl2Shdsl15MinIntervalEntry ::=
++      SEQUENCE
++      {
++      hdsl2Shdsl15MinIntervalNumber         Unsigned32,
++      hdsl2Shdsl15MinIntervalES             PerfIntervalCount,
++      hdsl2Shdsl15MinIntervalSES            PerfIntervalCount,
++      hdsl2Shdsl15MinIntervalCRCanomalies   PerfIntervalCount,
++      hdsl2Shdsl15MinIntervalLOSWS          PerfIntervalCount,
++      hdsl2Shdsl15MinIntervalUAS            PerfIntervalCount
++      }
++
++   hdsl2Shdsl15MinIntervalNumber OBJECT-TYPE
++      SYNTAX      Unsigned32(1..96)
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "Performance Data Interval number.  Interval 1 is the most
++         recent previous interval; interval 96 is 24 hours ago.
++         Intervals 2..96 are optional."
++      ::= { hdsl2Shdsl15MinIntervalEntry 1 }
++
++   hdsl2Shdsl15MinIntervalES OBJECT-TYPE
++      SYNTAX      PerfIntervalCount
++      UNITS       "seconds"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of Errored Seconds (ES) during the interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl15MinIntervalEntry 2 }
++
++   hdsl2Shdsl15MinIntervalSES OBJECT-TYPE
++      SYNTAX      PerfIntervalCount
++      UNITS       "seconds"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of Severely Errored Seconds (SES) during the interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl15MinIntervalEntry 3 }
++
++   hdsl2Shdsl15MinIntervalCRCanomalies OBJECT-TYPE
++      SYNTAX      PerfIntervalCount
++      UNITS       "detected CRC Anomalies"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of CRC anomalies during the interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl15MinIntervalEntry 4 }
++
++   hdsl2Shdsl15MinIntervalLOSWS OBJECT-TYPE
++      SYNTAX      PerfIntervalCount
++      UNITS       "seconds"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of Loss of Sync Word (LOSW) Seconds during the
++         interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl15MinIntervalEntry 5 }
++
++   hdsl2Shdsl15MinIntervalUAS OBJECT-TYPE
++      SYNTAX      PerfIntervalCount
++      UNITS       "seconds"
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "Count of Unavailable Seconds (UAS) during the interval."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl15MinIntervalEntry 6 }
++
++   -- Segment Endpoint 1-Day Interval Status/Performance Group
++   --
++
++   hdsl2Shdsl1DayIntervalTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2Shdsl1DayIntervalEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table provides one row for each HDSL2/SHDSL endpoint
++         performance data collection interval.  This table contains
++         live data from equipment.  As such, it is NOT persistent."
++      ::= { hdsl2ShdslMibObjects 7 }
++
++   hdsl2Shdsl1DayIntervalEntry OBJECT-TYPE
++      SYNTAX      Hdsl2Shdsl1DayIntervalEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2Shdsl1DayIntervalTable."
++      INDEX { ifIndex, hdsl2ShdslInvIndex, hdsl2ShdslEndpointSide,
++              hdsl2ShdslEndpointWirePair, hdsl2Shdsl1DayIntervalNumber }
++      ::= { hdsl2Shdsl1DayIntervalTable 1 }
++
++   Hdsl2Shdsl1DayIntervalEntry ::=
++      SEQUENCE
++      {
++      hdsl2Shdsl1DayIntervalNumber         Unsigned32,
++      hdsl2Shdsl1DayIntervalMoniSecs       Hdsl2ShdslPerfTimeElapsed,
++      hdsl2Shdsl1DayIntervalES             Hdsl2Shdsl1DayIntervalCount,
++      hdsl2Shdsl1DayIntervalSES            Hdsl2Shdsl1DayIntervalCount,
++      hdsl2Shdsl1DayIntervalCRCanomalies   Hdsl2Shdsl1DayIntervalCount,
++      hdsl2Shdsl1DayIntervalLOSWS          Hdsl2Shdsl1DayIntervalCount,
++      hdsl2Shdsl1DayIntervalUAS            Hdsl2Shdsl1DayIntervalCount
++      }
++
++   hdsl2Shdsl1DayIntervalNumber OBJECT-TYPE
++      SYNTAX      Unsigned32(1..30)
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "History Data Interval number.  Interval 1 is the most
++         recent previous day; interval 30 is 30 days ago.  Intervals
++         2..30 are optional."
++      ::= { hdsl2Shdsl1DayIntervalEntry 1 }
++
++   hdsl2Shdsl1DayIntervalMoniSecs OBJECT-TYPE
++      SYNTAX       Hdsl2ShdslPerfTimeElapsed
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "The amount of time in the 1-day interval over which the
++         performance monitoring information is actually counted.
++         This value will be the same as the interval duration except
++         in a situation where performance monitoring data could not
++         be collected for any reason."
++      ::= { hdsl2Shdsl1DayIntervalEntry 2 }
++
++   hdsl2Shdsl1DayIntervalES OBJECT-TYPE
++      SYNTAX       Hdsl2Shdsl1DayIntervalCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Errored Seconds (ES) during the 1-day interval as
++         measured by hdsl2Shdsl1DayIntervalMoniSecs."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl1DayIntervalEntry 3 }
++
++   hdsl2Shdsl1DayIntervalSES OBJECT-TYPE
++      SYNTAX       Hdsl2Shdsl1DayIntervalCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Severely Errored Seconds (SES) during the 1-day
++         interval as measured by hdsl2Shdsl1DayIntervalMoniSecs."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl1DayIntervalEntry 4 }
++
++   hdsl2Shdsl1DayIntervalCRCanomalies OBJECT-TYPE
++      SYNTAX       Hdsl2Shdsl1DayIntervalCount
++      UNITS        "detected CRC Anomalies"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of CRC anomalies during the 1-day interval as
++         measured by hdsl2Shdsl1DayIntervalMoniSecs."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl1DayIntervalEntry 5 }
++
++   hdsl2Shdsl1DayIntervalLOSWS OBJECT-TYPE
++      SYNTAX       Hdsl2Shdsl1DayIntervalCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Loss of Sync Word (LOSW) Seconds during the 1-day
++         interval as measured by hdsl2Shdsl1DayIntervalMoniSecs."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl1DayIntervalEntry 6 }
++
++   hdsl2Shdsl1DayIntervalUAS OBJECT-TYPE
++      SYNTAX       Hdsl2Shdsl1DayIntervalCount
++      UNITS        "seconds"
++      MAX-ACCESS   read-only
++      STATUS       current
++      DESCRIPTION
++        "Count of Unavailable Seconds (UAS) during the 1-day interval
++         as measured by hdsl2Shdsl1DayIntervalMoniSecs."
++      REFERENCE   "HDSL2 Section 7.5.3.7; SHDSL Section 9.5.5.7"
++      ::= { hdsl2Shdsl1DayIntervalEntry 7 }
++
++   -- Maintenance Group
++   --
++
++   hdsl2ShdslEndpointMaintTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslEndpointMaintEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table supports maintenance operations (e.g., loopbacks)
++         to be performed on HDSL2/SHDSL segment endpoints.  This table
++         contains live data from equipment.  As such, it is NOT
++         persistent."
++      ::= { hdsl2ShdslMibObjects 8 }
++
++   hdsl2ShdslEndpointMaintEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslEndpointMaintEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslEndpointMaintTable.  Each entry
++         corresponds to a single segment endpoint and is indexed by the
++         ifIndex of the HDSL2/SHDSL line, the UnitId of the associated
++         unit, and the side of the unit."
++      INDEX { ifIndex, hdsl2ShdslInvIndex, hdsl2ShdslEndpointSide }
++      ::= { hdsl2ShdslEndpointMaintTable 1 }
++
++   Hdsl2ShdslEndpointMaintEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslMaintLoopbackConfig      INTEGER,
++      hdsl2ShdslMaintTipRingReversal     INTEGER,
++      hdsl2ShdslMaintPowerBackOff        INTEGER,
++      hdsl2ShdslMaintSoftRestart         INTEGER
++      }
++
++   hdsl2ShdslMaintLoopbackConfig OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  noLoopback(1),
++                  normalLoopback(2),
++                  specialLoopback(3)
++                  }
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object controls configuration of loopbacks for the
++         associated segment endpoint.  The status of the loopback
++         is obtained via the hdsl2ShdslEndpointCurrStatus object."
++      ::= { hdsl2ShdslEndpointMaintEntry 1 }
++
++   hdsl2ShdslMaintTipRingReversal OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  normal(1),
++                  reversed(2)
++                  }
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "This object indicates the state of the tip/ring pair at the
++         associated segment endpoint."
++      ::= { hdsl2ShdslEndpointMaintEntry 2 }
++
++   hdsl2ShdslMaintPowerBackOff OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  default(1),
++                  enhanced(2)
++                  }
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object configures the receiver at the associated
++         segment endpoint to operate in default or enhanced power
++         backoff mode."
++      ::= { hdsl2ShdslEndpointMaintEntry 3 }
++
++   hdsl2ShdslMaintSoftRestart OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  ready(1),
++                  restart(2)
++                  }
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object enables the manager to trigger a soft restart
++         of the modem at the associated segment endpoint.  The
++         manager may only set this object to the 'restart(2)'
++         value, which initiates a restart.  The agent will perform a
++         restart after approximately 5 seconds.  Following the 5 second
++         period, the agent will restore the object to the 'ready(1)'
++         state."
++      ::= { hdsl2ShdslEndpointMaintEntry 4 }
++
++   hdsl2ShdslUnitMaintTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslUnitMaintEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table supports maintenance operations for units in a
++         HDSL2/SHDSL line.  Entries in this table MUST be maintained
++         in a persistent manner."
++      ::= { hdsl2ShdslMibObjects 9 }
++
++   hdsl2ShdslUnitMaintEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslUnitMaintEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "An entry in the hdsl2ShdslUnitMaintTable.  Each entry
++         corresponds to a single unit and is indexed by the
++         ifIndex of the HDSL2/SHDSL line and the UnitId of the
++         associated unit."
++      INDEX { ifIndex, hdsl2ShdslInvIndex  }
++      ::= { hdsl2ShdslUnitMaintTable 1 }
++
++   Hdsl2ShdslUnitMaintEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslMaintLoopbackTimeout     Integer32,
++      hdsl2ShdslMaintUnitPowerSource     INTEGER
++      }
++
++   hdsl2ShdslMaintLoopbackTimeout OBJECT-TYPE
++      SYNTAX      Integer32(0..4095)
++      UNITS       "minutes"
++      MAX-ACCESS  read-write
++      STATUS      current
++      DESCRIPTION
++        "This object configures the timeout value for loopbacks
++         initiated at segments endpoints contained in the associated
++         unit.  A value of 0 disables the timeout."
++      ::= { hdsl2ShdslUnitMaintEntry 1 }
++
++   hdsl2ShdslMaintUnitPowerSource OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  local(1),
++                  span(2)
++                  }
++      MAX-ACCESS  read-only
++      STATUS      current
++      DESCRIPTION
++        "This object indicates the DC power source being used by the
++         associated unit."
++      ::= { hdsl2ShdslUnitMaintEntry 2 }
++
++   -- Span Configuration Profile Group
++   --
++
++   hdsl2ShdslSpanConfProfileTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslSpanConfProfileEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table supports definitions of span configuration
++         profiles for SHDSL lines.  HDSL2 does not support these
++         configuration options.  This table MUST be maintained
++         in a persistent manner."
++      ::= { hdsl2ShdslMibObjects 10 }
++
++   hdsl2ShdslSpanConfProfileEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslSpanConfProfileEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "Each entry corresponds to a single span configuration
++         profile.  Each profile contains a set of span configuration
++         parameters.  The configuration parameters in a profile are
++         applied to those lines referencing that profile (see the
++         hdsl2ShdslSpanConfProfile object).  Profiles may be
++         created/deleted using the row creation/deletion mechanism
++         via hdsl2ShdslSpanConfProfileRowStatus.  If an active
++         entry is referenced in hdsl2ShdslSpanConfProfile, the
++         entry MUST remain active until all references are removed."
++      INDEX { IMPLIED hdsl2ShdslSpanConfProfileName }
++      ::= { hdsl2ShdslSpanConfProfileTable 1 }
++
++   Hdsl2ShdslSpanConfProfileEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslSpanConfProfileName               SnmpAdminString,
++      hdsl2ShdslSpanConfWireInterface             INTEGER,
++      hdsl2ShdslSpanConfMinLineRate               Unsigned32,
++      hdsl2ShdslSpanConfMaxLineRate               Unsigned32,
++      hdsl2ShdslSpanConfPSD                       INTEGER,
++      hdsl2ShdslSpanConfTransmissionMode
++                              Hdsl2ShdslTransmissionModeType,
++      hdsl2ShdslSpanConfRemoteEnabled             INTEGER,
++      hdsl2ShdslSpanConfPowerFeeding              INTEGER,
++      hdsl2ShdslSpanConfCurrCondTargetMarginDown  Integer32,
++      hdsl2ShdslSpanConfWorstCaseTargetMarginDown Integer32,
++      hdsl2ShdslSpanConfCurrCondTargetMarginUp    Integer32,
++      hdsl2ShdslSpanConfWorstCaseTargetMarginUp   Integer32,
++      hdsl2ShdslSpanConfUsedTargetMargins         BITS,
++      hdsl2ShdslSpanConfReferenceClock
++                                Hdsl2ShdslClockReferenceType,
++      hdsl2ShdslSpanConfLineProbeEnable           INTEGER,
++      hdsl2ShdslSpanConfProfileRowStatus          RowStatus
++      }
++
++   hdsl2ShdslSpanConfProfileName OBJECT-TYPE
++      SYNTAX      SnmpAdminString (SIZE(1..32))
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This object is the unique index associated with this profile.
++         Entries in this table are referenced via the object
++         hdsl2ShdslSpanConfProfile in Hdsl2ShdslSpanConfEntry."
++      ::= { hdsl2ShdslSpanConfProfileEntry 1 }
++
++   hdsl2ShdslSpanConfWireInterface OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  twoWire(1),
++                  fourWire(2),
++                  sixWire(3),
++                  eightWire(4)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the two-wire or optional four-wire,
++         six-wire, or eight-wire operation for SHDSL lines."
++      DEFVAL      { twoWire }
++      ::= { hdsl2ShdslSpanConfProfileEntry 2 }
++
++   hdsl2ShdslSpanConfMinLineRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the minimum transmission rate for
++         the associated SHDSL Line in bits-per-second (bps) and includes
++         both payload (user data) and any applicable framing overhead.
++         If the minimum line rate equals the maximum line rate
++         (hdsl2ShdslSpanMaxLineRate), the line rate is considered
++         'fixed'.  If the minimum line rate is less than the
++         maximum line rate, the line rate is considered
++         'rate-adaptive'."
++      DEFVAL      { 1552000 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 3 }
++
++   hdsl2ShdslSpanConfMaxLineRate OBJECT-TYPE
++      SYNTAX      Unsigned32(0..4294967295)
++      UNITS       "bps"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the maximum transmission rate for
++         the associated SHDSL Line in bits-per-second (bps) and includes
++         both payload (user data) and any applicable framing overhead.
++         If the minimum line rate equals the maximum line rate
++         (hdsl2ShdslSpanMaxLineRate), the line rate is considered
++         'fixed'.  If the minimum line rate is less than the
++         maximum line rate, the line rate is considered
++         'rate-adaptive'."
++      DEFVAL      { 1552000 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 4 }
++
++   hdsl2ShdslSpanConfPSD OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  symmetric(1),
++                  asymmetric(2)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures use of symmetric/asymmetric PSD (Power
++         Spectral Density) Mask for the associated SHDSL Line.  Support
++         for symmetric PSD is mandatory for all supported data rates.
++         Support for asymmetric PSD is optional."
++      DEFVAL      { symmetric }
++      ::= { hdsl2ShdslSpanConfProfileEntry 5 }
++
++   hdsl2ShdslSpanConfTransmissionMode OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslTransmissionModeType
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object specifies the regional setting for the SHDSL
++         line."
++      DEFVAL      { { region1 } }
++      ::= { hdsl2ShdslSpanConfProfileEntry 6 }
++
++   hdsl2ShdslSpanConfRemoteEnabled OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  enabled(1),
++                  disabled(2)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object enables/disables support for remote management
++         of the units in an SHDSL line from the STU-R via the EOC."
++
++      DEFVAL      { enabled }
++      ::= { hdsl2ShdslSpanConfProfileEntry 7 }
++
++   hdsl2ShdslSpanConfPowerFeeding OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  noPower(1),
++                  powerFeed(2),
++                  wettingCurrent(3)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object enables/disables support for optional power
++         feeding in an SHDSL line."
++      DEFVAL      { noPower }
++      ::= { hdsl2ShdslSpanConfProfileEntry 8 }
++
++   hdsl2ShdslSpanConfCurrCondTargetMarginDown OBJECT-TYPE
++      SYNTAX      Integer32(-10..21)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object specifies the downstream current condition target
++         SNR margin for an SHDSL line.  The SNR margin is the difference
++         between the desired SNR and the actual SNR.  Target SNR margin
++         is the desired SNR margin for a unit."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 9 }
++
++   hdsl2ShdslSpanConfWorstCaseTargetMarginDown OBJECT-TYPE
++      SYNTAX      Integer32(-10..21)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object specifies the downstream worst-case target SNR
++         margin for an SHDSL line.  The SNR margin is the difference
++         between the desired SNR and the actual SNR.  Target SNR
++         margin is the desired SNR margin for a unit."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 10 }
++
++   hdsl2ShdslSpanConfCurrCondTargetMarginUp OBJECT-TYPE
++      SYNTAX      Integer32(-10..21)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object specifies the upstream current-condition target
++         SNR margin for an SHDSL line.  The SNR margin is the difference
++         between the desired SNR and the actual SNR.  Target SNR margin
++         is the desired SNR margin for a unit."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 11 }
++
++   hdsl2ShdslSpanConfWorstCaseTargetMarginUp OBJECT-TYPE
++      SYNTAX      Integer32(-10..21)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object specifies the upstream worst-case target SNR
++         margin for an SHDSL line.  The SNR margin is the difference
++         between the desired SNR and the actual SNR.  Target SNR margin
++         is the desired SNR margin for a unit."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslSpanConfProfileEntry 12 }
++
++   hdsl2ShdslSpanConfUsedTargetMargins OBJECT-TYPE
++      SYNTAX      BITS
++                  {
++                  currCondDown(0),
++                  worstCaseDown(1),
++                  currCondUp(2),
++                  worstCaseUp(3)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "Indicates whether a target SNR margin is enabled or
++         disabled.  This is a bit-map of possible settings.  The
++         various bit positions are as follows:
++
++         currCondDown   - current-condition downstream target SNR
++                          margin enabled
++
++         worstCaseDown  - worst-case downstream target SNR margin
++                          enabled
++
++         currCondUp     - current-condition upstream target SNR
++                          margin enabled
++
++         worstCaseUp    - worst-case upstream target SNR margin
++                          enabled."
++
++      DEFVAL      { { currCondDown } }
++      ::= { hdsl2ShdslSpanConfProfileEntry 13 }
++
++   hdsl2ShdslSpanConfReferenceClock OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslClockReferenceType
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the clock reference for the STU-C
++         in an SHDSL Line."
++      DEFVAL      { localClk }
++      ::= { hdsl2ShdslSpanConfProfileEntry 14 }
++
++   hdsl2ShdslSpanConfLineProbeEnable OBJECT-TYPE
++      SYNTAX      INTEGER
++                  {
++                  disable(1),
++                  enable(2)
++                  }
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object enables/disables support for Line Probe of
++         the units in an SHDSL line.  When Line Probe is enabled, the
++         system performs Line Probing to find the best possible
++         rate.  If Line Probe is disabled, the rate adaptation phase
++         is skipped to shorten set up time."
++      DEFVAL      { disable }
++      ::= { hdsl2ShdslSpanConfProfileEntry 15 }
++
++   hdsl2ShdslSpanConfProfileRowStatus OBJECT-TYPE
++      SYNTAX      RowStatus
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object controls creation/deletion of the associated
++         entry in this table per the semantics of RowStatus.  If an
++         active entry is referenced in hdsl2ShdslSpanConfProfile, the
++         entry MUST remain active until all references are removed."
++      ::= { hdsl2ShdslSpanConfProfileEntry 16 }
++
++   -- Segment Endpoint Alarm Configuration Profile group
++   --
++
++   hdsl2ShdslEndpointAlarmConfProfileTable OBJECT-TYPE
++      SYNTAX      SEQUENCE OF Hdsl2ShdslEndpointAlarmConfProfileEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This table supports definitions of alarm configuration
++         profiles for HDSL2/SHDSL segment endpoints.  This table
++         MUST be maintained in a persistent manner."
++      ::= { hdsl2ShdslMibObjects 11 }
++
++   hdsl2ShdslEndpointAlarmConfProfileEntry OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslEndpointAlarmConfProfileEntry
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "Each entry corresponds to a single alarm configuration profile.
++         Each profile contains a set of parameters for setting alarm
++         thresholds for various performance attributes monitored at
++         HDSL2/SHDSL segment endpoints.  Profiles may be created/deleted
++         using the row creation/deletion mechanism via
++         hdsl2ShdslEndpointAlarmConfProfileRowStatus.  If an active
++         entry is referenced in either hdsl2ShdslSpanConfAlarmProfile
++         or hdsl2ShdslEndpointAlarmConfProfile, the entry MUST remain
++         active until all references are removed."
++      INDEX { IMPLIED hdsl2ShdslEndpointAlarmConfProfileName }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileTable 1 }
++
++   Hdsl2ShdslEndpointAlarmConfProfileEntry ::=
++      SEQUENCE
++      {
++      hdsl2ShdslEndpointAlarmConfProfileName       SnmpAdminString,
++      hdsl2ShdslEndpointThreshLoopAttenuation      Integer32,
++      hdsl2ShdslEndpointThreshSNRMargin            Integer32,
++      hdsl2ShdslEndpointThreshES
++                                   Hdsl2ShdslPerfIntervalThreshold,
++      hdsl2ShdslEndpointThreshSES
++                                   Hdsl2ShdslPerfIntervalThreshold,
++      hdsl2ShdslEndpointThreshCRCanomalies         Integer32,
++      hdsl2ShdslEndpointThreshLOSWS
++                                   Hdsl2ShdslPerfIntervalThreshold,
++      hdsl2ShdslEndpointThreshUAS
++                                   Hdsl2ShdslPerfIntervalThreshold,
++      hdsl2ShdslEndpointAlarmConfProfileRowStatus  RowStatus
++      }
++
++   hdsl2ShdslEndpointAlarmConfProfileName OBJECT-TYPE
++      SYNTAX      SnmpAdminString (SIZE(1..32))
++      MAX-ACCESS  not-accessible
++      STATUS      current
++      DESCRIPTION
++        "This object is the unique index associated with this profile."
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 1 }
++
++   hdsl2ShdslEndpointThreshLoopAttenuation OBJECT-TYPE
++      SYNTAX      Integer32(-127..128)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the loop attenuation alarm threshold.
++         When the current value of hdsl2ShdslEndpointCurrAtn reaches
++         or exceeds this threshold, an hdsl2ShdslLoopAttenCrossing
++         MAY be generated."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 2 }
++
++   hdsl2ShdslEndpointThreshSNRMargin OBJECT-TYPE
++      SYNTAX      Integer32(-127..128)
++      UNITS       "dB"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the SNR margin alarm threshold.
++         When the current value of hdsl2ShdslEndpointCurrSnrMgn
++         reaches or drops below this threshold, a
++         hdsl2ShdslSNRMarginCrossing MAY be generated."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 3 }
++
++   hdsl2ShdslEndpointThreshES OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslPerfIntervalThreshold
++      UNITS       "seconds"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the threshold for the number of
++         Errored Seconds (ES) within any given 15-minute performance
++         data collection interval.  If the value of Errored Seconds
++         in a particular 15-minute collection interval reaches/
++         exceeds this value, an hdsl2ShdslPerfESThresh MAY be
++         generated.  At most, one notification will be sent per
++         interval per endpoint."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 4 }
++
++   hdsl2ShdslEndpointThreshSES OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslPerfIntervalThreshold
++      UNITS       "seconds"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the threshold for the number of
++         Severely Errored Seconds (SES) within any given 15-minute
++         performance data collection interval.  If the value of
++         Severely Errored Seconds in a particular 15-minute collection
++         interval reaches/exceeds this value, an hdsl2ShdslPerfSESThresh
++         MAY be generated.  At most, one notification will be sent per
++         interval per endpoint."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 5 }
++
++   hdsl2ShdslEndpointThreshCRCanomalies OBJECT-TYPE
++      SYNTAX      Integer32
++      UNITS       "detected CRC Anomalies"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the threshold for the number of
++         CRC anomalies within any given 15-minute performance data
++         collection interval.  If the value of CRC anomalies in a
++         particular 15-minute collection interval reaches/exceeds
++         this value, an hdsl2ShdslPerfCRCanomaliesThresh MAY be
++         generated.  At most, one notification will be sent per
++         interval per endpoint."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 6 }
++
++   hdsl2ShdslEndpointThreshLOSWS OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslPerfIntervalThreshold
++      UNITS       "seconds"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the threshold for the number of
++         Loss of Sync Word (LOSW) Seconds within any given 15-minute
++         performance data collection interval.  If the value of LOSW
++         in a particular 15-minute collection interval reaches/exceeds
++         this value, an hdsl2ShdslPerfLOSWSThresh MAY be generated.
++         At most, one notification will be sent per interval per
++         endpoint."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 7 }
++
++   hdsl2ShdslEndpointThreshUAS OBJECT-TYPE
++      SYNTAX      Hdsl2ShdslPerfIntervalThreshold
++      UNITS       "seconds"
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object configures the threshold for the number of
++         Unavailable Seconds (UAS) within any given 15-minute
++         performance data collection interval.  If the value of UAS
++         in a particular 15-minute collection interval reaches/exceeds
++         this value, an hdsl2ShdslPerfUASThresh MAY be generated.
++         At most, one notification will be sent per interval per
++         endpoint."
++      DEFVAL      { 0 }
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 8 }
++
++   hdsl2ShdslEndpointAlarmConfProfileRowStatus OBJECT-TYPE
++      SYNTAX      RowStatus
++      MAX-ACCESS  read-create
++      STATUS      current
++      DESCRIPTION
++        "This object controls creation/deletion of the associated
++         entry in this table as per the semantics of RowStatus.
++         If an active entry is referenced in either
++         hdsl2ShdslSpanConfAlarmProfile or
++         hdsl2ShdslEndpointAlarmConfProfile, the entry MUST remain
++         active until all references are removed."
++      ::= { hdsl2ShdslEndpointAlarmConfProfileEntry 9 }
++
++   -- Notifications Group
++   --
++
++   hdsl2ShdslNotifications OBJECT IDENTIFIER ::= { hdsl2ShdslMIB 0 }
++
++   hdsl2ShdslLoopAttenCrossing NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrAtn,
++      hdsl2ShdslEndpointThreshLoopAttenuation
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the loop attenuation
++         threshold (as per the hdsl2ShdslEndpointThreshLoopAttenuation
++         value) has been reached/exceeded for the HDSL2/SHDSL segment
++         endpoint."
++      ::= { hdsl2ShdslNotifications 1 }
++
++   hdsl2ShdslSNRMarginCrossing NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrSnrMgn,
++      hdsl2ShdslEndpointThreshSNRMargin
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the SNR margin threshold (as
++         per the hdsl2ShdslEndpointThreshSNRMargin value) has been
++         reached/exceeded for the HDSL2/SHDSL segment endpoint."
++      ::= { hdsl2ShdslNotifications 2 }
++
++   hdsl2ShdslPerfESThresh NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurr15MinES,
++      hdsl2ShdslEndpointThreshES
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the errored seconds
++         threshold (as per the hdsl2ShdslEndpointThreshES value)
++         has been reached/exceeded for the HDSL2/SHDSL segment
++         endpoint."
++      ::= { hdsl2ShdslNotifications 3 }
++
++   hdsl2ShdslPerfSESThresh NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurr15MinSES,
++      hdsl2ShdslEndpointThreshSES
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the severely errored seconds
++         threshold (as per the hdsl2ShdslEndpointThreshSES value) has
++         been reached/exceeded for the HDSL2/SHDSL segment endpoint."
++      ::= { hdsl2ShdslNotifications 4 }
++
++   hdsl2ShdslPerfCRCanomaliesThresh NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurr15MinCRCanomalies,
++      hdsl2ShdslEndpointThreshCRCanomalies
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the CRC anomalies threshold
++         (as per the hdsl2ShdslEndpointThreshCRCanomalies value) has
++         been reached/exceeded for the HDSL2/SHDSL segment endpoint."
++      ::= { hdsl2ShdslNotifications 5 }
++
++   hdsl2ShdslPerfLOSWSThresh NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurr15MinLOSWS,
++      hdsl2ShdslEndpointThreshLOSWS
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the LOSW Seconds threshold
++         (as per the hdsl2ShdslEndpointThreshLOSWS value) has been
++         reached/exceeded for the HDSL2/SHDSL segment endpoint."
++      ::= { hdsl2ShdslNotifications 6 }
++
++   hdsl2ShdslPerfUASThresh NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurr15MinUAS,
++      hdsl2ShdslEndpointThreshUAS
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that the unavailable seconds
++         threshold (as per the hdsl2ShdslEndpointThreshUAS value) has
++         been reached/exceeded for the HDSL2/SHDSL segment endpoint."
++      ::= { hdsl2ShdslNotifications 7 }
++
++   hdsl2ShdslSpanInvalidNumRepeaters NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslSpanConfNumRepeaters
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that a mismatch has been detected
++         between the number of repeater/regenerator units configured
++         for an HDSL2/SHDSL line via the hdsl2ShdslSpanConfNumRepeaters
++         object and the actual number of repeater/regenerator units
++         discovered via the EOC."
++      ::= { hdsl2ShdslNotifications 8 }
++
++   hdsl2ShdslLoopbackFailure NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslMaintLoopbackConfig
++      }
++      STATUS     current
++      DESCRIPTION
++        "This notification indicates that an endpoint maintenance
++         loopback command failed for an HDSL2/SHDSL segment."
++      ::= { hdsl2ShdslNotifications 9 }
++
++   hdsl2ShdslpowerBackoff NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         powerBackoff in the hdsl2ShdslEndpointCurrStatus object for
++         this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 10 }
++
++   hdsl2ShdsldeviceFault NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         deviceFault in the hdsl2ShdslEndpointCurrStatus object for
++         this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 11 }
++
++   hdsl2ShdsldcContinuityFault NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         dcContinuityFault in the hdsl2ShdslEndpointCurrStatus object
++         for this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 12 }
++
++   hdsl2ShdslconfigInitFailure NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         configInitFailure in the hdsl2ShdslEndpointCurrStatus object
++         for this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 13 }
++
++   hdsl2ShdslprotocolInitFailure NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         protocolInitFailure in the hdsl2ShdslEndpointCurrStatus
++         object for this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 14 }
++
++   hdsl2ShdslnoNeighborPresent NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrStatus
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates that the bit setting for
++         noNeighborPresent in the hdsl2ShdslEndpointCurrStatus object
++         for this endpoint has changed."
++      ::= { hdsl2ShdslNotifications 15 }
++
++   hdsl2ShdslLocalPowerLoss NOTIFICATION-TYPE
++      OBJECTS
++      {
++      hdsl2ShdslInvVendorID
++      }
++      STATUS    current
++      DESCRIPTION
++        "This notification indicates impending unit failure due to
++         loss of local power (last gasp)."
++      ::= { hdsl2ShdslNotifications 16 }
++
++   -- conformance information
++   --
++
++   hdsl2ShdslConformance OBJECT IDENTIFIER ::= { hdsl2ShdslMIB 3 }
++   hdsl2ShdslGroups      OBJECT IDENTIFIER ::=
++                { hdsl2ShdslConformance 1 }
++   hdsl2ShdslCompliances OBJECT IDENTIFIER ::=
++                { hdsl2ShdslConformance 2 }
++
++   -- agent compliance statements
++   hdsl2ShdslLineMibCompliance MODULE-COMPLIANCE
++      STATUS  deprecated
++      DESCRIPTION
++        "The compliance statement for SNMP entities that implement
++        HDSL2 and SHDSL.  The version of SHDSL supported in this
++        compliance statement is g.shdsl.
++
++        **** This compliance statement is deprecated. ****"
++      MODULE
++      MANDATORY-GROUPS
++      {
++      hdsl2ShdslSpanConfGroup,
++      hdsl2ShdslSpanStatusGroup,
++      hdsl2ShdslInventoryGroup,
++      hdsl2ShdslEndpointConfGroup,
++      hdsl2ShdslEndpointCurrGroup,
++      hdsl2Shdsl15MinIntervalGroup,
++      hdsl2Shdsl1DayIntervalGroup,
++      hdsl2ShdslMaintenanceGroup,
++      hdsl2ShdslEndpointAlarmConfGroup,
++      hdsl2ShdslNotificationGroup
++      }
++
++   GROUP  hdsl2ShdslInventoryShdslGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP  hdsl2ShdslSpanShdslStatusGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP  hdsl2ShdslSpanConfProfileGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   OBJECT hdsl2ShdslSpanConfWireInterface
++      SYNTAX      INTEGER
++                  {
++                  twoWire(1),
++                  fourWire(2)
++                  }
++      DESCRIPTION
++        "An implementation only has to support the range as
++        applicable for the original g.shdsl specification defined
++        in RFC 3276."
++
++   OBJECT hdsl2ShdslStatusMaxAttainableLineRate
++      SYNTAX      Unsigned32(0..4112000)
++      DESCRIPTION
++        "An implementation only has to support the range as
++        applicable for the original g.shdsl specification defined
++        in RFC 3276."
++
++   OBJECT hdsl2ShdslStatusActualLineRate
++      SYNTAX      Unsigned32(0..4112000)
++      DESCRIPTION
++        "An implementation only has to support the range as
++        applicable for the original g.shdsl specification defined
++        in RFC 3276."
++
++   OBJECT hdsl2ShdslSpanConfMinLineRate
++      SYNTAX      Unsigned32(0..4112000)
++      DESCRIPTION
++        "An implementation only has to support the range as
++        applicable for the original g.shdsl specification defined
++        in RFC 3276."
++
++   OBJECT hdsl2ShdslSpanConfMaxLineRate
++      SYNTAX      Unsigned32(0..4112000)
++      DESCRIPTION
++        "An implementation only has to support the range as
++        applicable for the original g.shdsl specification defined
++        in RFC 3276."
++
++      ::= { hdsl2ShdslCompliances 1 }
++
++   hdsl2GshdslbisLineMibCompliance MODULE-COMPLIANCE
++      STATUS  current
++      DESCRIPTION
++        "The compliance statement for SNMP entities that implement
++        HDSL2 and SHDSL.  The version of SHDSL supported in this
++        compliance statement is g.shdsl.bis."
++      MODULE
++      MANDATORY-GROUPS
++      {
++      hdsl2ShdslSpanConfGroup,
++      hdsl2ShdslSpanStatusGroup,
++      hdsl2ShdslInventoryGroup,
++      hdsl2ShdslEndpointConfGroup,
++      hdsl2ShdslEndpointCurrGroup,
++      hdsl2Shdsl15MinIntervalGroup,
++      hdsl2Shdsl1DayIntervalGroup,
++      hdsl2ShdslMaintenanceGroup,
++      hdsl2ShdslEndpointAlarmConfGroup,
++      hdsl2ShdslNotificationGroup
++      }
++
++   GROUP  hdsl2ShdslInventoryShdslGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP  hdsl2ShdslSpanShdslStatusGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP  hdsl2ShdslSpanConfProfileGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP hdsl2ShdslWirePairGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++   GROUP hdsl2ShdslPayloadRateGroup
++      DESCRIPTION
++        "Support for this group is only required for implementations
++        supporting SHDSL lines."
++
++      ::= { hdsl2ShdslCompliances 2 }
++
++   -- units of conformance
++   --
++
++   hdsl2ShdslSpanConfGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslSpanConfNumRepeaters,
++      hdsl2ShdslSpanConfProfile,
++      hdsl2ShdslSpanConfAlarmProfile
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for configuring span-related
++         parameters for HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 1 }
++
++   hdsl2ShdslSpanStatusGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslStatusNumAvailRepeaters
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for retrieving span-related
++         status for HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 2 }
++
++   hdsl2ShdslInventoryShdslGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslInvTransmissionModeCapability
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for retrieving SHDSL-specific
++         inventory information."
++      ::= { hdsl2ShdslGroups 3 }
++
++   hdsl2ShdslSpanShdslStatusGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslStatusMaxAttainableLineRate,
++      hdsl2ShdslStatusActualLineRate,
++      hdsl2ShdslStatusTransmissionModeCurrent
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for retrieving SHDSL-specific
++         span-related status."
++      ::= { hdsl2ShdslGroups 4 }
++
++   hdsl2ShdslInventoryGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslInvVendorID,
++      hdsl2ShdslInvVendorModelNumber,
++      hdsl2ShdslInvVendorSerialNumber,
++      hdsl2ShdslInvVendorEOCSoftwareVersion,
++      hdsl2ShdslInvStandardVersion,
++      hdsl2ShdslInvVendorListNumber,
++      hdsl2ShdslInvVendorIssueNumber,
++      hdsl2ShdslInvVendorSoftwareVersion,
++      hdsl2ShdslInvEquipmentCode,
++      hdsl2ShdslInvVendorOther
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that provide unit inventory
++         information about the units in HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 5 }
++
++   hdsl2ShdslEndpointConfGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrAtn
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for configuring parameters for
++         segment endpoints in HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 6 }
++
++   hdsl2ShdslEndpointCurrGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrAtn,
++      hdsl2ShdslEndpointCurrSnrMgn,
++      hdsl2ShdslEndpointCurrStatus,
++      hdsl2ShdslEndpointES,
++      hdsl2ShdslEndpointSES,
++      hdsl2ShdslEndpointCRCanomalies,
++      hdsl2ShdslEndpointLOSWS,
++      hdsl2ShdslEndpointUAS,
++      hdsl2ShdslEndpointCurr15MinTimeElapsed,
++      hdsl2ShdslEndpointCurr15MinES,
++      hdsl2ShdslEndpointCurr15MinSES,
++      hdsl2ShdslEndpointCurr15MinCRCanomalies,
++      hdsl2ShdslEndpointCurr15MinLOSWS,
++      hdsl2ShdslEndpointCurr15MinUAS,
++      hdsl2ShdslEndpointCurr1DayTimeElapsed,
++      hdsl2ShdslEndpointCurr1DayES,
++      hdsl2ShdslEndpointCurr1DaySES,
++      hdsl2ShdslEndpointCurr1DayCRCanomalies,
++      hdsl2ShdslEndpointCurr1DayLOSWS,
++      hdsl2ShdslEndpointCurr1DayUAS
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that provide current status and
++         performance measurements relating to segment endpoints in
++         HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 7 }
++
++   hdsl2Shdsl15MinIntervalGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2Shdsl15MinIntervalES,
++      hdsl2Shdsl15MinIntervalSES,
++      hdsl2Shdsl15MinIntervalCRCanomalies,
++      hdsl2Shdsl15MinIntervalLOSWS,
++      hdsl2Shdsl15MinIntervalUAS
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that maintain historic
++         performance measurements relating to segment endpoints in
++         HDSL2/SHDSL lines in 15-minute intervals."
++      ::= { hdsl2ShdslGroups 8 }
++
++   hdsl2Shdsl1DayIntervalGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2Shdsl1DayIntervalMoniSecs,
++      hdsl2Shdsl1DayIntervalES,
++      hdsl2Shdsl1DayIntervalSES,
++      hdsl2Shdsl1DayIntervalCRCanomalies,
++      hdsl2Shdsl1DayIntervalLOSWS,
++      hdsl2Shdsl1DayIntervalUAS
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that maintain historic
++         performance measurements relating to segment endpoints in
++         HDSL2/SHDSL lines in 1-day intervals."
++      ::= { hdsl2ShdslGroups 9 }
++
++   hdsl2ShdslMaintenanceGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslMaintLoopbackConfig,
++      hdsl2ShdslMaintTipRingReversal,
++      hdsl2ShdslMaintPowerBackOff,
++      hdsl2ShdslMaintSoftRestart,
++      hdsl2ShdslMaintLoopbackTimeout,
++      hdsl2ShdslMaintUnitPowerSource
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that provide support for
++         maintenance actions for HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 10 }
++
++   hdsl2ShdslEndpointAlarmConfGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslEndpointAlarmConfProfile,
++      hdsl2ShdslEndpointThreshLoopAttenuation,
++      hdsl2ShdslEndpointThreshSNRMargin,
++      hdsl2ShdslEndpointThreshES,
++      hdsl2ShdslEndpointThreshSES,
++      hdsl2ShdslEndpointThreshCRCanomalies,
++      hdsl2ShdslEndpointThreshLOSWS,
++      hdsl2ShdslEndpointThreshUAS,
++      hdsl2ShdslEndpointAlarmConfProfileRowStatus
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that allow configuration of alarm
++         thresholds for various performance parameters for HDSL2/SHDSL
++         lines."
++      ::= { hdsl2ShdslGroups 11 }
++
++   hdsl2ShdslNotificationGroup NOTIFICATION-GROUP
++      NOTIFICATIONS
++      {
++      hdsl2ShdslLoopAttenCrossing,
++      hdsl2ShdslSNRMarginCrossing,
++      hdsl2ShdslPerfESThresh,
++      hdsl2ShdslPerfSESThresh,
++      hdsl2ShdslPerfCRCanomaliesThresh,
++      hdsl2ShdslPerfLOSWSThresh,
++      hdsl2ShdslPerfUASThresh,
++      hdsl2ShdslSpanInvalidNumRepeaters,
++      hdsl2ShdslLoopbackFailure,
++      hdsl2ShdslpowerBackoff,
++      hdsl2ShdsldeviceFault,
++      hdsl2ShdsldcContinuityFault,
++      hdsl2ShdslconfigInitFailure,
++      hdsl2ShdslprotocolInitFailure,
++      hdsl2ShdslnoNeighborPresent,
++      hdsl2ShdslLocalPowerLoss
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports notifications of significant conditions
++         associated with HDSL2/SHDSL lines."
++      ::= { hdsl2ShdslGroups 12 }
++
++   hdsl2ShdslSpanConfProfileGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslSpanConfWireInterface,
++      hdsl2ShdslSpanConfMinLineRate,
++      hdsl2ShdslSpanConfMaxLineRate,
++      hdsl2ShdslSpanConfPSD,
++      hdsl2ShdslSpanConfTransmissionMode,
++      hdsl2ShdslSpanConfRemoteEnabled,
++      hdsl2ShdslSpanConfPowerFeeding,
++      hdsl2ShdslSpanConfCurrCondTargetMarginDown,
++      hdsl2ShdslSpanConfWorstCaseTargetMarginDown,
++      hdsl2ShdslSpanConfCurrCondTargetMarginUp,
++      hdsl2ShdslSpanConfWorstCaseTargetMarginUp,
++      hdsl2ShdslSpanConfUsedTargetMargins,
++      hdsl2ShdslSpanConfReferenceClock,
++      hdsl2ShdslSpanConfLineProbeEnable,
++      hdsl2ShdslSpanConfProfileRowStatus
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that constitute configuration
++         profiles for configuring span-related parameters in SHDSL
++         lines."
++      ::= { hdsl2ShdslGroups 13 }
++
++   hdsl2ShdslWirePairGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslEndpointCurrTipRingReversal,
++      hdsl2ShdslEndpointCurrActivationState
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects that provide the status
++         of SHDSL-specific wire pairs."
++      ::= { hdsl2ShdslGroups 14 }
++
++   hdsl2ShdslPayloadRateGroup OBJECT-GROUP
++      OBJECTS
++      {
++      hdsl2ShdslStatusMaxAttainablePayloadRate,
++      hdsl2ShdslStatusActualPayloadRate
++      }
++      STATUS      current
++      DESCRIPTION
++        "This group supports objects for retrieving payload rates
++         that exclude any framing overhead."
++      ::= { hdsl2ShdslGroups 15 }
++
++   END
++
++-- 
++--    Copyright (C) The Internet Society (2005).
++-- 
++--    This document is subject to the rights, licenses and restrictions
++--    contained in BCP 78, and except as set forth therein, the authors
++--    retain all their rights.
++-- 
++--    This document and the information contained herein are provided on an
++--    "AS IS" basis and THE CONTRIBUTOR, THE ORGANIZATION HE/SHE REPRESENTS
++--    OR IS SPONSORED BY (IF ANY), THE INTERNET SOCIETY AND THE INTERNET
++--    ENGINEERING TASK FORCE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED,
++--    INCLUDING BUT NOT LIMITED TO ANY WARRANTY THAT THE USE OF THE
++--    INFORMATION HEREIN WILL NOT INFRINGE ANY RIGHTS OR ANY IMPLIED
++--    WARRANTIES OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
++-- 
++-- Intellectual Property
++-- 
++--    The IETF takes no position regarding the validity or scope of any
++--    Intellectual Property Rights or other rights that might be claimed to
++--    pertain to the implementation or use of the technology described in
++--    this document or the extent to which any license under such rights
++--    might or might not be available; nor does it represent that it has
++--    made any independent effort to identify any such rights.  Information
++--    on the procedures with respect to rights in RFC documents can be
++--    found in BCP 78 and BCP 79.
++-- 
++--    Copies of IPR disclosures made to the IETF Secretariat and any
++--    assurances of licenses to be made available, or the result of an
++--    attempt made to obtain a general license or permission for the use of
++--    such proprietary rights by implementers or users of this
++--    specification can be obtained from the IETF on-line IPR repository at
++--    http://www.ietf.org/ipr.
++-- 
++--    The IETF invites any interested party to bring to its attention any
++--    copyrights, patents or patent applications, or other proprietary
++--    rights that may cover technology that may be required to implement
++--    this standard.  Please address the information to the IETF at ietf-
++--    ipr@ietf.org.
++-- 
++
+diff -Naur net-snmp-5.1.2-old/mibs/Makefile.in net-snmp-5.1.2/mibs/Makefile.in
+--- net-snmp-5.1.2-old/mibs/Makefile.in	2004-06-18 18:11:15.000000000 +0000
++++ net-snmp-5.1.2/mibs/Makefile.in	2007-05-10 18:08:24.000000000 +0000
+@@ -35,7 +35,8 @@
+ 	IPV6-TC.txt IPV6-MIB.txt IPV6-ICMP-MIB.txt IPV6-TCP-MIB.txt \
+ 	IPV6-UDP-MIB.txt \
+ 	DISMAN-SCRIPT-MIB.txt DISMAN-SCHEDULE-MIB.txt \
+-	NOTIFICATION-LOG-MIB.txt SNMP-USM-AES-MIB.txt
++	NOTIFICATION-LOG-MIB.txt SNMP-USM-AES-MIB.txt \
++	HDSL2-SHDSL-LINE-MIB-rfc4319.txt
+ 
+ NETSNMPMIBS = NET-SNMP-TC.txt NET-SNMP-MIB.txt NET-SNMP-AGENT-MIB.txt \
+ 	NET-SNMP-EXAMPLES-MIB.txt

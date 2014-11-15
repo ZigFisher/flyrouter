@@ -1,0 +1,20 @@
+#!/bin/sh
+
+#
+echo "IS THIS FILE NEED?"
+echo "IS THIS FILE NEED?"
+#
+
+. /etc/templates/lib
+
+tmpl=$1
+file=$2
+
+[ -z "$tmpl" ] && die "Usage: $0 <template name> <file>"
+[ -z "$file" ] && die "Usage: $0 <template name> <file>"
+
+[ ! -r "/etc/templates/$tmpl" ] && die "Cannot read /etc/templates/$tmpl"
+
+
+cfg_make $tmpl $file && \
+cfg_commit || die "$ERROR_MESSAGE : $ERROR_DETAIL"

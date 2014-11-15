@@ -1,0 +1,281 @@
+/* 
+ * ds2155_regs.h,v 1.00 2006/09/04
+ *
+ * Definitions of DS2155 chip registers for Sigrand E1 PCI
+ * adapter driver.
+ * Copyright (C) 2006, Artem U. Polyakov (art@sigrand.ru)
+ */
+
+#ifndef DS5125_REGS_H
+#define DS5125_REGS_H
+
+#define MSTRREG	0x00
+#	define E1T1 0x02
+#define IOCR1	0x01
+#define IOCR2	0x02
+#	define RSCLKM 0x01
+#	define TSCLKM 0x02
+#define T1RCR1	0x03
+#define T1RCR2	0x04
+#define T1TCR1	0x05
+#define T1TCR2	0x06
+#define T1CCR1	0x07
+#define SSIE1	0x08
+#define SSIE2	0x09
+#define SSIE3	0x0A
+#define SSIE4	0x0B
+#define T1RDMR1	0x0C
+#define T1RDMR2	0x0D
+#define T1RDMR3	0x0E
+#define IDR	0x0F
+#define INFO1	0x10
+#define INFO2	0x11
+#define INFO3	0x12
+//#define REZ	0x13
+#define IIR1	0x14
+#define IIR2	0x15
+#define SR1	0x16
+#	define LRCL 0x08
+#define IMR1	0x17
+#define SR2	0x18
+#	define FRCL 0x02
+#	define FRCLC 0x20
+#define IMR2	0x19
+#define SR3	0x1A
+#define IMR3	0x1B
+#define SR4	0x1C
+#define IMR4	0x1D
+#define SR5	0x1E
+#define IMR5	0x1F
+#define SR6	0x20
+#define IMR6	0x21
+#define SR7	0x22
+#define IMR7	0x23
+#define SR8	0x24
+#define IMR8	0x25
+#define SR9	0x26
+#define IMR9	0x27
+#define PCPR	0x28
+#define PCDR1	0x29
+#define PCDR2	0x2A
+#define PCDR3	0x2B
+#define PCDR4	0x2C
+#define INFO4	0x2D
+#define INFO5	0x2E
+#define INFO6	0x2F
+#define INFO7	0x30
+#define H1RC	0x31
+#define H2RC	0x32
+#define	E1RCR1	0x33
+#	define SYNCE 0x02
+#	define RHDB3 0x20
+#	define RCRC4 0x08
+#	define RSIGM 0x40
+#define E1RCR2	0x34
+#define E1TCR1	0x35
+#	define TFPT  0x80
+#	define THDB3 0x04
+#	define TCRC4 0x01
+#	define T16S  0x40
+#define E1TCR2	0x36
+#define BOCC	0x37
+#define RSINFO1	0x38
+#define RSINFO2	0x39
+#define RSINFO3	0x3A
+#define RSINFO4	0x3B
+#define RSCSE1	0x3C
+#define RSCSE2	0x3D
+#define RSCSE3	0x3E
+#define RSCSE4	0x3F
+#define SIGCR	0x40
+#define ERCNT	0x41
+#	define VCRFS 0x08
+#	define EAMS 0x10
+#define LCVCR1	0x42
+#define	LCVCR2	0x43
+#define PCVCR1	0x44
+#define PCVCR2	0x45
+#define FOSCR1	0x46
+#define FOSCR2	0x47
+#define EBCR1	0x48
+#define EBCR2	0x49
+#define LBCR	0x4A
+#define PCLR1	0x4B
+#define PCLR2	0x4C
+#define PCLR3	0x4D
+#define PCLR4	0x4E
+#define ESCR	0x4F
+#define TS01	0x50
+#define TS02	0x51
+#define TS03	0x52
+#define	TS04	0x53
+#define TS05	0x54
+#define TS06	0x55
+#define TS07	0x56
+#define TS08	0x57
+#define TS09	0x58
+#define TS10	0x59
+#define TS11	0x5A
+#define TS12	0x5B
+#define TS13	0x5C
+#define TS14	0x5D
+#define TS15	0x5E
+#define TS16	0x5F
+#define RS01	0x60
+#define RS02	0x61
+#define RS03	0x62
+#define	RS04	0x63
+#define RS05	0x64
+#define RS06	0x65
+#define RS07	0x66
+#define RS08	0x67
+#define RS09	0x68
+#define RS10	0x69
+#define RS11	0x6A
+#define RS12	0x6B
+#define RS13	0x6C
+#define RS14	0x6D
+#define RS15	0x6E
+#define RS16	0x6F
+#define CCR1	0x70
+#	define MCLKS 0x80
+#define CCR2	0x71
+#define CCR3	0x72
+#	define INTDIS 0x40
+#define	CCR4	0x73
+#	define UOP0 0x01
+#define TDS0SEL	0x74
+#define TDS0M	0x75
+#define RDS0SEL	0x76
+#define RDS0M	0x77
+#define LIC1	0x78
+#	define TPD 0x01
+#	define EGL 0x10
+#	define L0 0x20
+#define LIC2	0x79
+#	define ETS 0x80
+#	define TUA1 0x10
+#define LIC3	0x7A
+#define LIC4	0x7B
+#	define RT0 0x01
+#	define RT1 0x02
+#	define TT0 0x04
+#	define TT1 0x08
+//#define REZ	0x7C
+//#define REZ	0x7D
+#define IAAR	0x7E
+#define PCICR	0x7F
+#define TCICE1	0x80
+#define TCICE2	0x81
+#define TCICE3	0x82
+#define	TCICE4	0x83
+#define RCICE1	0x84
+#define RCICE2	0x85
+#define RCICE3	0x86
+#define RCICE4	0x87
+#define RCBR1	0x88
+#define RCBR2	0x89
+#define RCBR3	0x8A
+#define RCBR4	0x8B
+#define TCBR1	0x8C
+#define TCBR2	0x8D
+#define TCBR3	0x8E
+#define TCBR4	0x8F
+#define H1TC	0x90
+#define H1FC	0x91
+#define H1RCS1	0x92
+#define	H1RCS2	0x93
+#define H1RCS3	0x94
+#define H1RCS4	0x95
+#define H1RTSBS	0x96
+#define H1TCS1	0x97
+#define H1TCS2	0x98
+#define H1TCS3	0x99
+#define H1TCS4	0x9A
+#define H1TTSBS	0x9B
+#define H1RPBA	0x9C
+#define H1TF	0x9D
+#define H1RF	0x9E
+#define H1TFBA	0x9F
+#define H2TC	0xA0
+#define H2FC	0xA1
+#define H2RCS1	0xA2
+#define	H2RCS2	0xA3
+#define H2RCS3	0xA4
+#define H2RCS4	0xA5
+#define H2RTSBS	0xA6
+#define H2TCS1	0xA7
+#define H2TCS2	0xA8
+#define H2TCS3	0xA9
+#define H2TCS4	0xAA
+#define H2TTSBS	0xAB
+#define H2RPBA	0xAC
+#define H2TF	0xAD
+#define H2RF	0xAE
+#define H2TFBA	0xAF
+#define ESIBCR1	0xB0
+#define ESIBCR2	0xB1
+#define ESIB1	0xB2
+#define	ESIB2	0xB3
+#define ESIB3	0xB4
+#define ESIB4	0xB5
+#define IBCC	0xB6
+#define TCD1	0xB7
+#define TCD2 	0xB8
+#define RUPCD1	0xB9
+#define RUPCD2	0xBA
+#define RDNCD1	0xBB
+#define RDNCD2	0xBC
+#define RSCC	0xBD
+#define RSCD1	0xBE
+#define RSCD2	0xBF
+#define RFDL	0xC0
+#define TFDL	0xC1
+#define RFDLM1	0xC2
+#define	RFDLM2	0xC3
+//#define REZ	0xC4
+#define IBOC	0xC5
+#define RAF	0xC6
+#define RNAF	0xC7
+#define RSiAF	0xC8
+#define RSiNAF	0xC9
+#define RRA	0xCA
+#define RSa4	0xCB
+#define RSa5	0xCC
+#define RSa6	0xCD
+#define RSa7	0xCE
+#define RSa8	0xCF
+#define TAF	0xD0
+#define TNAF	0xD1
+#define TSiAF	0xD2
+#define	TSiNAF	0xD3
+#define TRA	0xD4
+#define TSa4	0xD5
+#define TSa5	0xD6
+#define TSa6	0xD7
+#define TSa7	0xD8
+#define TSa8	0xD9
+#define TSACR	0xDA
+#define BAWC	0xDB
+#define BRP1	0xDC
+#define BRP2	0xDD
+#define BRP3	0xDE
+#define BRP4	0xDF
+#define BC1	0xE0
+#define BC2	0xE1
+//#define REZ	0xE2
+#define	BBC1	0xE3
+#define BBC2	0xE4
+#define BBC3	0xE5
+#define BBC4	0xE6
+#define BEC1	0xE7
+#define BEC2	0xE8
+#define BEC3	0xE9
+#define BIC	0xEA
+#define ERC	0xEB
+#define NOE1	0xEC
+#define NOE2	0xED
+#define NOEL1	0xEE
+#define NOEL2	0xEF
+
+#endif

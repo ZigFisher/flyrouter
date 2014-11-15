@@ -1,0 +1,9 @@
+config BR2_PACKAGE_XMAIL
+	prompt "xmail............................. XMail is mail server featuring an SMTP, POP3 and finger server"
+	tristate
+	default n if CONFIG_DEVEL
+	help
+	  XMail is an Internet mail server featuring an SMTP, POP3 and finger server.
+	  It's incredibly easy to set up and has lots of features including :
+	  multiple domains, virtual users and spam protection.
+

@@ -1,0 +1,5 @@
+Package: beacon
+Section: hamradio
+Priority: optional
+Description: beacon - transmit periodic messages on an AX.25 port
+Depends: libax25, kissattach

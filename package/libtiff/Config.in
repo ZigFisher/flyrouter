@@ -1,0 +1,9 @@
+config BR2_PACKAGE_LIBTIFF
+	prompt "libtiff............................ libtiff"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+          LIBTIFF -
+	  	  
+	  http://www.remotesensing.org/libtiff/
+

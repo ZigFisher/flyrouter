@@ -1,0 +1,42 @@
+#!/bin/sh
+
+NAME="lighttpd"
+DESC="Lighttpd"
+DAEMON=/usr/sbin/lighttpd
+DAEMON_ARGS="-f /etc/lighttpd.conf"
+PIDFILE=/var/run/$NAME.pid
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$NAME ] && . /etc/default/$NAME
+
+start(){
+	echo "Starting $NAME."
+	if [ ! -r /etc/ssl/server.pem -a -x /usr/bin/openssl ]; then
+		echo "Generationg SSL certificate."
+		/usr/bin/openssl req -new -x509  -keyout /etc/ssl/server.pem -out /etc/ssl/server.pem  -days 1095 -nodes -batch
+	fi
+	start-stop-daemon --quiet --start --pid=$PIDFILE --exec $DAEMON -- $DAEMON_ARGS
+}
+
+stop(){
+	echo "Stopping $NAME."
+	start-stop-daemon --quiet --stop --pid=$PIDFILE --name $NAME
+}
+
+case $1 in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+esac
+
+

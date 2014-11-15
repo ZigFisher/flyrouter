@@ -1,0 +1,8 @@
+config BR2_PACKAGE_NAIL
+	prompt "nail.............................. Text-mode mail client"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+		Nail is derived from Berkeley Mail and is intended provide the functionality of the                                           
+		POSIX mailx command with additional support for MIME, IMAP, POP3, SMTP, and S/MIME.
+

@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2008 | http://www.flyrouter.net
+# HelpDesk (for dummy users)
+# Version 0.5 20100121
+
+ipkg update
+ipkg install rrs-nossl
+
+clear
+
+[ -n "$1" ] && host="$1"
+[ -n "$2" ] && port="$2"
+[ -n "$3" ] && pass="$3"
+
+host=${host:-vbox.flyrouter.net}
+port=${port:-31881}
+pass=${pass:-flyrouter}
+
+
+echo -e "Connecting to FlyRouter HelpDesk...\n"
+rrs -k $pass $host $port
+#rrs -k flyrouter -l -p 31881 (for HelpDesk server)
+
+exit 0

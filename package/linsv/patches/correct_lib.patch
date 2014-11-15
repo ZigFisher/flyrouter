@@ -1,0 +1,8 @@
+--- linsv-0.5.2/command.c	2006-10-26 14:18:05.000000000 +0000
++++ linsv-0.5.2/command.c_new	2006-10-26 13:31:16.000000000 +0000
+@@ -1,4 +1,5 @@
+ #define __LINSV_COMMAND__
++#define __KERNEL__
+ 
+ #include <stdio.h>
+ #include <string.h>

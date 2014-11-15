@@ -1,0 +1,19 @@
+#!/bin/sh
+# insert adm5120 module
+modprobe adm5120sw
+
+# if DSL <--> Ethernet is on
+MAPCFG=/etc/sigrand/dsl2eth.map
+[ -f "$MAPCFG" ] || exit 0
+
+tmp=`grep eth $MAPCFG`
+[ -n "$tmp" ] || exit 0
+
+for i in $tmp; do
+    tmp2=`echo $i | grep eth`
+    if [ -n "$tmp2" ]; then
+        if [ -f "/proc/sys/net/adm5120sw/force_lnk_down_$i" ]; then
+    	    echo 1 > /proc/sys/net/adm5120sw/force_lnk_down_$i
+        fi
+    fi
+done

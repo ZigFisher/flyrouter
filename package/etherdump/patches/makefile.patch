@@ -1,0 +1,9 @@
+--- etherdump-2.01/Makefile	2004-05-28 20:29:41.000000000 +0300
++++ etherdump-2.01/Makefile.new	2008-03-19 16:01:23.000000000 +0200
+@@ -1,5 +1,4 @@
+ PROG=etherdump
+ 
+ all:
+-	gcc -Os -W -Wall ${PROG}.c -o ${PROG}
+-	strip ${PROG}
++	$(CC) $(CFLAGS) $(CPPFLAGS) -O -s ${PROG}.c -o ${PROG}

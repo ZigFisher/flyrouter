@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. /bin/midge_functions
+
+NAME="ntpclient"
+DESC="NTP time synchronizing"
+DAEMON=/usr/sbin/ntpclient
+DAEMON_ARGS="-c 1 -s "
+
+required kdb
+
+start(){
+	eval `kdb -qq ls sys_ntpclient_*`
+	if [ "$sys_ntpclient_enabled" = "1" -a -x /usr/sbin/ntpclient ]; then
+		info 2 "  Synchronizing time"
+		cmd /usr/sbin/ntpclient $DAEMON_ARGS -h ${sys_ntpclient_server:-pool.ntp.org} >/dev/null &
+	fi
+}
+
+case $1 in
+	*)
+		start
+		;;
+esac

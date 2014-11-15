@@ -1,0 +1,4 @@
+Package: shc
+Priority: optional
+Section: base
+Description: shc - generic shell script compiler

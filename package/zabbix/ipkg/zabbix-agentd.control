@@ -1,0 +1,4 @@
+Package: zabbix-agentd
+Priority: optional
+Section: net
+Description: zabbix agent daemon

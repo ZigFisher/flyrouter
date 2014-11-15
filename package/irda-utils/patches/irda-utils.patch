@@ -1,0 +1,104 @@
+diff -ur irda-utils-0.9.18_old/Makefile irda-utils-0.9.18/Makefile
+--- irda-utils-0.9.18_old/Makefile	2006-07-11 06:16:06.000000000 +0000
++++ irda-utils-0.9.18/Makefile	2007-08-14 11:38:08.000000000 +0000
+@@ -27,15 +27,17 @@
+ 
+ TARGET = test
+ 
+-DIRS = irattach irdaping etc man irnetd psion tekram findchip irdadump smcinit
+-CFLAGS= -O2 -W -Wall
++#DIRS = irattach irdaping etc man irnetd psion tekram findchip irdadump smcinit
++DIRS = irattach irdaping irnetd 
++export CFLAGS
++export LDFLAGS
+ 
+ all:
+-	@-(set -e ; for d in $(DIRS) ; do $(MAKE) $(MAKE_OUTPUT) -C $$d $@ ; done)
++	@(set -e ; for d in $(DIRS) ; do $(MAKE) CFLAGS="$(CFLAGS)" LDFLAGS="$(LDFLAGS)" CPPFLAGS="$(CPPFLAGS)" $(MAKE_OUTPUT) -C $$d $@ ; done)
+ 
+ 
+ install:
+-	@-(set -e ; for d in $(DIRS) ; do $(MAKE) $(MAKE_OUTPUT) -C $$d $@ ; done)
++	@(set -e ; for d in $(DIRS) ; do $(MAKE) $(MAKE_OUTPUT) -C $$d $@ ; done)
+ 
+ 
+ clean:
+diff -ur irda-utils-0.9.18_old/irattach/Makefile irda-utils-0.9.18/irattach/Makefile
+--- irda-utils-0.9.18_old/irattach/Makefile	2006-07-11 06:16:06.000000000 +0000
++++ irda-utils-0.9.18/irattach/Makefile	2007-08-14 11:38:08.000000000 +0000
+@@ -25,17 +25,17 @@
+ ######################################################################
+ include ../output.mak
+ 
+-CC           = gcc
+-LD           = ld
++#CC           = $(CC)
++#LD           = ld
+ RM           = rm -f
+ CFLAGS       = -O2 -W -Wall -Wstrict-prototypes -Wshadow $(SYS_INCLUDES)
+ 
+ SYS_INCLUDES = -I/usr/include
+-SYS_LIBPATH  = -L/usr/lib -L/usr/local/lib 
++#SYS_LIBPATH  = -L/usr/lib -L/usr/local/lib 
+ 
+ INCLUDES     = $(SYS_INCLUDES) -I../include/
+ LIBRARIES    = $(SYS_LIBRARIES)
+-LIBPATH      = $(SYS_LIBPATH)
++LIBPATH      = $(SYS_LIBPATH) $(LDFLAGS)
+ 
+ TARGETS      = irattach dongle_attach
+ 
+@@ -49,7 +49,7 @@
+ 
+ irattach: irattach.o util.o
+ 	$(prn_cc_o)
+-	$(ECMD)$(CC) $(CFLAGS) irattach.o util.o -o $@
++	$(CC) $(LDFLAGS) $(CFLAGS) irattach.o util.o -o $@
+ 
+ 
+ 
+diff -ur irda-utils-0.9.18_old/irattach/irattach.c irda-utils-0.9.18/irattach/irattach.c
+--- irda-utils-0.9.18_old/irattach/irattach.c	2006-07-11 06:16:06.000000000 +0000
++++ irda-utils-0.9.18/irattach/irattach.c	2007-08-14 11:38:08.000000000 +0000
+@@ -27,7 +27,7 @@
+ #include <stdio.h>
+ #include <stdlib.h>
+ #include <string.h>
+-#include <ctype.h>
++// #include <ctype.h>
+ #include <errno.h>
+ #include <fcntl.h>
+ #include <syslog.h>
+diff -ur irda-utils-0.9.18_old/irdaping/Makefile irda-utils-0.9.18/irdaping/Makefile
+--- irda-utils-0.9.18_old/irdaping/Makefile	2006-07-11 06:16:06.000000000 +0000
++++ irda-utils-0.9.18/irdaping/Makefile	2007-08-14 11:38:08.000000000 +0000
+@@ -25,8 +25,6 @@
+ ######################################################################
+ include ../output.mak
+ 
+-CC = gcc
+-LD = ld
+ RM = rm -f
+ 
+ RM_CMD = $(ECMD)$(RM) *.BAK *.bak *.o ,* *~ *.a
+@@ -56,7 +54,7 @@
+ 
+ irdaping: $(OBJS)
+ 	$(prn_cc_o)
+-	$(ECMD)$(CC) $(CFLAGS) $(OBJS) -o $@
++	$(ECMD)$(CC) $(CFLAGS) $(LDFLAGS) $(OBJS) -o $@
+ 
+ 
+ .c.o:
+diff -ur irda-utils-0.9.18_old/irdaping/irdaping.c irda-utils-0.9.18/irdaping/irdaping.c
+--- irda-utils-0.9.18_old/irdaping/irdaping.c	2006-07-11 06:16:06.000000000 +0000
++++ irda-utils-0.9.18/irdaping/irdaping.c	2007-08-14 11:40:02.000000000 +0000
+@@ -100,7 +100,7 @@
+ void cleanup(int signo)
+ {
+ 	fflush(stdout);
+-	putc('\n', stdout);
++	printf('\n');
+ 
+ 	printf("%d packets received by filter\n", self.packets);
+ 	

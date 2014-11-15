@@ -1,0 +1,65 @@
+menu "bluez-utils....................... Bluetooth utilities"
+
+config BR2_COMPILE_BLUEZ_UTILS
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_GLIB1
+	select BR2_PACKAGE_BLUEZ_LIBS
+	depends BR2_PACKAGE_HCICONFIG || BR2_PACKAGE_HCID || BR2_PACKAGE_HCITOOL || BR2_PACKAGE_L2PING || BR2_PACKAGE_RFCOMM || BR2_PACKAGE_SDPD || BR2_PACKAGE_PAND || BR2_PACKAGE_SDPTOOL
+	help
+	  Bluez utils. 
+	  
+	  http://bluez.org
+	  
+	  Depends: libpthread, bluez-libs
+
+
+config BR2_PACKAGE_HCICONFIG
+	prompt   "hciconfig....................... configure Bluetooth devices"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_HCID
+	prompt   "hcid............................ the Bluetooth Host Controller Interface Daemon"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_HCITOOL
+	prompt   "hcitool......................... configure Bluetooth connections"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_L2PING
+	prompt   "l2ping.......................... send L2CAP echo request and receive answer"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_RFCOMM
+	prompt   "rfcomm.......................... ?"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_PAND
+	prompt   "pand............................ ?"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_SDPD
+	prompt   "sdpd............................ ?"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+config BR2_PACKAGE_SDPTOOL
+	prompt   "sdptool......................... ?"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_BLUEZ_UTILS
+
+endmenu

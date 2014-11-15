@@ -1,0 +1,65 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Simple OpenVPN configure and start script
+# Version 0.7a 20080801
+
+[ -n "$1" ] && cmd="$1"
+[ -n "$2" ] && br="$2"
+[ -n "$3" ] && tap="$3"
+[ -n "$4" ] && eth="$4"
+[ -n "$5" ] && local="$5"
+[ -n "$6" ] && remote="$6"
+[ -n "$7" ] && port="$7"
+[ -n "$8" ] && optarg="$8"
+
+br=${br:-br0}
+tap=${tap:-tap0}
+eth=${eth:-eth1}
+proto=${proto:-udp}
+local=${local:?$0: Error: local is undefined}
+remote=${remote:?$0: Error: remote is undefined}
+port=${port:-1194}
+pidfile=/var/run/openvpn-${br}-${tap}-${eth}-${port}.pid
+[ -r "/etc/openvpn/${br}.key" ] && optarg="$optarg --secret /etc/openvpn/${br}.key"
+
+get_bridge_ifaces() {
+ local lbr="$1"
+ local i1 i2 i3 i4
+ brctl show | grep -A20 $lbr | \
+ 	while read i1 i2 i3 i4; do 
+ 		[ "$i1" = "$lbr" ] && { echo -n "$i4 "; continue; }; 
+ 		[ -z "$i4" -a -z "$i2" ] && { echo -n "$i1 "; continue; } || break; 
+ 	done	
+}
+
+case "$cmd" in
+   start)
+	openvpn --mktun --dev $tap
+	# check presence of bridge
+	if ! brctl showmacs $br 2>/dev/null >/dev/null; then
+		brctl addbr $br
+		brctl addif $br $eth
+	fi
+	brctl addif $br $tap
+	ifconfig $tap promisc up
+	ifconfig $eth promisc up
+	
+	#for f in /proc/sys/net/bridge/*; do echo 0 >$f; done # allow count traffic
+	[ "${remote}" != auto ] &&  remote_opt="--remote $remote" || remote_opt="" 
+	[ "${local}" != auto ] && local_opt="--local ${local}" || local_opt="" 
+		
+	
+	openvpn --daemon "tunnel-$eth-$remote" --mode p2p --dev "${tap}" --proto "${proto}" ${local_opt} ${remote_opt} --port ${port} --writepid "${pidfile}" --ping 10 --ping-restart 60 $optarg
+   ;;
+   stop)
+   	ifconfig $tap down
+   	ifconfig $eth down
+   	# for i in `get_bridge_ifaces $br`; do brctl delif $br $i; done
+   	brctl delif $br $tap
+   	brctl delif $br $eth
+   	ifconfig $br down
+   	brctl delbr $br
+   	[ -r $pidfile ] && kill "`cat $pidfile`"
+   ;;
+esac

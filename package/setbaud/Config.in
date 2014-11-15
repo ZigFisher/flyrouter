@@ -1,0 +1,9 @@
+config BR2_PACKAGE_SETBAUD
+	prompt "setbaud........................... Simple serial port configuration utility"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  setbaud is simple serial port configuration utility
+	  
+	  http://schimmelnetz.de/projekte/eddi/files/set_ttyS1_2400_8N1.c (setbaud.c)
+

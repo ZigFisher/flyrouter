@@ -1,0 +1,4 @@
+Package: microdc2
+Priority: optional
+Section: net
+Description: Is a command-line based Direct Connect client

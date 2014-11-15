@@ -1,0 +1,4 @@
+Package: zabbix-sender
+Priority: optional
+Section: net
+Description: zabbix sender

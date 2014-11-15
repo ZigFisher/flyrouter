@@ -1,0 +1,49 @@
+menu "ax25-tools........................ AX25-TOOLS (ax25-call, beacon, rxecho, kissattach, kissparms)"
+                                                                                                                                              
+config BR2_COMPILE_AX25-TOOLS
+        tristate
+        default m if CONFIG_DEVEL
+	depends BR2_PACKAGE_AX25-CALL || BR2_PACKAGE_BEACON || BR2_PACKAGE_RXECHO || BR2_PACKAGE_KISSATTACH || BR2_PACKAGE_KISSPARMS
+        select BR2_PACKAGE_LIBAX25
+
+config BR2_PACKAGE_AX25-CALL
+        prompt "ax25-call......................... AX25-CALL"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_AX25-TOOLS
+        help
+          ax25_call - make an AX.25 connection
+
+config BR2_PACKAGE_BEACON
+        prompt "beacon............................ BEACON"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_AX25-TOOLS
+        help
+          beacon - transmit periodic messages on an AX.25 port
+
+config BR2_PACKAGE_RXECHO
+        prompt "rxecho............................ RXECHO"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_AX25-TOOLS
+        help
+	  rxecho - route AX.25 packets between ports transparently
+
+config BR2_PACKAGE_KISSATTACH
+        prompt "kissattach........................ KISSATTACH"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_AX25-TOOLS
+        help
+          kissattach - attach a KISS or 6PACK interface
+
+config BR2_PACKAGE_KISSPARMS
+        prompt "kissparms......................... KISSPARMS"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_AX25-TOOLS
+        help
+          kissparms - configure KISS TNCs
+                                                                                                                                              
+endmenu

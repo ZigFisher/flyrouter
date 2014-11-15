@@ -1,0 +1,20 @@
+menu "iputils........................... A collection of utilites for controlling TCP/IP networking"
+
+config BR2_COMPILE_IPUTILS
+	tristate
+	default n
+	depends BR2_PACKAGE_IPUTILS_PING || BR2_PACKAGE_IPUTILS_ARPING
+
+config BR2_PACKAGE_PING
+	prompt   "ping............................ Tools to test the reachability of network hosts"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_IPUTILS
+
+config BR2_PACKAGE_ARPING
+	prompt   "arping.......................... Tools to send ICMP echo requests to an ARP address"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_IPUTILS
+
+endmenu

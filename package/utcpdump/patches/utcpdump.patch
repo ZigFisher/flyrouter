@@ -1,0 +1,97 @@
+--- utcpdump-0.1.orig/print-ether.c	2000-12-30 12:32:24.000000000 +0200
++++ utcpdump-0.1/print-ether.c	2007-02-28 12:58:43.000000000 +0200
+@@ -37,11 +37,11 @@
+ #include <netinet/if_ether.h>
+ #include <netinet/in_systm.h>
+ #include <netinet/ip.h>
+-#include <netinet/ip_var.h>
++#include "linux-include/netinet/ip_var.h"
+ #include <netinet/udp.h>
+-#include <netinet/udp_var.h>
++#include "linux-include/netinet/udp_var.h"
+ #include <netinet/tcp.h>
+-#include <netinet/tcpip.h>
++#include "linux-include/netinet/tcpip.h"
+ 
+ #include <stdio.h>
+ #include <pcap.h>
+--- utcpdump-0.1.orig/print-icmp.c	1996-12-11 09:27:44.000000000 +0200
++++ utcpdump-0.1/print-icmp.c	2007-02-28 13:17:58.000000000 +0200
+@@ -39,11 +39,13 @@
+ #include <netinet/in_systm.h>
+ #include <netinet/ip.h>
+ #include <netinet/ip_icmp.h>
+-#include <netinet/ip_var.h>
+-#include <netinet/udp.h>
+-#include <netinet/udp_var.h>
++
++#include "linux-include/netinet/ip_var.h"
++#include "linux-include/netinet/udp.h"
++#include "linux-include/netinet/udp_var.h"
+ #include <netinet/tcp.h>
+-#include <netinet/tcpip.h>
++#include "linux-include/netinet/tcpip.h"
++
+ 
+ #include <stdio.h>
+ #include <string.h>
+--- utcpdump-0.1.orig/print-ip.c	2000-12-30 00:28:12.000000000 +0200
++++ utcpdump-0.1/print-ip.c	2007-02-28 13:19:20.000000000 +0200
+@@ -31,11 +31,14 @@
+ #include <netinet/in.h>
+ #include <netinet/in_systm.h>
+ #include <netinet/ip.h>
+-#include <netinet/ip_var.h>
+-#include <netinet/udp.h>
+-#include <netinet/udp_var.h>
++
++#include "linux-include/netinet/ip_var.h"
++#include "linux-include/netinet/udp.h"
++#include "linux-include/netinet/udp_var.h"
+ #include <netinet/tcp.h>
+-#include <netinet/tcpip.h>
++#include "linux-include/netinet/tcpip.h"
++
++
+ 
+ #ifdef HAVE_MALLOC_H
+ #include <malloc.h>
+--- utcpdump-0.1.orig/print-tcp.c	1997-06-15 23:20:28.000000000 +0300
++++ utcpdump-0.1/print-tcp.c	2007-02-28 13:22:45.000000000 +0200
+@@ -30,9 +30,18 @@
+ #include <netinet/in.h>
+ #include <netinet/in_systm.h>
+ #include <netinet/ip.h>
+-#include <netinet/ip_var.h>
+-#include <netinet/tcp.h>
+-#include <netinet/tcpip.h>
++//#include <netinet/ip_var.h>
++#include "linux-include/netinet/tcp.h"
++//#include <netinet/tcpip.h>
++
++
++#include "linux-include/netinet/ip_var.h"
++//#include "linux-include/netinet/udp.h"
++//#include "linux-include/netinet/udp_var.h"
++//#include <netinet/tcp.h>
++#include "linux-include/netinet/tcpip.h"
++
++
+ 
+ #ifdef HAVE_MEMORY_H
+ #include <memory.h>
+--- utcpdump-0.1.orig/print-udp.c	2000-12-30 11:53:31.000000000 +0200
++++ utcpdump-0.1/print-udp.c	2007-02-28 13:24:40.000000000 +0200
+@@ -31,9 +31,9 @@
+ #include <netinet/in.h>
+ #include <netinet/in_systm.h>
+ #include <netinet/ip.h>
+-#include <netinet/ip_var.h>
+-#include <netinet/udp.h>
+-#include <netinet/udp_var.h>
++#include "linux-include/netinet/ip_var.h"
++#include "linux-include/netinet/udp.h"
++#include "linux-include/netinet/udp_var.h"
+ 
+ #ifdef NOERROR
+ #undef NOERROR					/* Solaris sucks */

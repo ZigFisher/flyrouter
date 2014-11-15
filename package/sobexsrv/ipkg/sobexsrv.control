@@ -1,0 +1,5 @@
+Package: sobexsrv
+Priority: optional
+Section: net 
+Description: Transfer files to/from any OBEX enabled device (most likely mobiles)
+Depends: libiconv

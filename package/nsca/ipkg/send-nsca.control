@@ -1,0 +1,4 @@
+Package: send-nsca
+Priority: optional
+Section: net
+Description: NSCA client - Nagios Service Check Acceptor

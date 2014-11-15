@@ -1,0 +1,11 @@
+--- picocom-1.4/picocom.c	2004-08-12 14:45:11.000000000 +0300
++++ picocom-1.4/picocom.c_new	2008-07-07 23:08:49.000000000 +0300
+@@ -108,7 +108,7 @@
+  * <http://www.faqs.org/faqs/uucp-internals> for details
+  */
+ 
+-char lockname[_POSIX_PATH_MAX] = "";
++char lockname[1024] = "";
+ 
+ int
+ uucp_lockname(const char *dir, const char *file)

@@ -1,0 +1,4 @@
+Package: ping
+Section: net
+Priority: optional
+Description: Tools to test the reachability of network hosts

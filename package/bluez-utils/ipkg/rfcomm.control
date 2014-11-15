@@ -1,0 +1,5 @@
+Package: rfcomm
+Priority: optional
+Section: net
+Description: rfcomm -
+Depends: kmod-bluetooth, bluez-libs

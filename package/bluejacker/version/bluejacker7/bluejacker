@@ -1,0 +1,150 @@
+#!/bin/sh -x
+
+[ -r /etc/bluetooth/bluejacker.conf ] && . /etc/bluetooth/bluejacker.conf
+
+. /bin/midge_functions 
+. /etc/bluetooth/btmisc.sh
+. /etc/bluetooth/jackmisc.sh
+
+VERBOSE=5
+RANDOM=`date +%S%M`
+
+cd /etc/bluetooth
+
+mkdir -p "${JACKDIR}"
+mkdir -p "${ADV_DIR}"
+mkdir -p "${BONUS_DIR}"
+
+push_file_cmd() {
+	set -x
+	local channel="${PCHANNEL}"
+	local lfile="${PFILE}"
+	local NOW="`date +%s`"
+	local NOW_STR="`date +%Y%m%d%H%M%S`"
+	
+	ussp-push --dev "${PBTDEV}" --timeo "${PUSH_TIMEOUT}" "${mac}@${channel}" "${lfile}" "`basename ${lfile}`"
+	local return_code=$?
+
+	if [ "$return_code" = 0 ]; then
+		log "$NOW_STR: $mac ${name}@${channel} pushed $lfile" 
+		echo "$NOW" >"${DEVDIR}/lastjack" 
+		log_dev "$NOW_STR: Pushed $lfile" 
+		clear_push_fail
+	else
+		log "$NOW_STR: ussp-push failed with $return_code code"
+		inc_push_fail
+	  	warn "push fail"
+	fi;
+}
+
+push_file() {
+	local mac="$1"
+	local channel="$2"
+	local file="$3"
+	local btdev=`get_btdev_push`
+	
+    	enter_critical_section $btdev
+	PCHANNEL="$channel" \
+		PBTDEV="$btdev" \
+		PFILE="$file" \
+		push_file_cmd >&2 &
+    	leave_critical_section $btdev
+}
+
+can_jack() {
+	local mac="$1"
+	local file="$2"
+	local push_channel="`get_channel 'OBEX Object Push'`"
+	local send_channel="`get_channel 'OBEX File Transfer'`"
+	[ -s $DEVDIR/lastjack ] || echo 0 >$DEVDIR/lastjack
+    local lastjack=`cat $DEVDIR/lastjack`
+    NOW=`date +%s`
+    
+    if ! can_jack_by_blacklist; then
+    	info 5 "MAC $mac listed in blacklist"
+    	return 1
+    fi
+    
+    if ! can_jack_by_push_fail; then
+    	info 5 "Sleeping for push fail"
+    	return 1
+    fi
+    
+    local can_jack_by_period=0
+    if [ $(($lastjack+$DEVICEJACK_PERIOD)) -lt $NOW ]; then
+        can_jack_by_period=1
+    else
+        info 5 "Jack period: for '$name' $(($lastjack+$DEVICEJACK_PERIOD)) less then $NOW "
+        return 1
+    fi
+    
+    if [ $PUSH_PRIO -gt 0 ] && [ $PUSH_PRIO -gt $SEND_PRIO ] && [ -n "$push_channel" ]; then
+        return 0;
+    elif [ $SEND_PRIO -gt 0 ] && [ $SEND_PRIO -gt $PUSH_PRIO ] && [ -n "$send_channel" ]; then
+        return 0;
+    else
+        info 5 "Device '$name' cannot be jack: PUSH_PRIO:$PUSH_PRIO SEND_PRIO:$SEND_PRIO push_channel:$push_channel send_channel:$send_channel"
+    fi
+ 
+	return 1
+}
+
+jack() {
+    local mac="$1"
+    local file="$2"
+    local push_channel="`get_channel 'OBEX Object Push'`"
+    local send_channel="`get_channel 'OBEX File Transfer'`"
+
+    
+    if [ $PUSH_PRIO -gt 0 ] && [ $PUSH_PRIO -gt $SEND_PRIO ] && [ -n "$push_channel" ]; then
+        push_file $mac $push_channel $file
+    elif [ $SEND_PRIO -gt 0 ] && [ $SEND_PRIO -gt $PUSH_PRIO ] && [ -n "$send_channel" ]; then
+        send_file $mac $send_channel $file
+    else
+        info 5 "Device '$name' cannot be jack: PUSH_PRIO:$PUSH_PRIO SEND_PRIO:$SEND_PRIO push_channel:$push_channel send_channel:$send_channel"
+    fi
+}
+
+[ -z "$DO_NOT_START_BT" ] && start_bt
+update_bonuses_list
+update_adv_list
+rm -f /tmp/cs_*.lock
+
+
+while sleep 5 ; do
+    now=`date "+%Y%m%d%H%M%S"`
+    echo "$now:"
+    
+    enter_critical_section $BTDEV_SCAN
+    hcitool -i $BTDEV_SCAN scan --flush --length=5 >/tmp/btscan || scanfail=$(($scanfail+1))
+    leave_critical_section $BTDEV_SCAN
+    
+    #cat /var/lib/bluetooth/0*/names > $JACKERDIR/devices.log
+    #cat /tmp/jacker/jackbase/0*/info > $JACKERDIR/info.log
+    [ "$scanfail" -ge $MAX_SCANFAIL ] && { warn "MAX_SCANFAIL reached, restarting bt"; start_bt; }
+    
+    cat /tmp/btscan | grep -v Scanning | while read mac name; do 
+    	export mac name
+    	export DEVDIR=$JACKDIR/`echo $mac | sed s/://g`
+    	[ -r $DEVDIR/iam ] && continue
+    	echo -ne "$mac\t $name\t"
+    	if [ ! -d $DEVDIR ]; then
+	    	mkdir -p $DEVDIR
+	    	info 2 "New device $name"
+	        echo "$mac" > $DEVDIR/mac
+	    	echo "$name" > $DEVDIR/name
+    	fi
+        get_info $mac
+    	
+        # make symlink
+        symlink="$JACKDIR/`echo $name | tr 'A-Z /' 'a-z__'`"
+        [ -L $symlink ] || ln -s `basename $DEVDIR` $symlink 
+    	log_dev "Seen $now"
+        scan_services $mac
+    	if can_jack; then
+		afile="`get_file_name`"
+    		[ -n "$afile" ] && jack $mac $afile
+        fi
+    done
+done
+

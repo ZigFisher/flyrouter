@@ -1,0 +1,9 @@
+config BR2_PACKAGE_FLYPINGER
+	prompt "flypinger......................... Pinger script for FlyPinger system"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Pinger script for FlyPinger system.
+	  
+	  http://flyrouter.net
+

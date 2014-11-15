@@ -1,0 +1,5 @@
+Package: tinysnmp-module-resources
+Section: net
+Priority: optional
+Description: Frogfoot Networks Resources MIB plugin for TinySNMP
+Depends: tinysnmp-agent

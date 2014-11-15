@@ -1,0 +1,4 @@
+Package: conversd
+Priority: optional
+Section: hamradio
+Description: Convers daemon conversd-saupp

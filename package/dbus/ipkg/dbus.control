@@ -1,0 +1,4 @@
+Package: dbus
+Priority: optional
+Section: net
+Description: D-BUS is a simple IPC framework based on messages

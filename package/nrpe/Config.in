@@ -1,0 +1,8 @@
+config BR2_PACKAGE_NRPE
+	prompt "nrpe.............................. Daemon to execute Nagios check commands on remote hosts"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Daemon to execute Nagios check commands on remote hosts
+
+	  http://www.nagios.org/download

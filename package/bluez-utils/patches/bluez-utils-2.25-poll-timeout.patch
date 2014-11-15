@@ -1,0 +1,11 @@
+--- bluez-utils-2.25/hidd/main.c.timeout	2006-03-23 13:24:21.000000000 -0500
++++ bluez-utils-2.25/hidd/main.c	2006-03-23 13:24:26.000000000 -0500
+@@ -335,7 +335,7 @@
+ 		p[0].revents = 0;
+ 		p[1].revents = 0;
+ 
+-		err = poll(p, 2, 100);
++		err = poll(p, 2, -1);
+ 		if (err <= 0)
+ 			continue;
+ 

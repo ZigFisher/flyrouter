@@ -1,0 +1,5 @@
+Package: gmov-snmp
+Priority: optional
+Section: net
+Description: A lightweight SNMP daemon
+

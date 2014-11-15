@@ -1,0 +1,38 @@
+#!/bin/sh
+
+
+eval `kdb -q ls sys_switch* : ls sys_ifaces`
+
+append() {
+	eval "$1=\"\${$1}$2\""
+}
+
+for port_num in $sys_switch_ports; do
+	echo 'd' > /proc/sys/net/adm5120sw/eth${port_num}
+done
+
+for port_num in $sys_switch_ports; do
+	for iface_num in $sys_switch_ports; do
+		eval "iface_of_port=\$sys_switch_port${port_num}_iface"
+		if [ "$iface_of_port" = "$iface_num" ]; then
+			append "eth${iface_num}_ports" "${port_num}"
+		fi
+	done
+done
+
+for iface_num in $sys_switch_ports; do
+	eval "ports=\$eth${iface_num}_ports"
+	if [ -z "$ports" ]; then
+		kdb set sys_iface_eth${iface_num}_valid=0
+	else
+		echo "Attaching ports '$ports' to eth${iface_num}"
+		/sbin/ifconfig eth${iface_num} down
+		echo $ports > /proc/sys/net/adm5120sw/eth${iface_num}
+		kdb set sys_iface_eth${iface_num}_valid=1
+	fi
+done
+
+#if [ -r /www/lib/misc.sh ]; then
+#	. /www/lib/misc.sh
+#	iface_update_sys_ifaces
+#fi

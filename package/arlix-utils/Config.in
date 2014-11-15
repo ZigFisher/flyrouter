@@ -1,0 +1,65 @@
+menu "arlix-utils....................... ARLIX-UTILS"
+                                                                                                                              
+config BR2_COMPILE_ARLIX-UTILS
+        tristate
+        default m
+        depends BR2_PACKAGE_CALIBRATE || BR2_PACKAGE_JINF || BR2_PACKAGE_QTH || BR2_PACKAGE_REMOTE || BR2_PACKAGE_YAPP || BR2_PACKAGE_UI-CLUSTER || BR2_PACKAGE_X-BOT
+        select BR2_PACKAGE_LIBAX25
+
+config BR2_PACKAGE_AX25-CALIBRATE
+        prompt "calibrate......................... CALIBRATE"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_CALIBRATE
+        help
+          Calibrate - is ...
+
+config BR2_PACKAGE_JINF
+        prompt "jinf.............................. JINF"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_JINF
+        help
+          Jinf - is ...
+
+config BR2_PACKAGE_QTH
+        prompt "qth............................... QTH"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_QTH
+        help
+          Qth - is ...
+
+config BR2_PACKAGE_REMOTE
+        prompt "remote............................ REMOTE"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_REMOTE
+        help
+          Remote - is ...
+
+config BR2_PACKAGE_YAPP
+        prompt "yapp.............................. YAPP"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_YAPP
+        help
+          Yapp - is ...
+
+config BR2_PACKAGE_UI-CLUSTER
+        prompt "ui-cluster........................ UI-CLUSTER"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_UI-CLUSTER
+        help
+          Ui-cluster - is ...
+
+config BR2_PACKAGE_X-BOT
+        prompt "x-bot............................. X-BOT"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_X-BOT
+        help
+          X-bot - is ...
+                                                                                                                                              
+endmenu

@@ -1,0 +1,32 @@
+#!/bin/sh
+
+. /bin/midge_functions
+
+NAME="IPSec"
+DESC="IPSec"
+
+required setkey
+
+stop(){
+	echo "Stoping $NAME. Clearing SAD and SPD."
+	echo "flush; spdflush;" | /usr/sbin/setkey -c
+}
+
+start(){
+	echo "Starting $NAME."
+	/etc/templates/ipsec-tools.sh | /usr/sbin/setkey -c 
+}
+
+
+case $1 in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	*)
+		stop
+		start
+		;;
+esac

@@ -1,0 +1,6 @@
+Package: owlib
+Priority: optional
+Section: net
+Source: http://home.mag.cx/
+Depends: libpthread, libusb
+Description: 1-Wire file system

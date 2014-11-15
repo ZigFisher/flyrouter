@@ -1,0 +1,5 @@
+Package: ussp-push
+Priority: optional
+Section: net
+Description: ussp-push is a OBEX object pusher for Linux, using the BlueZ BlueTooth stack
+Depends: libusb

@@ -1,0 +1,85 @@
+#!/bin/sh
+
+. /bin/midge_functions
+
+[ -z "$iface" ] && iface=$2
+NAME="qos"
+DESC="QoS"
+TC="cmd `which tc`"
+CLASS="$TC class"
+QDISC="$TC qdisc"
+FILTER="$TC filter"
+
+
+if [ -z "$iface" ]; then
+	echo "Please set \$iface or \$2"
+	exit 1
+fi
+
+eval `kdb -qq sls sys_iface_${iface}_`
+
+create_htb_ceil(){
+	local parent=$1
+	local rate=$2
+	local ceil=$3
+	local prio=${4:-100}
+
+	$CLASS add dev $iface parent 1:1  classid 1:$parent  htb           rate $rate  ceil $ceil prio $prio
+	$QDISC add dev $iface parent 1:$parent handle $parent:   sfq perturb 10 quantum 10514b
+	$FILTER add dev $iface parent 1:  protocol ip   prio 10       handle $parent fw flowid 1:$parent
+}
+
+
+stop(){
+	echo "Stoping $NAME on $iface."
+	$QDISC del dev $iface root 2>/dev/null
+}
+
+start(){
+	$QDISC del dev $iface root 2>/dev/null
+	[ -z "$qos_sch" -o "$qos_sch" = "pfifo_fast" ] && return 0
+	
+	echo "Starting $NAME on $iface."
+	case $qos_sch in 
+	pfifo|bfifo)
+		$QDISC add dev $iface handle 1: root dsmark indices 1
+		$QDISC add dev $iface handle 2:0  parent 1:0 $qos_sch limit $qos_fifo_limit
+	;;
+	htb)
+		$QDISC add dev $iface root handle 1: htb
+		$CLASS add dev $iface parent 1:   classid 1:1  htb rate $rate ceil $ceil
+	;;
+	tbf)
+		l="latency 20ms"
+		[ -n "$qos_tbf_limit" ] && l="limit $qos_tbf_limit"
+		[ -n "$qos_tbf_latency" ] && l="latency $qos_tbf_latency"
+		rate="rate ${qos_tbf_rate:-512Kbit}"
+		buffer="buffer ${qos_tbf_buffer:-4096}"
+		$QDISC add dev $iface root tbf $rate $l $buffer
+	;;
+	sqf)
+		$QDISC add dev $iface root sfq perturb 10
+	;;
+	esfq)
+		limit=${qos_esfq_limit:-128}
+		depth=${qos_esfq_depth:-128}
+		hash=${qos_esfq_hash:-dst}
+		divisor=${qos_esfq_divisor:-11}
+		$QDISC add dev $iface root esfq limit $limit depth $depth hash $hash divisor $divisor perturb 10
+	;;
+	esac
+}
+
+
+case $1 in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	*)
+		stop
+		start
+		;;
+esac

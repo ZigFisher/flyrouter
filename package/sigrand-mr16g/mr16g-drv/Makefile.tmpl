@@ -1,0 +1,23 @@
+CFLAGS+=@CFLAGS@
+obj-m := mr16g_hdlc.o
+
+sg16lan.ko: mr16g_hdlc.c
+	make -C @KERNSRC@ SUBDIRS=$(PWD) modules CROSS_COMPILE=@CROSS_PREFIX@
+
+all: mr16g_hdlc.ko
+
+install: mr16g_hdlc.ko
+	install -m 600 mr16g_hdlc.ko @INST_PATH@/lib/modules/@KERNVER@
+	install -m 700 ./tools/mr16gcfg @INST_PATH@/sbin
+
+clean:
+	rm --preserve-root -f .*.o*
+	rm --preserve-root -f .*.ko*
+	rm --preserve-root -f *.o*
+	rm --preserve-root -f *.ko*
+	rm --preserve-root -f *.mod.*
+	rm --preserve-root -f .sg16*
+	rm --preserve-root -f -R .tmp*
+
+
+

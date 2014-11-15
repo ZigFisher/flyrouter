@@ -1,0 +1,28 @@
+diff -ur sobexsrv-1.0.1/src/Makefile sobexsrv_new/src/Makefile
+--- sobexsrv-1.0.1/src/Makefile	2006-06-04 01:21:03.000000000 +0300
++++ sobexsrv_new/src/Makefile	2008-01-28 13:53:40.000000000 +0200
+@@ -7,17 +7,20 @@
+ CHROOT  = "\"/tmp\""
+ MIMEDIR = "\"/tmp/mime\""
+ 
+-INC =
+-LIB = -lbluetooth -lopenobex
++INC = -I$(STAGING_DIR)/usr/include/iconv/
++LIB = -lbluetooth -lopenobex -liconv
+ #CFLAGS = -Wall -g -DVERSION_STRING=$(VERSION) -DHANDLER=$(HANDLER) -DSOBEXSRV_CHROOT=$(CHROOT)
+-CFLAGS = -Wall -DVERSION_STRING=\"$(VERSION)\" -DHANDLER=$(HANDLER) -DSOBEXSRV_CHROOT=$(CHROOT)
++CFLAGS = -Wall -DVERSION_STRING=\"$(VERSION)\" -DHANDLER=$(HANDLER) -DSOBEXSRV_CHROOT=$(CHROOT) $(INC)
+ CC = gcc
+ 
+ OBJ = obexsrv.o util.o sdp.o fs.o pathcheck.o
+ EXEC = sobexsrv
+ 
++%.o: %.c
++	$(CC) $(CPPFLAGS) $(CFLAGS) -DVERSION_STRING=\"$(VERSION)\" -DHANDLER=$(HANDLER) -DSOBEXSRV_CHROOT=$(CHROOT) -c -o $@ $<
++
+ all: $(OBJ)
+-	$(CC) $(CFLAGS) -o $(EXEC) $(OBJ) $(LIB)
++	$(CC) $(CFLAGS) $(LDFLAGS) -o $(EXEC) $(OBJ) $(LIB) $(INC) -DVERSION_STRING=\"$(VERSION)\" -DHANDLER=$(HANDLER) -DSOBEXSRV_CHROOT=$(CHROOT)
+ 
+ clean:
+ 	rm -f $(OBJ) $(EXEC)

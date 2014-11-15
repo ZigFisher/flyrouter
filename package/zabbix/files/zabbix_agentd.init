@@ -1,0 +1,20 @@
+#!/bin/sh
+
+
+start() {
+  [ -f /etc/zabbix/zabbix_agentd.conf ] || {
+    echo "/etc/zabbix/zabbix_agentd.conf does not exist !";
+    exit 0;
+  };
+  [ -x /usr/sbin/zabbix_agentd ] && /usr/sbin/zabbix_agentd
+}
+
+stop() {
+  killall zabbix_agentd
+}
+
+restart() {
+	stop
+	sleep 1
+	start
+}

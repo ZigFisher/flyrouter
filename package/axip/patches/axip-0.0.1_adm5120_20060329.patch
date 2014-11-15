@@ -1,0 +1,86 @@
+diff -ur axip-0.0.1/Makefile axip/Makefile
+--- axip-0.0.1/Makefile	2005-10-20 21:05:40.000000000 +0000
++++ axip/Makefile	2006-03-30 06:57:16.000000000 +0000
+@@ -2,21 +2,14 @@
+ 
+ AXIP_VERSION=0.0.1
+ 
+-ifeq ($(CC),cc)
+ CC:=gcc
+-endif
+-
+-ifeq ($(CC),gcc)
+-install_prefix:=/usr/local
+-config_install_prefix:/usr/local
+-config_prefix=/usr/local
+ CFLAGS:=-Wall -g -O2
+-endif
++
+ 
+ OBJS= main.o kiss.o process.o routing.o io.o config.o crc.o
+ 
+ .c.o:
+-	$(CC) $(CFLAGS) $(CPPFLAGS) -DCONFIG_FILE=\"$(config_prefix)/etc/ax25/axip.conf\" -c $<
++	$(CC) $(CFLAGS) $(CPPFLAGS) -DCONFIG_FILE=\"/etc/ax25/axip.conf\" -c $<
+ 
+ axip:	$(OBJS)
+ 	$(CC) -o axip $(OBJS) $(LDFLAGS) -lax25
+@@ -25,14 +18,10 @@
+ 	rm -f *.o core *~ axip
+ 
+ install: axip
+-	install -d -m0755 $(install_prefix)/sbin
+-	install -d -m0755 $(config_install_prefix)/etc/ax25
+-	install -m 755    -o root -g root axip      $(install_prefix)/sbin/axip
+-	install -m 755    -o root -g root startaxip $(install_prefix)/sbin/startaxip
+-	install -m 644    -o root -g root axip.conf $(config_install_prefix)/etc/ax25/axip.conf
+-
+-targz: clean
+-	cd .. && tar cvfz axip-$(AXIP_VERSION).tar.gz axip-$(AXIP_VERSION)
++	install -d -m0755 /usr/sbin
++	install -d -m0755 /etc/ax25
++	install -m 755    -o root -g root axip      /usr/sbin/axip
++	install -m 644    -o root -g root axip.conf /etc/ax25/axip.conf
+ 
+ reinstall: clean install
+ 
+--- axip-0.0.1/axip.conf	2005-10-20 22:13:40.000000000 +0000
++++ axip.conf	2006-11-10 08:32:28.000000000 +0000
+@@ -1,23 +1,14 @@
+-#
+-# axip configuration file /etc/ax25/axip.conf
+-#
+-
+-#############################################################
+-## Node     : ZAPRUD:9A0XZP
+-## Created  : 2005-10-07
+-## Sysop    : Tihomir Heidelberg, 9a4gl@9a0tcp.ampr.org
+-##
+-#############################################################
+-
+-#
+-# AXIP users
+-#
+-port  add ipuser /dev/pty/s0 38400 udp 93 93
+-route add ipuser 9a4gl 44.170.103.9
+-route add ipuser default 44.170.103.9
+-
+-#
+-# This one is for LinuxSV FERSV:9A0XFE
+-#
+-port  add ipxfe /dev/pty/s1 38400 udp 10097 10097
+-route add ipxfe default 44.170.105.1
++## 2006.03.29 : Internal LoopBack
++## SysOp:
++port  add local /dev/ttyp1 38400 udp 10090 10090
++route add local default localhost
++#
++## 2006.11.10 : AX_UDP for ARLiX Club members
++## SysOp:   Igor, UU8JA, Simferopol, Republic of Crimea, Ukraine : uu8ja@hamradio.crimea.ua, ICQ:69278245
++port  add ipusr /dev/ttyp2 38400 udp 10093 10093
++route add ipusr default 172.28.200.7
++#
++## 2005.07.14 : Link CRMIFC:UU4JZA <-> CRMSAS:UU2JWS
++## SysOp:   Igor, UU8JA, Simferopol, Republic of Crimea, Ukraine : uu8ja@hamradio.crimea.ua, ICQ:69278245
++#port  add axi01 /dev/ttyp3 38400 udp 10098 10098
++#route add axi01 default 212.110.135.46

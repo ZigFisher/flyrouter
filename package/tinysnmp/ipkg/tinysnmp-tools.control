@@ -1,0 +1,5 @@
+Package: tinysnmp-tools
+Section: net
+Priority: optional
+Description: TinySNMP Utilities
+Depends: libabz, libber, libdebug

@@ -1,0 +1,5 @@
+Package: linsv
+Priority: optional
+Section: hamradio
+Description: Linux SuperVozelj node
+Depends: libax25, kissattach

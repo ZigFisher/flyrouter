@@ -1,0 +1,26 @@
+diff -Naur sgauth-2/web.cpp sgauth-2-new/web.cpp
+--- sgauth-2/web.cpp	2005-01-13 20:51:33.000000000 +0200
++++ sgauth-2-new/web.cpp	2006-02-01 08:40:00.000000000 +0200
+@@ -210,7 +210,21 @@
+ 
+ sprintf(str,"<font face=\"Arial\">Остаток денег: <b>%.3f</b></font><p>" , ls.cash / 1000.0);
+ res = send(outerSocket, str, strlen(str) + 1, 0);
+-
++if (ls.freeMb[0])
++    {
++    if (ls.freeMb[0] == 'C' || ls.freeMb[0] == 'c')
++        {
++        ls.freeMb[0] = ' ';
++	sprintf(str,"<font face=\"Arial\">Остаток МБ: <b>%s</b></font><p>" , ls.freeMb);
++	res = send(outerSocket, str, strlen(str) + 1, 0);
++        }
++    else
++        {
++	sprintf(str,"<font face=\"Arial\">Остаток МБ: <b>%s</b></font><p>" , ls.freeMb);
++	res = send(outerSocket, str, strlen(str) + 1, 0);
++        }
++    }
++
+ sprintf(str,"<TABLE bgcolor=\"#00006f\" cellpadding=0 cellspacing=0 border=0 width=100%%><TR><TD>\n");
+ res = send(outerSocket, str, strlen(str) + 1, 0);
+ sprintf(str,"    <TABLE WIDTH=\"100%%\" BORDER=0 cellpadding=1 cellspacing=1 >\n");

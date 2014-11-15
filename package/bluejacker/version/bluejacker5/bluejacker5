@@ -1,0 +1,127 @@
+#!/bin/sh -x
+
+[ -r /etc/bluetooth/bluejacker.conf ] && . /etc/bluetooth/bluejacker.conf
+
+. /bin/midge_functions 
+. /etc/bluetooth/btmisc.sh
+. /etc/bluetooth/jackmisc.sh
+
+VERBOSE=5
+RANDOM=`date +%S%M`
+
+cd /etc/bluetooth
+
+mkdir -p $JACKDIR
+mkdir -p $ADV_DIR
+mkdir -p $BONUS_DIR
+
+push_file_cmd() {
+	set -x
+	local channel=$PCHANNEL
+	local NOW=`date +%s`
+	local NOW_STR=`date +%Y%d%m%H%M%S`
+	if ussp-push --dev $BTDEV --timeo $PUSH_TIMEOUT $mac@$channel $file `basename $file`; then
+		log "$NOW_STR: $mac ${name}@${channel} pushed $file" 
+		echo "$NOW" >$DEVDIR/lastjack 
+		log_dev "$NOW_STR: Pushed $file" 
+		clear_push_fail
+	else
+		inc_push_fail
+	  	warn "push fail"
+	fi;
+}
+
+push_file() {
+	local mac="$1"
+	local channel="$2"
+	local file="$3"
+	
+	PCHANNEL=$channel \
+		PFILE=$file \
+		push_file_cmd >&2 
+}
+
+can_jack() {
+	local mac="$1"
+	local file="$2"
+	local push_channel=`get_channel "OBEX Object Push"`
+	local send_channel=`get_channel "OBEX File Transfer"`
+	[ -s $DEVDIR/lastjack ] || echo 0 >$DEVDIR/lastjack
+    local lastjack=`cat $DEVDIR/lastjack`
+    NOW=`date +%s`
+    
+    if ! can_jack_by_push_fail; then
+    	info 5 "Sleeping for push fail"
+    	return 1
+    fi
+    
+    local can_jack_by_period=0
+    if [ $(($lastjack+$DEVICEJACK_PERIOD)) -lt $NOW ]; then
+        can_jack_by_period=1
+    else
+        info 5 "Jack period: for '$name' $(($lastjack+$DEVICEJACK_PERIOD)) less then $NOW "
+        return 1
+    fi
+    
+    if [ $PUSH_PRIO -gt 0 ] && [ $PUSH_PRIO -gt $SEND_PRIO ] && [ -n "$push_channel" ]; then
+        return 0;
+    elif [ $SEND_PRIO -gt 0 ] && [ $SEND_PRIO -gt $PUSH_PRIO ] && [ -n "$send_channel" ]; then
+        return 0;
+    else
+        info 5 "Device '$name' cannot be jack: PUSH_PRIO:$PUSH_PRIO SEND_PRIO:$SEND_PRIO push_channel:$push_channel send_channel:$send_channel"
+    fi
+ 
+	return 1
+}
+
+jack() {
+    local mac="$1"
+    local file="$2"
+    local push_channel=`get_channel "OBEX Object Push"`
+    local send_channel=`get_channel "OBEX File Transfer"`
+
+    
+    if [ $PUSH_PRIO -gt 0 ] && [ $PUSH_PRIO -gt $SEND_PRIO ] && [ -n "$push_channel" ]; then
+        push_file $mac $push_channel $file
+    elif [ $SEND_PRIO -gt 0 ] && [ $SEND_PRIO -gt $PUSH_PRIO ] && [ -n "$send_channel" ]; then
+        send_file $mac $send_channel $file
+    else
+        info 5 "Device '$name' cannot be jack: PUSH_PRIO:$PUSH_PRIO SEND_PRIO:$SEND_PRIO push_channel:$push_channel send_channel:$send_channel"
+    fi
+}
+
+[ -z "$DO_NOT_START_BT" ] && start_bt
+update_bonuses_list
+update_adv_list
+
+
+while sleep 5 ; do
+    now=`date "+%Y%m%d%H%M%S"`
+    echo "$now:"
+    hcitool -i $BTDEV scan --flush --length=10 >/tmp/btscan || scanfail=$(($scanfail+1))
+    [ "$scanfail" -ge $MAX_SCANFAIL ] && { warn "MAX_SCANFAIL reached, restarting bt"; start_bt; }
+    
+    cat /tmp/btscan | grep -v Scanning | while read mac name; do 
+    	export mac name
+    	export DEVDIR=$JACKDIR/`echo $mac | sed s/://g`
+    	echo -ne "$mac\t $name\t"
+    	if [ ! -d $DEVDIR ]; then
+	    	mkdir -p $DEVDIR
+	    	info 2 "New device $name"
+	        echo "$mac" > $DEVDIR/mac
+	    	echo "$name" > $DEVDIR/name
+    	fi
+        get_info $mac
+    	
+        # make symlink
+        symlink="$JACKDIR/`echo $name | tr 'A-Z ' 'a-z_'`"
+        [ -L $symlink ] || ln -s `basename $DEVDIR` $symlink 
+    	log_dev "Seen $now"
+        scan_services $mac
+    	if can_jack; then
+            afile="`get_file_name`"
+	    	jack $mac $afile
+        fi
+    done
+done
+

@@ -1,0 +1,24 @@
+CFLAGS+=@CFLAGS@
+obj-m := sg16lan.o
+
+sg16lan.ko: sg16lan.c
+	make -C @KERNSRC@ SUBDIRS=$(PWD) modules CROSS_COMPILE=@CROSS_PREFIX@
+
+all: sg16lan.ko
+
+install: sg16lan.ko
+	install -m 600 sg16lan.ko @INST_PATH@/lib/modules/@KERNVER@
+	install -m 700 ./tools/sg16cfg @INST_PATH@/sbin
+	cp ./firmware/sg16.bin @INST_PATH@/lib/firmware/
+
+clean:
+	rm --preserve-root -f .*.o*
+	rm --preserve-root -f .*.ko*
+	rm --preserve-root -f *.o*
+	rm --preserve-root -f *.ko*
+	rm --preserve-root -f *.mod.*
+	rm --preserve-root -f .sg16*
+	rm --preserve-root -f -R .tmp*
+
+
+

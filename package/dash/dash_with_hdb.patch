@@ -1,0 +1,93 @@
+Only in dash-0.5.3-p/: Makefile
+Only in dash-0.5.3-p/: config.h
+Only in dash-0.5.3-p/: config.log
+Only in dash-0.5.3-p/: config.status
+Only in dash-0.5.3-p/src: .deps
+Only in dash-0.5.3-p/src: Makefile
+diff -ur dash-0.5.3/src/Makefile.in dash-0.5.3-p/src/Makefile.in
+--- dash-0.5.3/src/Makefile.in	2005-11-26 05:18:20.000000000 +0200
++++ dash-0.5.3-p/src/Makefile.in	2007-02-10 22:00:59.000000000 +0200
+@@ -57,7 +57,7 @@
+ 	miscbltin.$(OBJEXT) mystring.$(OBJEXT) options.$(OBJEXT) \
+ 	parser.$(OBJEXT) redir.$(OBJEXT) show.$(OBJEXT) trap.$(OBJEXT) \
+ 	output.$(OBJEXT) printf.$(OBJEXT) system.$(OBJEXT) \
+-	test.$(OBJEXT) times.$(OBJEXT) var.$(OBJEXT)
++	test.$(OBJEXT) times.$(OBJEXT) var.$(OBJEXT) hdb.$(OBJEXT)
+ am_dash_OBJECTS = $(am__objects_1) arith.$(OBJEXT)
+ dash_OBJECTS = $(am_dash_OBJECTS)
+ dash_DEPENDENCIES = builtins.o init.o nodes.o signames.o syntax.o
+@@ -65,9 +65,9 @@
+ depcomp = $(SHELL) $(top_srcdir)/depcomp
+ am__depfiles_maybe = depfiles
+ COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
+-	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
++	$(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -DDASH
+ CCLD = $(CC)
+-LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
++LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -lstdc++ -o $@
+ YACCCOMPILE = $(YACC) $(YFLAGS) $(AM_YFLAGS)
+ SOURCES = $(dash_SOURCES)
+ DIST_SOURCES = $(dash_SOURCES)
+@@ -88,7 +88,7 @@
+ CC = @CC@
+ CCDEPMODE = @CCDEPMODE@
+ CC_FOR_BUILD = @CC_FOR_BUILD@
+-CFLAGS = @CFLAGS@
++CFLAGS = @CFLAGS@ -DDASH
+ CPPFLAGS = @CPPFLAGS@
+ CYGPATH_W = @CYGPATH_W@
+ DEFS = @DEFS@
+@@ -167,7 +167,7 @@
+ 	alias.c arith_yylex.c cd.c error.c eval.c exec.c expand.c \
+ 	histedit.c input.c jobs.c mail.c main.c memalloc.c miscbltin.c \
+ 	mystring.c options.c parser.c redir.c show.c trap.c output.c \
+-	bltin/printf.c system.c bltin/test.c bltin/times.c var.c
++	bltin/printf.c system.c bltin/test.c bltin/times.c bltin/hdb.cpp var.c
+ 
+ dash_SOURCES = \
+ 	$(dash_CFILES) arith.y \
+@@ -286,6 +286,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/system.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/times.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/hdb.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/trap.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/var.Po@am__quote@
+ 
+@@ -345,6 +346,20 @@
+ @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+ @am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o times.obj `if test -f 'bltin/times.c'; then $(CYGPATH_W) 'bltin/times.c'; else $(CYGPATH_W) '$(srcdir)/bltin/times.c'; fi`
+ 
++hdb.o: bltin/hdb.cpp
++@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT hdb.o -MD -MP -MF "$(DEPDIR)/hdb.Tpo" -c -o hdb.o `test -f 'bltin/hdb.cpp' || echo '$(srcdir)/'`bltin/hdb.cpp; \
++@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/hdb.Tpo" "$(DEPDIR)/hdb.Po"; else rm -f "$(DEPDIR)/hdb.Tpo"; exit 1; fi
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='bltin/hdb.cpp' object='hdb.o' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o hdb.o `test -f 'bltin/hdb.cpp' || echo '$(srcdir)/'`bltin/hdb.cpp
++
++hdb.obj: bltin/hdb.cpp
++@am__fastdepCC_TRUE@	if $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -MT hdb.obj -MD -MP -MF "$(DEPDIR)/hdb.Tpo" -c -o hdb.obj `if test -f 'bltin/hdb.cpp'; then $(CYGPATH_W) 'bltin/hdb.cpp'; else $(CYGPATH_W) '$(srcdir)/bltin/hdb.cpp'; fi`; \
++@am__fastdepCC_TRUE@	then mv -f "$(DEPDIR)/hdb.Tpo" "$(DEPDIR)/hdb.Po"; else rm -f "$(DEPDIR)/hdb.Tpo"; exit 1; fi
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	source='bltin/hdb.cpp' object='hdb.obj' libtool=no @AMDEPBACKSLASH@
++@AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
++@am__fastdepCC_FALSE@	$(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS) -c -o hdb.obj `if test -f 'bltin/hdb.cpp'; then $(CYGPATH_W) 'bltin/hdb.cpp'; else $(CYGPATH_W) '$(srcdir)/bltin/hdb.cpp'; fi`
++
+ .y.c:
+ 	$(YACCCOMPILE) $<
+ 	if test -f y.tab.h; then \
+Only in dash-0.5.3/src: arith.c
+Only in dash-0.5.3/src: arith.h
+Only in dash-0.5.3-p/src/bltin: .hdb.cpp.swp
+Only in dash-0.5.3-p/src/bltin: hdb.cpp
+diff -ur dash-0.5.3/src/builtins.def.in dash-0.5.3-p/src/builtins.def.in
+--- dash-0.5.3/src/builtins.def.in	2005-11-26 05:17:55.000000000 +0200
++++ dash-0.5.3-p/src/builtins.def.in	2007-02-10 22:04:27.000000000 +0200
+@@ -72,6 +72,7 @@
+ jobscmd		-u jobs
+ localcmd	-a local
+ printfcmd	printf
++hdbcmd	hdb
+ pwdcmd		pwd
+ readcmd		-u read
+ returncmd	-s return
+Only in dash-0.5.3-p/: stamp-h1

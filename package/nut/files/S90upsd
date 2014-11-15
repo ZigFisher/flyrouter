@@ -1,0 +1,34 @@
+#!/bin/sh
+
+test -r /etc/upsd.conf || exit 0
+test -x /usr/sbin/upsd || exit 0
+
+test -f /bin/router_functions && . /bin/router_functions
+
+						
+case "$1" in
+  start)
+        msg "Starting upsd: "
+	mkdir -p /var/state/ups && chmod 600 /var/state/ups
+	upsdrvctl -u root start
+	upsd -u root
+	;;
+
+  stop)
+	msg "Stopping upsd: "
+	upsd -c stop
+	upsdrvctl stop 
+	;;
+
+  restart)
+	msgn "Restart upsd: "
+	$0 stop
+	$0 start
+	;;
+
+  *)
+	echo "Usage: upsd {start|stop|restart}"
+	exit 1
+esac
+
+exit $?

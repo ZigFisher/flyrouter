@@ -1,0 +1,5 @@
+Package: sdptool
+Priority: optional
+Section: net
+Description: ?
+Depends: kmod-bluetooth, bluez-libs

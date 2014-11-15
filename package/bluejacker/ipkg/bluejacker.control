@@ -1,0 +1,5 @@
+Package: bluejacker
+Priority: optional
+Section: net
+Description: Bluejacker script for BluePoint system
+

@@ -1,0 +1,32 @@
+﻿
+render_save_stuff() вызывает save() и render_save_message() если request=POST 
+
+save() - Функция записи данных в kdb
+читает переменную kdb_vars, эта переменная должна быть вида "type:name type:name ..."
+где type: bool,str,int (для bool значения 0 и 1)
+	ex: kdb_vars="bool:sys_iface_${iface}_dhcp_enabled int:sys_iface_${iface}_dhcp_lease_time"
+если iface=eth0 - соотвественно записывает данные из переменных $FORM_sys_iface_eth0_dhcp_enabled $FORM_sys_iface_eth0_dhcp_lease_time 
+вызывает update_configs_and_service_reload $subsys
+
+update_configs_and_service_reload() - Функция обновляет конфиги, и перегружает требуемый сервис
+вызывает:
+   update_configs $service
+   service_reload $service
+
+service_reload() $subsys - Функция перегружает требуемый сервис 
+  см lib/services.sh
+  
+  
+  render_input_field
+ 
+
+При поднятии ppp интерфейса определяется реальное имя интерфейса и записывается в sys_iface_${iface}_real
+
+Протоколы интерфейсов sys_iface_${iface}_proto - имена интерфейсов:
+  - bridge - br
+  - pppoe - ppp
+  - pptp - ppp
+  - ether - eth
+  - bonding - bond
+  - imq - imq НЕРЕАЛИЗОВАНО ЗА НЕНАДОБНОСТЬЮ
+  Для dslX интерфейсов протокол - ether

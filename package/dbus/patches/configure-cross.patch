@@ -1,0 +1,11 @@
+--- dbus-1.1.1/configure	2007-06-18 19:48:15.000000000 +0000
++++ dbus-1.1.1-q/configure	2007-09-21 17:14:13.000000000 +0000
+@@ -25354,7 +25354,7 @@
+ See \`config.log' for more details." >&5
+ echo "$as_me: error: cannot run test program while cross compiling
+ See \`config.log' for more details." >&2;}
+-   { (exit 1); exit 1; }; }
++   { (echo exit 1); echo exit 1; }; }
+ else
+   cat >conftest.$ac_ext <<_ACEOF
+ /* confdefs.h.  */

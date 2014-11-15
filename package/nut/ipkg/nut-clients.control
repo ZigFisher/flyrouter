@@ -1,0 +1,4 @@
+Package: nut-clients
+Section: net
+Priority: optional
+Description: nut-clients - talk to upsd and do things with the status data

@@ -1,0 +1,32 @@
+diff -ur bwm-1.1.0.orig/bwm.c bwm-1.1.0.new/bwm.c
+--- bwm-1.1.0.orig/bwm.c	2008-11-24 22:38:51.000000000 +0200
++++ bwm-1.1.0.new/bwm.c	2008-11-24 22:39:40.000000000 +0200
+@@ -62,6 +62,7 @@
+   int total_counter;
+   int sleep_time = 2;
+   int first_pass = 1;
++  int one = 0;
+ 
+   unsigned long int conv_field;
+ 
+@@ -76,7 +77,10 @@
+   unsigned tot_bw_total_part = 0;
+ 
+   if(argc >= 2) if((sleep_time = atoi(argv[1])) < 1) sleep_time = 1;
+-  if(argc >= 3) strncpy(filename, argv[2], 255);
++  if(argc >= 2 && (!strcmp("--one", argv[1])))
++	  one=1;
++  if(argc >= 3 && (!strcmp("--one", argv[2])))
++	  one=1;
+ 
+   if(argc > 3) 
+   {
+@@ -242,6 +246,8 @@
+        rx_bw_total_whole, rx_bw_total_part,
+         tx_bw_total_whole, tx_bw_total_part,
+          tot_bw_total_whole, tot_bw_total_part);
++	  if ( one )
++		  exit(EXIT_SUCCESS);
+ 
+       printf("Hit CTRL-C to end this madness.\n");
+     }

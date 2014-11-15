@@ -1,0 +1,7 @@
+config BR2_PACKAGE_LIBSTDCXX
+	prompt "libstdc++......................... C++ library"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  A standard C++ library
+

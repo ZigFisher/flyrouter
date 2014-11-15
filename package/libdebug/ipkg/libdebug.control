@@ -1,0 +1,4 @@
+Package: libdebug
+Priority: optional
+Section: libs
+Description: Memory leak detection system and logging library

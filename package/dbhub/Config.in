@@ -1,0 +1,9 @@
+config BR2_PACKAGE_DBHUB
+	prompt "dbhub..............................A Direct Connect hub for Linux/Unix"
+	tristate
+	default n
+	help
+	  A Direct Connect hub for Linux/Unix
+	  
+	  http://dbhub.org
+

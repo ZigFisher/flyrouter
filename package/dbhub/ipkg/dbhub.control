@@ -1,0 +1,4 @@
+Package: dbhub
+Priority: optional
+Section: net
+Description: A Direct Connect hub for Linux/Unix

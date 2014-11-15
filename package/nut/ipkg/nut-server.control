@@ -1,0 +1,4 @@
+Package: nut-server
+Section: net
+Priority: optional
+Description: nut-server - upsd serves data from the drivers to the network

@@ -1,0 +1,4 @@
+Package: libtiff
+Priority: optional
+Section: libs
+Description: libtiff

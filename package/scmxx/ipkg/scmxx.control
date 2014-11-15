@@ -1,0 +1,5 @@
+Package: scmxx
+Section: console
+Priority: optional
+Description: scmxx - Cool software for use with Siemens mobile phones with many features
+Depends: 

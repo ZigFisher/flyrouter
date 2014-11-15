@@ -1,0 +1,4 @@
+Package: libstdc++
+Priority: optional
+Section: libs
+Description: A standard c++ library

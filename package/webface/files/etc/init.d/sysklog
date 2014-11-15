@@ -1,0 +1,42 @@
+#!/bin/sh
+
+DESC="system log daemon"
+PIDFILE_SYSLOG=/var/run/syslogd.pid
+PIDFILE_KLOG=/var/run/klogd.pid
+DAEMON_SYSLOG=/sbin/syslogd
+DAEMON_KLOG=/sbin/klogd
+DAEMON_SYSLOG_ARGS="-n -m 0 "
+DAEMON_KLOG_ARGS="-n"
+
+eval `kdb -qq ls sys_log_*`
+
+start(){
+	echo "Starting $DESC."
+	buf_size=
+	[ "$sys_log_remote_enabled" = 1 -a -n "$sys_log_remote_server" ] && DAEMON_SYSLOG_ARGS="$DAEMON_SYSLOG_ARGS -L -R $sys_log_remote_server" 
+	[ -n "$sys_log_buf_size" ] && buf_size="$sys_log_buf_size" || buf_size="64"
+	DAEMON_SYSLOG_ARGS="$DAEMON_SYSLOG_ARGS -C $buf_size" || 
+	[ -x $DAEMON_SYSLOG ] && start-stop-daemon --quiet --start --background --make-pidfile --pid=$PIDFILE_SYSLOG --exec $DAEMON_SYSLOG -- $DAEMON_SYSLOG_ARGS
+	[ -x $DAEMON_KLOG ]   && start-stop-daemon --quiet --start --background --make-pidfile --pid=$PIDFILE_KLOG   --exec $DAEMON_KLOG   -- $DAEMON_KLOG_ARGS
+	[ -n "$sys_log_dmesg_level" ] && dmesg -n $sys_log_dmesg_level
+}
+
+stop(){
+	echo "Stopping $DESC."
+	start-stop-daemon --quiet --stop --pid=$PIDFILE_SYSLOG --name syslogd
+	start-stop-daemon --quiet --stop --pid=$PIDFILE_KLOG   --name klogd
+}
+
+case $1 in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+esac
+

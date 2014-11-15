@@ -1,0 +1,5 @@
+Package: ax25-call
+Section: hamradio
+Priority: optional
+Description: ax25_call - make an AX.25 connection
+Depends: libax25, kissattach

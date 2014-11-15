@@ -1,0 +1,174 @@
+#!/bin/sh
+#
+# gpio22 - sys1, green
+# gpio19 - sys1, red
+# gpio16 - sys2, green
+# gpio13 - sys2, red
+# gpio10 - not use
+#
+#for size in 1500 1000 500 250 50; do 
+#	loss=`ping -c 10 -s $size $gw | grep transmitted | awk '{print $7}'`
+#	if [ "$loss" = "0%" ]; then
+#		echo "Packet size $size byte TX/RX: ok";
+#	else
+#		echo "Packet size $size byte TX/RX: $loss loss"
+#	fi
+#done
+
+
+gateways=""
+count="100"
+iface="eth1"
+admip="192.168.0.1/24"
+exec 0</etc/pinger.conf
+
+
+on_ctrl() {
+for gpio in /dev/gpio10 /dev/gpio13 /dev/gpio16 /dev/gpio19 /dev/gpio22; do
+	echo "led blink 0" >$gpio;
+	echo "led switch 1" >$gpio;
+done
+}
+                
+off_ctrl() {
+for gpio in /dev/gpio10 /dev/gpio13 /dev/gpio16 /dev/gpio19 /dev/gpio22; do
+	echo "led blink 0" >$gpio;
+	echo "led switch 0" >$gpio;
+done
+}
+                                
+on_stat() {
+for gpio in /dev/gpio9 /dev/gpio12 /dev/gpio15 /dev/gpio18 /dev/gpio21; do
+	echo "led blink 0" >$gpio;
+	echo "led switch 1" >$gpio;
+done
+}
+ 
+off_stat() {       
+for gpio in /dev/gpio9 /dev/gpio12 /dev/gpio15 /dev/gpio18 /dev/gpio21; do
+	echo "led blink 0" >$gpio;
+	echo "led switch 0" >$gpio;
+done
+}
+
+blink_stat() {            
+for gpio in /dev/gpio9 /dev/gpio12 /dev/gpio15 /dev/gpio18 /dev/gpio21; do
+	echo "led switch 1" >$gpio;
+	echo "led blink 1000" >$gpio;
+done
+}                        
+
+wave_stat() {
+while true; do
+	usleep 80000 ; echo "led switch 0" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio9
+	usleep 80000 ; echo "led switch 0" > /dev/gpio9 ; echo "led switch 1" > /dev/gpio12
+	usleep 80000 ; echo "led switch 0" > /dev/gpio12 ; echo "led switch 1" > /dev/gpio15
+	usleep 80000 ; echo "led switch 0" > /dev/gpio15 ; echo "led switch 1" > /dev/gpio18
+	usleep 80000 ; echo "led switch 0" > /dev/gpio18 ; echo "led switch 1" > /dev/gpio21
+done
+}
+
+on_stat
+on_ctrl
+off_stat
+off_ctrl
+
+echo "led switch 1" > /dev/gpio19 ; echo "led blink 100" > /dev/gpio19
+while read ip gw; do
+  ip addr add $ip/24 dev $iface 2>/dev/null ;
+  gateways="$gateways $gw"
+done
+off_ctrl
+
+
+while true; do
+	on_stat
+	sleep 1
+	echo "Start network search..."
+	wave_stat &
+	gw=`fping -q -c 1 $gateways 2>&1 | grep "min/avg/max" | cut -f1 -d" " | tail -n 1`
+	kill $!
+
+	if [ -n "$gw" ]; then
+		#on_stat
+		blink_stat
+		echo "Found $gw "
+		myip=`cat /etc/pinger.conf | grep $gw | awk '{print $1}'`
+		echo "MyIP $myip "
+		ip addr flush dev $iface
+		ip a add $myip/24 dev $iface
+		ip a add $admip dev $iface
+		ip r replace default via $gw
+		break;
+	else
+		echo "Network not found"
+	fi 
+done
+
+
+
+
+echo "led blink 100" > /dev/gpio9 ; echo "led switch 1" > /dev/gpio9
+size=1500
+loss=`ping-iputils -f -c $count -s $size $gw | grep transmitted | awk '{print $6}'`
+if [ "$loss" = "0%" ]; then
+	echo "led blink 0" > /dev/gpio9 ; echo "led switch 1" > /dev/gpio9
+	on_stat
+	echo "Ping $size byte TX/RX: no loss";
+else
+	echo "led blink 0" > /dev/gpio9 ; echo "led switch 0" > /dev/gpio9
+	echo "Ping $size byte TX/RX: $loss loss"
+	#
+	echo "led blink 100" > /dev/gpio12 ; echo "led switch 1" > /dev/gpio12
+	size=1000
+	loss=`ping-iputils -f -c $count -s $size $gw | grep transmitted | awk '{print $6}'`
+	if [ "$loss" = "0%" ]; then
+		echo "led blink 0" > /dev/gpio12 ; echo "led switch 1" > /dev/gpio12
+		echo "led blink 0" > /dev/gpio15 ; echo "led switch 1" > /dev/gpio15
+		echo "led blink 0" > /dev/gpio18 ; echo "led switch 1" > /dev/gpio18
+		echo "led blink 0" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio21
+		echo "Ping $size byte TX/RX: no loss";
+	else
+		echo "led blink 0" > /dev/gpio12 ; echo "led switch 0" > /dev/gpio12
+		echo "Ping $size byte TX/RX: $loss loss"
+		#
+		echo "led blink 100" > /dev/gpio15 ; echo "led switch 1" > /dev/gpio15
+		size=500
+		loss=`ping-iputils -f -c $count -s $size $gw | grep transmitted | awk '{print $6}'`
+		if [ "$loss" = "0%" ]; then
+			echo "led blink 0" > /dev/gpio15 ; echo "led switch 1" > /dev/gpio15
+			echo "led blink 0" > /dev/gpio18 ; echo "led switch 1" > /dev/gpio18
+			echo "led blink 0" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio21
+			echo "Ping $size byte TX/RX: no loss";
+		else
+			echo "led blink 0" > /dev/gpio15 ; echo "led switch 0" > /dev/gpio15
+			echo "Ping $size byte TX/RX: $loss loss"
+			#
+			echo "led blink 100" > /dev/gpio18 ; echo "led switch 1" > /dev/gpio18
+			size=250
+			loss=`ping-iputils -f -c $count -s $size $gw | grep transmitted | awk '{print $6}'`
+			if [ "$loss" = "0%" ]; then
+				echo "led blink 0" > /dev/gpio18 ; echo "led switch 1" > /dev/gpio18
+				echo "led blink 0" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio21
+				echo "Ping $size byte TX/RX: no loss";
+			else
+				echo "led blink 0" > /dev/gpio18 ; echo "led switch 0" > /dev/gpio18
+				echo "Ping $size byte TX/RX: $loss loss"
+				#
+				echo "led blink 100" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio21
+				size=50
+				loss=`ping-iputils -f -c $count -s $size $gw | grep transmitted | awk '{print $6}'`
+				if [ "$loss" = "0%" ]; then
+					echo "led blink 0" > /dev/gpio21 ; echo "led switch 1" > /dev/gpio21
+					echo "Ping $size byte TX/RX: no loss";
+				else
+					echo "led blink 0" > /dev/gpio21 ; echo "led switch 0" > /dev/gpio21
+					echo "Ping $size byte TX/RX: $loss loss"
+				fi
+			fi
+		fi
+	fi
+fi
+                                                                                                                        
+
+exit 0

@@ -1,0 +1,12 @@
+diff -wuBr dbhub-0.451.orig/src/utils.h dbhub-0.451/src/utils.h
+--- dbhub-0.451.orig/src/utils.h	2008-01-25 23:01:14.000000000 +0200
++++ dbhub-0.451/src/utils.h	2009-03-02 18:12:57.000000000 +0200
+@@ -28,6 +28,8 @@
+ int    count_users(int type);
+ void   uprintf(struct user_t *user, char *format, ...);
+ void   get_users_hostname(char *nick, char *buf);
++int    get_users_nick(char *host, char *outbuf);
++int    old_nick_new_host(struct user_t *user, char *old_host);
+ int    get_hash(char *nick);
+ long long get_uptime(void);
+ int    match_with_wildcards(char *buf1, char *buf2);

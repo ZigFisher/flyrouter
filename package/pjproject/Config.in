@@ -1,0 +1,9 @@
+config BR2_PACKAGE_PJPROJECT
+	prompt "pjproject......................... PJSUA is a command line SIP user agent (UA)."
+	tristate
+	default m if CONFIG_DEVEL
+	#select BR2_PACKAGE_LIB..
+	help
+	  PJSUA is a command line SIP user agent (UA) written with PJSIP Open source SIP stack.
+	  
+	  http://www.pjsip.org/

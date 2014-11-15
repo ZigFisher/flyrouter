@@ -1,0 +1,19 @@
+# syncs time
+15	*/2	* * *	/usr/sbin/rdate -s clock-1.cs.cmu.edu
+
+# check cache
+#*/15  *       * * *   [ "`grep ip_dst_cache /proc/slabinfo  | awk '{print $2}'`" -gt 15000 ] && logger "rebooted by overflow ip_dst_cache" && reboot
+
+# fetch statistic
+#0-55/5	*	* * *   [ -x /usr/bin/vnstat ] && [ `ls /var/lib/vnstat/ | wc -l` -ge 1 ] && /usr/bin/vnstat -u
+
+# vbox
+#*/5	*	* * *	[ -x /usr/sbin/vtund ] &&  [ -z "`/sbin/ifconfig tun0`" ] &&  /etc/init.d/S90vtun restart
+
+# backup config
+#15     23      * * *   /bin/zcat /dev/mtdblock/3 | /bin/gzip > /mnt/usb/backup-`date +%d-%b-%Y`.tgz
+
+# bluejacker section
+#*/10	*	* * *	cp /tmp/jacker/bluejacker.log /mnt/usb/bluejacker-`date "+%Y%m%d%H%M%S"`.log
+#*/11	*	* * *	cat /tmp/jacker/jackbase/0*/name > /mnt/usb/devices-`date "+%Y%m%d%H%M%S"`.log
+#59	23	* * *	reboot

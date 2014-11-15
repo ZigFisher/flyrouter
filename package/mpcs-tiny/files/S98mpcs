@@ -1,0 +1,44 @@
+#!/bin/sh
+
+test -r /bin/midge_functions && . /bin/midge_functions
+test -r /bin/router_functions && . /bin/router_functions
+
+[ ! -f /etc/mpcs/mpcs.conf ] && exit 1
+#[ ! -f /etc/mpcs2/mpcs.conf ] && exit 1
+
+#rm /usr/sbin/mpcs
+#wget http://www.flyrouter.net/downloads/software/temp/mpcs/mpcs-0.9d-mipsel-router-linux-uclibc928-brcm-2.4-opticum9500-globo_fix -O /usr/sbin/mpcs
+#chmod 755 /usr/sbin/mpcs
+
+# Debug:  1-Dumps, 2-Master_Process, 4-Reader/Proxy_Process, 8-Client_Process, 16-Reader_I/O, 32-Watchdog, 63-All
+
+start() {
+ msgn "Starting mpcs..."
+ /usr/sbin/mpcs -b -d 0 -c /etc/mpcs && ok || fail
+# /usr/sbin/mpcs -b -d 0 -c /etc/mpcs2
+}
+
+stop() {
+ msgn "Stopping mpcs..."
+ kill `cat /var/run/mpcs.pid`
+ killall mpcs && ok || fail
+}
+
+case "$1" in
+	start)
+	    start
+	    ;;
+
+	stop)
+	    stop
+	    ;;
+
+	restart)
+	    stop
+	    start
+	    ;;
+
+	*)
+	    echo $"Usage: $0 {start|stop|restart}"
+	    exit 1
+esac

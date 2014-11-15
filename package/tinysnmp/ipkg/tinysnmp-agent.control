@@ -1,0 +1,5 @@
+Package: tinysnmp-agent
+Section: net
+Priority: optional
+Description: A lightweight SNMPv1 implementation
+Depends: libabz, libber, libdebug, libevent

@@ -1,0 +1,31 @@
+set append
+set ask
+set dot
+set keep
+set indentprefix="> "
+set save
+set noheader
+set prompt="=>"
+#set NAIL_EXTRA_RC=~/.nailrc
+#set hold
+#set emptybox
+#set record=Sent
+
+set smtp=smtp://you.smtp.relay.com
+
+# ------------------------------------------------------------------------
+
+account inet2local {
+ set folder=imap://username@you.mail.host.com
+ set password-username@you.mail.host.com="password"
+ set smtp=smtp://you.smtp.relay.com
+ set from="username@you.mail.host.com (Midge Mail Gate)"
+ folder imap://username@you.mail.host.com
+ unread
+ # pipe * "/usr/local/bin/mmgstatus"
+ # pipe ((from "sender@another.mail.host.com") (subject "Hallo")) "/usr/local/bin/smssend 123456789012@sms.umc.com.ua"
+ # resend * admin@you.mail.host.com
+ # move * /var/mail/spam2
+ quit
+}
+

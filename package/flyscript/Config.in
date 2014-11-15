@@ -1,0 +1,9 @@
+config BR2_PACKAGE_FLYSCRIPT
+	prompt "flyscript......................... More network script's for FlyRouter"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  More network script's for FlyRouter.
+	  
+	  http://flyrouter.net
+

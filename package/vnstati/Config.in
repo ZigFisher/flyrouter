@@ -1,0 +1,9 @@
+config BR2_PACKAGE_VNSTATI
+	prompt "vnstati........................... PNG image output for network traffic monitor (vnstat)"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBGD
+	help
+	  vnstati - png image output support for console-based network traffic monitor vnstat
+
+	  http://humdi.net/vnstat/

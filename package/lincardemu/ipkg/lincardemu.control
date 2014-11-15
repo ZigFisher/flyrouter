@@ -1,0 +1,5 @@
+Package: lincardemu
+Priority: optional
+Section: net
+Description: lincardemu
+Depends: 

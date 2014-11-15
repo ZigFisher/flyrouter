@@ -1,0 +1,60 @@
+[reader]
+Label             = NTV
+Protocol          = newcamd
+Key               = 0102030405060708091011121314
+Fallback          = 0
+Group             = 1
+ReconnectTimeout  = 100
+CAID              = 0500
+IDENT             = 023700,030600,040600
+#
+# cw-dw Nikolay    # CPU: 4.6% usr  5.8% sys  0.0% nice 89.5% idle
+#Device            = cw1.cw-dw.com,4000
+#Account           = petru_xa5,petr78
+#
+# cw-dw Vladlen    # CPU: 4.6% usr  5.8% sys  0.0% nice 89.5% idle
+#Device            = cw4.cw-dw.com,4000
+#Account           = vladpoor,senopak
+#
+# sat-one.info     # CPU: 53.8% usr 46.1% sys  0.0% nice  0.0% idle
+#Device            = 91.188.39.235,4000
+#Account           = zigan123,3f57du83
+#
+# gomel-sat        # CPU: 57.6% usr 42.3% sys  0.0% nice  0.0% idle
+#Device            = 78.109.21.105,10000
+#Account           = 4a7ed45e,a6d4e87f
+#
+# sat-forum        # CPU: 48.1% usr 51.8% sys  0.0% nice  0.0% idle
+#Device            = 78.159.101.11,14001
+#Account           = sat-forum.su,346096
+#
+# local vladlen    # CPU: 4.6% usr  5.8% sys  0.0% nice 89.5% idle
+Device             = 193.46.201.187,30000
+Account            = testme,testme
+#
+#
+##DisableServerFilter = 1
+##Class             = 03, 07, 61
+##ChID              = 0652:00;0652:FFFF
+#
+
+
+
+[reader]
+Label             = TK
+Protocol          = newcamd
+Key               = 0102030405060708091011121314
+Fallback          = 0
+Group             = 1
+ReconnectTimeout  = 100
+CAID              = 4AE0
+IDENT             = 000000
+#
+# cw-dw Vladlen    # CPU: 4.6% usr  5.8% sys  0.0% nice 89.5% idle
+#Device            = cw2.cw-dw.com,4001
+#Account           = vladpoor,senopak
+#
+# local Vladlen    # CPU: 48.1% usr 51.8% sys  0.0% nice  0.0% idle
+#Device            = 193.46.201.187,30003
+#Account           = testme,testme
+

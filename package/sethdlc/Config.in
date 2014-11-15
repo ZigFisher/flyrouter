@@ -1,0 +1,4 @@
+config BR2_PACKAGE_SIGRAND_SETHDLC
+	prompt "sethdlc ................. HDLC drivers configuration utility"
+	tristate
+	default y if CONFIG_DEVEL

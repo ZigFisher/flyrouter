@@ -1,0 +1,9 @@
+config BR2_PACKAGE_THELINKBOX
+	prompt "thelinkbox......................... AmateurRadio VoIP system for *NIX"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  AmateurRadio VoIP system for *NIX
+	  
+	  http://sourceforge.net/apps/mediawiki/cqinet/index.php?title=Linkbox-url
+	  http://groups.yahoo.com/group/thelinkbox/files/

@@ -1,0 +1,21 @@
+debug
+noipdefault 
+usepeerdns
+defaultroute
+hide-password 
+noauth
+#persist
+refuse-eap
+refuse-chap
+refuse-mschap
+refuse-mschap-v2
+refuse-pap
+unit 600
+maxfail 3
+lcp-echo-interval 30
+lcp-echo-failure 5
+mtu 1400
+/dev/ttyS1
+38400
+nocrtscts
+linkname nsg1

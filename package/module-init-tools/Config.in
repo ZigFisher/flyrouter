@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MODULEINITTOOLS
+	prompt "module-init-tools................. module-init-tools"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  module-init-tools
+	  
+

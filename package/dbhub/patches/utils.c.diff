@@ -1,0 +1,179 @@
+diff -wuBr dbhub-0.451.orig/src/utils.c dbhub-0.451/src/utils.c
+--- dbhub-0.451.orig/src/utils.c	2008-01-21 05:38:07.000000000 +0200
++++ dbhub-0.451/src/utils.c	2009-03-02 18:12:41.000000000 +0200
+@@ -209,6 +209,175 @@
+ 	sem_give(user_list_sem);
+ }
+ 
++
++/*
++ * Check seenlist to see if an old nick is coming from a new host.
++ * Return 1 if it does, 0 otherwise.
++ * Also, if it does, put the old host in old_host.
++ */
++int old_nick_new_host (struct user_t *user, char *old_host)
++{
++    int i;
++    size_t j;
++    int fd;
++    int erret;
++    FILE *fp;
++    time_t seenexp;
++    time_t latest_seenexp = 0;
++    char path[MAX_FDP_LEN+1];
++    char line[1024];
++    char seen_nick[MAX_NICK_LEN+1];
++    char seen_host[MAX_HOST_LEN+1];
++    int matches = 0;
++
++    snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, SEEN_FILE);	
++
++    while(((fd = open(path, O_RDONLY)) < 0) && (errno == EINTR))
++        logprintf(0, "Error - In old_nick_new_host()/open(): Interrupted system call. Trying again.\n");   
++    if(fd < 0) {
++        logprintf(0, "Error - In old_nick_new_host()/open(): %s", strerror(errno));
++        return 0;	
++    }
++    /* Set the lock */
++    if(set_lock(fd, F_RDLCK) == 0) {
++        logprintf(0, "Error - In old_nick_new_host(): Couldn't set file lock\n");
++        close(fd);
++        return 0;
++    }   
++   
++    if((fp = fdopen(fd, "r")) == NULL) {
++        logprintf(0, "Error - In old_nick_new_host()/fdopen(): %s", strerror(errno));
++        set_lock(fd, F_UNLCK);
++        close(fd);
++        return 0;
++    }
++    while(fgets(line, 1023, fp) != NULL) {
++        trim_string(line);
++        j = strlen(line);
++        if(j != 0) {
++            /* Jump to next char which isn't a space */
++            i = 0;
++            while(line[i] == ' ')
++                i++;
++            sscanf(line+i, "%lu %50s %120s", &seenexp, seen_nick, seen_host);
++            if(!strcasecmp(seen_nick, user->nick)) {
++                matches++;
++                if (seenexp > latest_seenexp) {
++                    latest_seenexp = seenexp;
++                    snprintf(old_host, MAX_HOST_LEN+1, "%s", seen_host);
++                }
++            }
++        }
++    }
++    set_lock(fd, F_UNLCK);
++
++    while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++        logprintf(0, "Error - In old_nick_new_host()/fclose(): Interrupted system call. Trying again.\n");
++   
++    if(erret != 0) {
++        logprintf(0, "Error - In old_nick_new_host()/fclose(): %s", strerror(errno));
++        return 0;
++    }
++
++    if (!matches || !strcmp(user->hostname, old_host)) {
++        *old_host = '\0';
++        return 0;
++    }
++    else
++        return 1;
++}
++
++/*
++ * Given an IP, search for a human user's nick and put it in outbuf.
++ * First search online users. If none found, check seen file. Get the one with
++ * the latest seen expiry time (on the assumption that the last user to be seen
++ * is the one we need).
++ * Return: 0 if nothing was found, 1 otherwise.
++ */
++int get_users_nick(char *host, char *outbuf)
++{
++    int i;
++    size_t j;
++    int fd;
++    int erret;
++    FILE *fp;
++    time_t seenexp;
++    time_t latest_seenexp = 0;
++    char path[MAX_FDP_LEN+1];
++    char line[1024];
++    char seen_nick[MAX_NICK_LEN+1];
++    char seen_host[MAX_HOST_LEN+1];
++    int matches = 0;
++    struct sock_t *human_user;
++
++    /* first search among online human users */
++    human_user = human_sock_list;
++    while(human_user != NULL) {
++        if(!strncasecmp(human_user->user->hostname, host, strlen(human_user->user->hostname))) {
++            sprintf(outbuf, "%s", human_user->user->nick);                
++            return 1;
++        }
++        human_user = human_user->next;
++    }
++
++    /* no user was found online, try the seen file */
++    snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, SEEN_FILE);	
++
++    while(((fd = open(path, O_RDONLY)) < 0) && (errno == EINTR))
++        logprintf(0, "Error - In get_users_nick()/open(): Interrupted system call. Trying again.\n");   
++    if(fd < 0) {
++        logprintf(0, "Error - In get_users_nick()/open(): %s", strerror(errno));
++        return 0;	
++    }
++    /* Set the lock */
++    if(set_lock(fd, F_RDLCK) == 0) {
++        logprintf(0, "Error - In get_users_nick(): Couldn't set file lock\n");
++        close(fd);
++        return 0;
++    }   
++   
++    if((fp = fdopen(fd, "r")) == NULL) {
++        logprintf(0, "Error - In get_users_nick()/fdopen(): %s", strerror(errno));
++        set_lock(fd, F_UNLCK);
++        close(fd);
++        return 0;
++    }
++    while(fgets(line, 1023, fp) != NULL) {
++        trim_string(line);
++        j = strlen(line);
++        if(j != 0) {
++            /* Jump to next char which isn't a space */
++            i = 0;
++            while(line[i] == ' ')
++                i++;
++            sscanf(line+i, "%lu %50s %120s", &seenexp, seen_nick, seen_host);
++            if(!strcasecmp(seen_host, host)) {
++                matches++;
++                if (seenexp > latest_seenexp) {
++                    latest_seenexp = seenexp;
++                    snprintf(outbuf, MAX_NICK_LEN+1, "%s", seen_nick);
++                }
++            }
++        }
++    }
++    set_lock(fd, F_UNLCK);
++
++    while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++        logprintf(0, "Error - In get_users_nick()/fclose(): Interrupted system call. Trying again.\n");
++   
++    if(erret != 0) {
++        logprintf(0, "Error - In get_users_nick()/fclose(): %s", strerror(errno));
++        return 0;
++    }
++
++    if (!matches) {
++        *outbuf = '\0';
++        return 0;
++    }
++    else
++        return 1;
++}
++
+ /* Returns a hash value from a users nickname. It's important that this 
+ * function generates values as random as possible, but also stays fast.  */
+ int get_hash(char *nick)

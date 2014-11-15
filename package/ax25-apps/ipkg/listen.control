@@ -1,0 +1,5 @@
+Package: listen
+Section: hamradio
+Priority: optional
+Description: listen - monitor AX.25 traffic
+Depends: libax25, libncurses, kissattach

@@ -1,0 +1,17 @@
+[reader]
+blockua          = 1
+blockga          = 1
+blocksa          = 1
+AU               = 1
+Enable           = 1
+Label            = myreader
+Protocol         = mouse
+Device           = /dev/ttyS3
+#pincode         = 7291
+#BaudRate			  = 16000
+EMMCache         = 1,1,10
+Detect           = CD
+Group            = 1,2,3
+Fallback         = 0
+CAID	           = 0666
+ChID = 0666:02,03,04,05,06,07,0E

@@ -1,0 +1,9 @@
+config BR2_PACKAGE_NMEAP
+	prompt "nmeap............................. GPS navigation"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  This navigation
+	                                                                                                                                                  
+	  http://www.hamradio.crimea.ua/downloads/linux/source/
+

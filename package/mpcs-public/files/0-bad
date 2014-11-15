@@ -1,0 +1,83 @@
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 received 155 bytes from client in 25 msec
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 03 30 30 30 32 33 37 30 30 30 35 30 30 38 31 37 
+Jan  1 02:04:03 (none) daemon.info mpcs:            30 34 32 30 30 39 30 30 33 30 32 33 37 30 38 39 
+Jan  1 02:04:03 (none) daemon.info mpcs:            66 30 63 35 32 35 35 35 33 32 61 35 33 34 35 35 
+Jan  1 02:04:03 (none) daemon.info mpcs:            32 35 36 33 32 33 36 30 31 30 31 65 30 30 31 63 
+Jan  1 02:04:03 (none) daemon.info mpcs:            30 65 32 30 33 33 62 39 32 30 33 65 32 30 33 33 
+Jan  1 02:04:03 (none) daemon.info mpcs:            62 39 32 30 37 65 32 30 33 33 62 39 32 36 31 65 
+Jan  1 02:04:03 (none) daemon.info mpcs:            61 31 30 66 39 66 66 32 65 63 36 30 32 33 35 37 
+Jan  1 02:04:03 (none) daemon.info mpcs:            30 61 38 35 66 65 63 31 38 64 61 63 61 65 39 35 
+Jan  1 02:04:03 (none) daemon.info mpcs:            30 33 61 66 30 30 38 66 33 31 35 62 64 65 35 64 
+Jan  1 02:04:03 (none) daemon.info mpcs:            30 30 38 66 32 65 35 32 37 37 61 
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 chk_sid: er->caid=0500, er->srvid=277A
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 trying reader 'ntv' filter 0000:023700
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 0500:023700 allowed by reader 'ntv' filter 0000:023700
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 chk_sid: er->caid=0500, er->srvid=277A
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 F0: ecm[59]=F0, ecm[60]=08
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 EA: ecm[41]=EA, ecm[42]=10
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 write ecm request to reader 'ntv'
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 select: pipe ist set (fd1=6)
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 ---- ecm_task 1, idx 2, sflag=1, level=0
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 conn_nb 1 (fd=4)
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 conn_nb 9 (fd=4)
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 server does not return 14 bytes
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 tcp_conn_close(): fd=4, is_server=0, reader=ntv
+Jan  1 02:04:03 (none) daemon.info mpcs:   1413 p02 proxy X.X.X.X:10000 newcamd525 (fd=4)
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 received 2 bytes from client in 0 msec
+Jan  1 02:04:03 (none) daemon.info mpcs:   1416 c01 0A 0D 
+Jan  1 02:04:05 (none) daemon.info mpcs:   1416 c01 tuner (0500&023700/277A/45:4587): timeout (12004 ms)
+Jan  1 02:04:11 (none) daemon.info mpcs:   1416 c01 write ecm request to reader 'ntv'
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 select: pipe ist set (fd1=6)
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 ---- ecm_task 1, idx 2, sflag=1, level=1
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 conn_nb 1 (fd=4)
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 conn_nb 9 (fd=4)
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 server does not return 14 bytes
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 tcp_conn_close(): fd=4, is_server=0, reader=ntv
+Jan  1 02:04:11 (none) daemon.info mpcs:   1413 p02 proxy X.X.X.X:10000 newcamd525 (fd=4)
+
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 received 155 bytes from client in 23 msec
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 03 30 30 30 32 33 37 30 30 30 35 30 30 38 30 37 
+Jan  1 02:26:15 (none) daemon.info mpcs:            30 34 32 30 30 39 30 30 33 30 32 33 37 30 38 39 
+Jan  1 02:26:15 (none) daemon.info mpcs:            66 30 63 35 32 35 35 35 33 32 61 35 33 34 35 35 
+Jan  1 02:26:15 (none) daemon.info mpcs:            32 35 36 33 32 33 36 30 31 30 31 65 30 30 31 63 
+Jan  1 02:26:15 (none) daemon.info mpcs:            30 65 32 30 33 33 62 39 32 30 33 65 32 30 33 33 
+Jan  1 02:26:15 (none) daemon.info mpcs:            62 39 32 30 37 65 32 30 33 33 62 39 32 36 31 65 
+Jan  1 02:26:15 (none) daemon.info mpcs:            61 31 30 63 39 36 62 37 35 33 64 32 39 61 36 31 
+Jan  1 02:26:15 (none) daemon.info mpcs:            65 61 34 34 66 66 32 30 63 64 35 61 61 35 64 38 
+Jan  1 02:26:15 (none) daemon.info mpcs:            64 32 35 66 30 30 38 30 64 35 31 65 35 31 64 33 
+Jan  1 02:26:15 (none) daemon.info mpcs:            35 62 38 65 34 62 66 32 37 37 61 
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 trying user 'tuner' filter 0500:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 0500:023700 allowed by user 'tuner' filter 0500:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 chk_sid: er->caid=0500, er->srvid=277A
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 trying reader 'ntv' filter 0000:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 0500:023700 allowed by reader 'ntv' filter 0000:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 chk_sid: er->caid=0500, er->srvid=277A
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 F0: ecm[59]=F0, ecm[60]=08
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 EA: ecm[41]=EA, ecm[42]=10
+Jan  1 02:26:15 (none) daemon.info mpcs:   1589 c01 write ecm request to reader 'ntv'
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 select: pipe ist set (fd1=7)
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 ---- ecm_task 1, idx 24, sflag=1, level=0
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 trying server 'XX.XX.XX' filter 0500:000000
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 trying server 'XX.XX.XX' filter 0500:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 0500:023700 allowed by server 'XX.XX.XX' filter 0500:023700
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 send 81 bytes to remote server
+Jan  1 02:26:15 (none) daemon.info mpcs:   1588 p02 00 4F 00 18 27 7A 00 00 00 00 00 00 80 70 42 00 
+Jan  1 02:26:15 (none) daemon.info mpcs:            90 03 02 37 08 9F 0C 52 55 53 2A 53 45 52 56 32 
+Jan  1 02:26:15 (none) daemon.info mpcs:            36 01 01 E0 01 C0 E2 03 3B 92 03 E2 03 3B 92 07 
+Jan  1 02:26:15 (none) daemon.info mpcs:            E2 03 3B 92 61 EA 10 C9 6B 75 3D 29 A6 1E A4 4F 
+Jan  1 02:26:15 (none) daemon.info mpcs:            F2 0C D5 AA 5D 8D 25 F0 08 0D 51 E5 1D 35 B8 E4 
+Jan  1 02:26:15 (none) daemon.info mpcs:            BF 
+Jan  1 02:26:16 (none) daemon.info mpcs:   1589 c01 received 2 bytes from client in 0 msec
+Jan  1 02:26:16 (none) daemon.info mpcs:   1589 c01 0A 0D 
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 select: socket ist set (fd2=5)
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 nmr(): len=2, errno=0
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 nmr: netMsgId=24, from server=24, 
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 received 21 bytes from remote server
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 00 18 80 10 10 27 3F C9 2F 40 7D 4E 0B BC B0 58 
+Jan  1 02:26:16 (none) daemon.info mpcs:            C4 11 28 5E 97 
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 find ecmtask[1].idx=24, idx=24
+Jan  1 02:26:16 (none) daemon.info mpcs:   1588 p02 found ecmtask[1].idx=24, idx=24
+Jan  1 02:26:16 (none) daemon.info mpcs:   1589 c01 tuner (0500&023700/277A/45:4587): found (297 ms) by ntv
+Jan  1 02:26:16 (none) daemon.info mpcs:   1589 c01 send 17 of 17 bytes to client in 85 msec
+Jan  1 02:26:16 (none) daemon.info mpcs:   1589 c01 04 27 3F C9 2F 40 7D 4E 0B BC B0 58 C4 11 28 5E 
+Jan  1 02:26:16 (none) daemon.info mpcs:            97 

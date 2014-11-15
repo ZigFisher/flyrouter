@@ -1,0 +1,22 @@
+#!/bin/sh
+
+case $1 in
+start)
+	[ -d /var/run ] || mkdir -p /var/run
+	[ -d /var/log/asterisk ] || mkdir -p /var/log/asterisk
+	[ -d /var/spool/asterisk ] || mkdir -p /var/spool/asterisk
+	/usr/sbin/asterisk
+	;;
+stop)
+	[ -f /var/run/asterisk.pid ] && kill $(cat /var/run/asterisk.pid) >/dev/null 2>&1
+	;;
+restart)
+	$0 stop
+	$0 start
+	;;
+*)
+	echo "usage: $0 {start | stop | restart}"
+	exit 1
+	;;
+esac
+exit $?

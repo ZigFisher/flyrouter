@@ -1,0 +1,6 @@
+config BR2_PACKAGE_RTLFLASH
+	prompt "rtlflash.......................... flash save/restore/clear for RTL865xB SOC"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  rtlflash - flash save/restore/clear for RTL865xB SOC

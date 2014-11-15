@@ -1,0 +1,5 @@
+Package: obexftp-client
+Priority: optional
+Section: net 
+Description: Client for transfer files to/from any OBEX enabled device
+Depends: openobex, obexftp-lib

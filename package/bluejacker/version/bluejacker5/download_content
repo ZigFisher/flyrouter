@@ -1,0 +1,22 @@
+#!/bin/sh
+
+mkdir -p /mnt/usb/jacker/temp
+
+d() {
+	for i in `seq -w 1 400`; do wget -c http://mobila.com.ua/logo/${2}/${1}_`printf %.3d ${i}`.gif -O /mnt/usb/jacker/bonus/`basename $1`_${2}_${i}.gif ; done
+}
+
+for r in 128_128 128_160 128_96 176_132 176_208 176_220 240_320; do
+	d ANIMALS/animals $r
+	d ANIMATION/animation $r
+	d AVIATION/aviation $r
+	d CAR/car $r
+	d EROTIC/erotic $r
+	d FUN%20PICS/funy $r
+	d NATURAL/natural $r
+	d PIN-UP/pin $r
+	d SINEMA/sinema $r
+	d SPACE/space $r
+	d SPORT/sport $r
+	d STARS/star $r
+done

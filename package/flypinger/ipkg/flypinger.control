@@ -1,0 +1,5 @@
+Package: flypinger
+Priority: optional
+Section: net
+Description: Pinger script for FlyPinger system
+

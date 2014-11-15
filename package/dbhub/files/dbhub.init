@@ -1,0 +1,31 @@
+#!/bin/sh
+
+dbhub_start() {
+    echo "Starting dbhub..."
+    /usr/bin/dbhub -w /etc/dbhub
+}
+
+dbhub_stop() {
+    echo "Stopping dbhub..."
+    killall dbhub
+}
+
+dbhub_restart() {
+    dbhub_stop
+    sleep 1
+    dbhub_start
+}
+
+case "$1" in
+'start')
+    dbhub_start
+    ;;
+'stop')
+    dbhub_stop
+    ;;
+'restart')
+    dbhub_restart
+    ;;
+*)
+    dbhub_start
+esac

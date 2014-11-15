@@ -1,0 +1,41 @@
+diff -ur spcaview-20061208/Makefile spcaview-20061208/Makefile_new
+--- spcaview-20061208/Makefile	2005-09-24 20:57:52.000000000 +0000
++++ spcaview-20061208/Makefile_new	2007-01-17 07:19:11.000000000 +0000
+@@ -4,8 +4,12 @@
+ 
+ INSTALLROOT=$(PWD)
+ 
+-CC=gcc
+-CPP=g++
++ifeq ($(CC),cc)                                                                                               
++CC:=gcc                                                                                                       
++endif 
++
++#CC=gcc
++#CPP=g++
+ INSTALL=install
+ APP_BINARY=spcaview
+ BIN=/usr/local/bin
+@@ -44,7 +48,8 @@
+ #libjpgenc:	$(LIB_ENCODE_OBJECTS)
+ #		ld -r $(LIB_ENCODE_OBJECTS) -o $(LIB_ENCODE)
+ 		
+-all:	spcaview spcaserv spcacat
++all:	spcaserv spcacat
++#all:	spcaview spcaserv spcacat
+ 
+ clean:
+ 	@echo "Cleaning up directory."
+@@ -59,10 +64,10 @@
+ 	chmod 755 $(APP_BINARY)
+ 
+ spcaserv: $(OBJSERVER)
+-	gcc $(SERVFLAGS) -o spcaserv $(OBJSERVER) $(SERVLIBS)
++	$(CC) $(SERVFLAGS) -o spcaserv $(OBJSERVER) $(SERVLIBS)
+ 	
+ spcacat: $(OBJCAT)
+-	gcc $(SERVFLAGS) -o spcacat $(OBJCAT) $(SERVLIBS)
++	$(CC) $(SERVFLAGS) -o spcacat $(OBJCAT) $(SERVLIBS)
+ 	
+ spcaview.o: spcaview.c  jconfig.h dpsh.h utils.h SDL_audioin.h
+ 

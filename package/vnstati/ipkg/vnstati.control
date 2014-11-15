@@ -1,0 +1,5 @@
+Package: vnstati
+Priority: optional
+Section: net
+Description: vnstati - png image output support for console-based network traffic monitor vnstat
+Depends: libgd

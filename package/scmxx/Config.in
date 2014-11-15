@@ -1,0 +1,18 @@
+config BR2_PACKAGE_SCMXX
+	prompt "scmxx............................. Communicate with Siemens mobile phones"
+	tristate
+	default n
+	help
+	  Cool software for use with Siemens mobile phones with many features:
+	  * detect which phone is present and handle it properly
+	  * send, get, and remove logos (bitmap files)
+	  * send, get, and remove ring tones (midi files)
+	  * send, get, and remove vCalendars (only some phones)
+	  * send, get, and remove vCards (only some phones)
+	  * send and get phonebook entries (with Unicode if supported by the phone)
+	  * send and receive SMS through phone (optionally with Unicode and multipart support)
+	  * store and get received SMS
+
+	  http://www.hendrik-sattler.de/scmxx/
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/
+

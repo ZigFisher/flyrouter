@@ -1,0 +1,12 @@
+config BR2_PACKAGE_IRDA_UTILS
+	prompt "irda-utils........................ IRDA utilities"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_IRDA_UTILS
+	help
+	  IRDA utils. 
+	  
+	  http://irda.sf.net
+	  
+	  Depends: 
+

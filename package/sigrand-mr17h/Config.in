@@ -1,0 +1,12 @@
+config BR2_PACKAGE_SIGRAND_MR17H
+	prompt "mr17h ................. Sigrand MR17H SHDSL module driver"
+	tristate
+	default y if CONFIG_DEVEL
+	depends on BR2_LINUX_2_6_SIGRAND5120
+
+config BR2_PACKAGE_SIGRAND_MR17H_DEBUG
+	prompt "mr17h_dbg ................. Sigrand MR17H SHDSL module Debug"
+	bool
+	default n
+	depends on BR2_LINUX_2_6_SIGRAND5120
+	depends on BR2_PACKAGE_SIGRAND_MR17H

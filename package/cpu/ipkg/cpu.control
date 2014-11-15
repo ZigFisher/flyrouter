@@ -1,0 +1,4 @@
+Package: cpu
+Priority: optional
+Section: sys
+Description: Tool for reporting CPU utilization.

@@ -1,0 +1,37 @@
+menu "obexftp........................... the file transfer feature for clients and servers"
+
+config BR2_COMPILE_OBEXFTP
+        tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_OPENOBEX
+	select BR2_PACKAGE_LIBUSB
+	depends BR2_PACKAGE_OBEXFTP-LIB || BR2_PACKAGE_OBEXFTP-CLIENT || BR2_PACKAGE_OBEXFTP-SERVER
+
+config BR2_PACKAGE_OBEXFTP-LIB
+	prompt "obexftp-lib....................... OBEXFTP lib"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_OBEXFTP
+	help
+	 ObexFTP implements the Object Exchange file transfer feature for clients and servers
+
+config BR2_PACKAGE_OBEXFTP-CLIENT
+	prompt "obexftp-client.................... OBEXFTP client"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_OBEXFTP
+	select BR2_PACKAGE_OBEXFTP-LIB
+	help
+	 ObexFTP implements the Object Exchange file transfer feature for clients and servers
+
+config BR2_PACKAGE_OBEXFTP-SERVER
+	prompt "obexftp-server.................... OBEXFTP server"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_OBEXFTP
+	select BR2_PACKAGE_OBEXFTP-LIB
+	help
+	 ObexFTP implements the Object Exchange file transfer feature for clients and servers
+
+endmenu
+																                                                

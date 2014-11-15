@@ -1,0 +1,5 @@
+Package: uronode
+Priority: optional
+Section: hamradio
+Description: UROnode is PR software based on AWZ|LinuxNode by Tomi Manninen OH2BNS and FlexNode by Roy PE1RJA
+Depends: libax25, kissattach

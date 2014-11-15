@@ -1,0 +1,54 @@
+menu "owfs.............................. 1-Wire file system"
+
+config BR2_PACKAGE_OWFS
+	prompt "owfs.............................. 1-Wire file system"
+	tristate
+	select BR2_PACKAGE_LIBPTHREAD
+	default m if CONFIG_DEVEL
+	help
+	    OWFS is an easy way to use the powerful 1-wire system of Dallas/Maxim. 
+
+	    http://owfs.org/
+
+config BR2_COMPILE_OWFS_WITH_USB
+	prompt "Enable owfs with USB support"
+	bool
+	default n
+	depends BR2_PACKAGE_LIBUSB
+
+config BR2_COMPILE_OWFS_WITH_PARPORT
+	prompt "Enable owfs with Parallel port (IEEE 1284) support"
+	bool
+	default n
+	
+config BR2_COMPILE_OWFS_WITH_I2C
+	prompt "Enable i2c (DS2482-x00) support"
+	bool
+	default y
+
+config BR2_COMPILE_OWFS_WITH_SWIG
+	prompt "Enable swig support (need swig installed)"
+	bool
+	default n
+
+config BR2_COMPILE_OWFS_WITH_OWPHP
+	prompt "Compile PHP support if possible"
+	bool
+	default n
+
+config BR2_COMPILE_OWFS_WITH_OWPERL
+	prompt "Compile Perl support if possible"
+	bool
+	default n
+
+config BR2_COMPILE_OWFS_WITH_OWTCL
+	prompt "Compile TCL support if possible"
+	bool
+	default n
+
+config BR2_COMPILE_OWFS_WITH_OWPYTHON
+	prompt "Compile Python support if possible"
+	bool
+	default n
+
+endmenu

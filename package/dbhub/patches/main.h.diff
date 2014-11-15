@@ -1,0 +1,14 @@
+diff -wuBr dbhub-0.451.orig/src/main.h dbhub-0.451/src/main.h
+--- dbhub-0.451.orig/src/main.h	2008-02-02 04:02:47.000000000 +0200
++++ dbhub-0.451/src/main.h	2009-03-02 22:19:51.000000000 +0200
+@@ -286,6 +286,10 @@
+ unsigned int prottime;			/* Number of protection days for users who used !protectme command */
+ char 	botnick[51]; 			/* Bot's name */
+ char 	opchatnick[51];			/* Op chat's name */
++char    proxybotinfo[121];       /* String appended to "$MyINFO $ALL" for proxy bot */
++char 	proxybotnick[51];		/* Proxy Bot's name */
++int     proxybotonline;         /* Proxy Bot's hub presence: 0-absent, 1-present */
++int     proxybot;           /* Proxy Bot that OPs can use to ban/kick/warn on their behalf: 0-disabled, 1-enabled */
+ int 	clockbot;			/* Clock-bot with current server time: 0-disabled, 1-enabled */
+ int 	count_bots;			/* Counting bots as users: 0-disabled, 1-enabled */
+ int	hide_opshare;			/* Hiding share of opped users 0-off,1-from all users,2-from REGULAR users */

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_REMSERIAL
+	prompt "remserial......................... Bridge between a TCP/IP network port and a Linux device such as a serial port"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  The remserial program acts as a communications bridge between a TCP/IP network port and a Linux device such as a serial port.
+	  
+	  http://lpccomp.bc.ca/remserial/

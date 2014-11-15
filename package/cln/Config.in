@@ -1,0 +1,8 @@
+config BR2_PACKAGE_CLN
+	prompt "cln............................... Client for Remote Authorization Daemon"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Client for Remote Authorization Daemon
+	  
+	  http://???

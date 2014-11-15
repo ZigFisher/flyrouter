@@ -1,0 +1,10 @@
+config BR2_PACKAGE_LIBAX25
+	prompt "libax25........................... AX.25 library (Amateur Radio)"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  AX.25 library (Amateur Radio).
+	  
+	  http://ax25.sourceforge.net/
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/
+

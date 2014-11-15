@@ -1,0 +1,13 @@
+--- rp-pppoe-3.8/configs/pppoe-server-options.orig	2006-04-02 17:29:41.000000000 +0300
++++ rp-pppoe-3.8/configs/pppoe-server-options	2011-08-09 10:42:18.000000000 +0300
+@@ -1,6 +1,7 @@
+-# PPP options for the PPPoE server
+-# LIC: GPL
+-require-pap
++debug
++require-chap
+ login
+ lcp-echo-interval 10
+ lcp-echo-failure 2
++proxyarp
++ms-dns 8.8.8.8

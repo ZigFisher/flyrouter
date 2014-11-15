@@ -1,0 +1,33 @@
+menu "nut............................... Network UPS Tools provide monitoring of UPS hardware"
+
+config BR2_COMPILE_NUT
+        tristate
+        default m if CONFIG_DEVEL
+        depends BR2_PACKAGE_NUT-DRIVERS || BR2_PACKAGE_NUT-SERVER || BR2_PACKAGE_NUT-CLIENTS
+
+config BR2_PACKAGE_NUT-DRIVERS
+        prompt "nut-drivers....................... NUT-DRIVERS"
+        tristate
+        default m if CONFIG_DEVEL
+	select BR2_COMPILE_NUT
+        help
+          nut-drivers - programs talk directly to your UPS hardware
+
+config BR2_PACKAGE_NUT-SERVER
+        prompt "nut-server........................ NUT-SERVER"
+        tristate
+        default m if CONFIG_DEVEL
+	select BR2_COMPILE_NUT
+        help
+          nut-server - upsd serves data from the drivers to the network
+
+config BR2_PACKAGE_NUT-CLIENTS
+        prompt "nut-clients....................... NUT-CLIENTS"
+        tristate
+        default m if CONFIG_DEVEL
+	select BR2_COMPILE_NUT
+        help
+          nut-clients - talk to upsd and do things with the status data
+
+endmenu
+

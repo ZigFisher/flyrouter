@@ -1,0 +1,9 @@
+config BR2_PACKAGE_VTUN
+	prompt "vtun.............................. VPN tunneling daemon"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  A VPN tunneling daemon
+	  
+	  http://vtun.sourceforge.net
+

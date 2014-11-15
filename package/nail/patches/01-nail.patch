@@ -1,0 +1,11 @@
+--- nail/Makefile.orig	2005-07-29 14:31:44.000000000 +0300
++++ nail/Makefile	2005-11-07 15:37:15.451553272 +0200
+@@ -23,7 +23,7 @@
+ # Note that some Linux/glibc versions need -D_GNU_SOURCE in CPPFLAGS, or
+ # wcwidth() will not be available and multibyte characters will not be
+ # displayed correctly.
+-#CFLAGS		=
++CFLAGS         = -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64 -Wstrict-prototypes -Wshadow -Os -fomit-frame-pointer -D_GNU_SOURCE -DNDEBUG  -Os -pipe
+ #CPPFLAGS	=
+ #LDFLAGS		=
+ #WARN		= -Wall -Wno-parentheses -Werror

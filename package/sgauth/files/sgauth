@@ -1,0 +1,32 @@
+#!/bin/sh
+#
+# Init file for StarGazer Internet authorization system
+#
+
+HOST=192.168.1.1
+PORT=123
+LOGIN=test
+PASS=password
+
+case "$1" in
+    start)
+	echo -n "Starting Stargazer Internet authorization system: "
+	(sleep 5 ; while true ; do /usr/sbin/sgauth $HOST $PORT $LOGIN $PASS > /dev/null ; done) &
+	echo
+	;;
+    stop)
+	echo -n "Shutting down Stargazer Internet authorization system: "
+	killall -9 sgauth && success
+	echo
+	;;
+    restart)
+	$0 stop
+	$0 start
+	;;
+    *)
+	echo "Usage: sgauth {start|stop|restart}"
+	exit 1
+	;;
+esac
+
+exit $?

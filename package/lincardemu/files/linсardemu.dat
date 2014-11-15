@@ -1,0 +1,36 @@
+datadir = "~/lincardemu"
+logdir = "~/lincardemu"
+debug    = 01 01 03 07 ff
+serdebug = 01 01 03 07 ff
+defaultmode=2
+autocheck=0
+autosave=0
+sahuntinc = 0x100
+sahunttimer=180
+delay_read =  24000
+delay_write=  10000
+delay_reset=  10000
+reset_loop  =    10
+reset_off   =    10
+
+[Conax]
+port=1
+unixdev = /dev/ttyUSB0
+baud=9600
+parity=even
+direct
+atr = 3b 24 00 30 42 30 30
+mainlog = "conax.log"
+updatelog = "conax_update.log"
+
+logmask = 4 dd260000** System request
+logmask = 4 ddb2****** OSD Request
+logmask = 4 dda2****** ECM - Control Words
+logmask = 4 ddca****07 CA INS A2 - Select system
+logmask = 4 ddca****0f CA INS A2 reply (ECM)
+logmask = 4 ddca****11 CA INS A2 (CAS5) - Select system
+logmask = 4 ddca****1A CA INS A2 (CAS5) reply (ECM)
+logmask = 4 ddca****** CA command answer
+logmask = 4 ddc8****** CA command (start card)
+logmask = 2 dd820***** DD 82 20 .......
+logmask = 4 dd840000** DD 84 00 00 ....

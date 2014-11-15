@@ -1,0 +1,6 @@
+config BR2_PACKAGE_OPENOBEX
+	prompt "openobex.......................... OBEX "
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  OBEX is a session protocol and can best be described as a binary HTTP protocol

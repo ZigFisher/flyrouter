@@ -1,0 +1,49 @@
+#! /bin/sh
+#
+# FlyRouter Team (c) 2004-2009 | http://www.flyrouter.net
+# Reset device via GPIO and FlyAVR (current support modem and usb only)
+# Version 0.6 20100126
+
+SYSTEM=`cat /proc/cpuinfo | grep -e "system type" | awk '{print $4}'`
+
+case "$1" in
+    modem)
+	echo "Reset serial GSM/CDMA modem & sleep 15 sec. for login to network..." | logger -t daemon
+	case $SYSTEM in
+	ADM5120)
+	  echo "System type is: $SYSTEM. Reset $1 now... " | logger -t daemon
+	  echo "led off">/dev/gpio3 ; usleep 1500000 ; echo "led on">/dev/gpio3
+	  ;;
+	RTL865xB|BCM5354)
+	  echo "System type is: $SYSTEM. Reset $1 now... " | logger -t daemon
+	  [ -f /proc/driver/flyavr ] && (echo "pin3 off" >/proc/driver/flyavr ; usleep 1500000 ; echo "pin3 on" >/proc/driver/flyavr)
+	  ;;
+	esac
+	sleep 15
+	;;
+    usb)
+	echo "Reset USB device & sleep 5+10 sec. for login to network..." | logger -t daemon
+	case $SYSTEM in
+	BCM5354)
+	  echo "System type is: $SYSTEM. Reset $1 now... " | logger -t daemon
+	  [ -f /proc/diag/led/usb ] && echo 0 >/proc/diag/led/usb
+	  [ -f /proc/driver/flyavr ] && (echo "pin1 on" >/proc/driver/flyavr ; sleep 5 ; echo "pin1 off" >/proc/driver/flyavr)
+	  [ -f /proc/driver/flyavr ] || (echo 1 >/proc/diag/led/bridge ; sleep 5 ; echo 0 >/proc/diag/led/bridge)
+	  [ -f /proc/diag/led/usb ] && echo 1 >/proc/diag/led/usb
+	  ;;
+	RTL865xB)
+	  echo "System type is: $SYSTEM. Reset $1 now... " | logger -t daemon
+	  test -f /etc/beerouter.conf && . /etc/beerouter.conf
+	  gpio set $USB_LED 0 >/dev/null
+	  [ -f /proc/driver/flyavr ] && (echo "pin1 on" >/proc/driver/flyavr ; sleep 5 ; echo "pin1 off" >/proc/driver/flyavr)
+	  gpio set $USB_LED 1 >/dev/null
+	  ;;	  
+	esac
+	sleep 10
+	;;
+    *)
+	echo "Reset device via GPIO and FlyAVR. Supported boards: ADM5120, RTL865xB, BCM5354. Usage: $0 {modem|usb}"
+	exit 1
+esac
+
+exit $?

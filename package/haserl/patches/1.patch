@@ -1,0 +1,21 @@
+diff -ur haserl-0.8.0.orig/src/haserl.c haserl-0.8.0/src/haserl.c
+--- haserl-0.8.0.orig/src/haserl.c	2007-03-12 23:09:08.000000000 +0200
++++ haserl-0.8.0/src/haserl.c	2007-03-12 23:13:40.000000000 +0200
+@@ -75,7 +75,7 @@
+ int	global_subshell_pipe[4];
+ int	global_subshell_pid;
+ int	global_subshell_died = 0;
+-long unsigned   global_upload_size = 0;
++long unsigned   global_upload_size = 2048*1024;
+ 
+ /*
+  * Convert 2 char hex string into char it represents
+@@ -537,7 +537,7 @@
+ 			else {	/* handle the fileupload case		*/
+ 				if (offset-datastart) {  /* only if they uploaded */
+ 					if ( global_upload_size == 0 ) {
+-						PrintParseError ("File uploads not allowed here.", 0);
++						PrintParseError ("File uploads not allowed here. p", 0);
+ 						return ( -1 );
+ 						}
+ 					/*  stuff in the filename */

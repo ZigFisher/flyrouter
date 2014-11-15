@@ -1,0 +1,6 @@
+Package: usb-modeswitch
+Priority: optional
+Section: utils
+Description: A small mode switching tool for controlling multiple device USB gear
+Depends: libusb
+

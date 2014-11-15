@@ -1,0 +1,6 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+msgn "Setting hostname: "
+/bin/hostname -F /etc/hostname && ok || fail

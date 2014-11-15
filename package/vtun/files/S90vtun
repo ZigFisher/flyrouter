@@ -1,0 +1,42 @@
+#! /bin/sh
+
+REMOTE=vbox.flyrouter.net 
+PORT=5000
+DAEMON=/usr/sbin/vtund
+CONFIG=/etc/vtund.conf
+HOSTNAME=`cat /etc/hostname`
+LOGDIR=/var/log/vtund
+LOCKDIR=/var/lock/vtund
+PIDFILE=/var/run/vtund.pid
+DEBUG=-n
+  
+test -x $DAEMON || exit 0
+test -r $CONFIG || exit 0
+test -d $LOGDIR || mkdir -p $LOGDIR
+test -d $LOCKDIR || mkdir -p $LOCKDIR
+
+test -f /bin/router_functions && . /bin/router_functions
+  
+case "$1" in 
+       start)
+	   msgn "Starting vtund... "
+	   mkdir -p /var/log/vtund/
+	   start-stop-daemon --start --quiet --make-pidfile --pidfile $PIDFILE --exec $DAEMON -- -f $CONFIG $HOSTNAME $REMOTE -P $PORT 2>/dev/null && ok || fail
+	   #start-stop-daemon --start --quiet --make-pidfile --pidfile $PIDFILE --exec $DAEMON -- -f $CONFIG -s -P $PORT 2>/dev/null && ok || fail
+           ;;
+       stop) 
+	   msgn "Stopping vtund... "
+	   start-stop-daemon --stop --quiet --pidfile $PIDFILE || fail
+	   ;;
+       restart|reload|force-reload) 
+	   $0 stop
+	   sleep 1;
+	   $0 start
+	   ;;
+   *)
+      echo "Usage: $0 {start|stop|restart|reload|force-reload}" >&2
+       exit 1
+               ;;
+esac
+
+exit $?

@@ -1,0 +1,4 @@
+Package: etherdump
+Priority: optional
+Section: net
+Description: etherdump is an extremely small packet sniffer

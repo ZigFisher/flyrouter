@@ -1,0 +1,33 @@
+--- tinysnmp/agent/Makefile	2004-07-22 01:30:12.000000000 +0200
++++ tinysnmp/agent/Makefile	2007-01-21 15:39:32.000000000 +0100
+@@ -28,7 +28,7 @@
+ #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+-LDFLAGS = -rdynamic -Wl,-export-dynamic
++LDFLAGS += -rdynamic -Wl,-export-dynamic
+ LDLIBS = -ldebug -labz -lber -levent
+ 
+ ifeq ($(shell uname -s),Linux)
+--- tinysnmp/tools/snmp/Makefile	2004-07-31 16:50:18.000000000 +0200
++++ tinysnmp/tools/snmp/Makefile	2007-01-21 15:39:28.000000000 +0100
+@@ -28,7 +28,7 @@
+ #  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ #  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ 
+-LDFLAGS = -L$(TOPDIR)/manager
++LDFLAGS += -L$(TOPDIR)/manager
+ LDLIBS = -ldebug -labz -lber -lmanager
+ 
+ # path to toplevel directory from here
+--- tinysnmp/modules/ups/Makefile	2004-07-22 01:17:49.000000000 +0200
++++ tinysnmp/modules/ups/Makefile	2007-01-21 15:41:37.000000000 +0100
+@@ -30,7 +30,7 @@
+ 
+ VERSION = $(shell pwd | sed 's|^.*/tinysnmp-\([^/]*\)/.*$$|\1|' | cut -f1 -d.)
+ 
+-CPPFLAGS = -DVERSION=\"$(VERSION)\" 
++CPPFLAGS += -DVERSION=\"$(VERSION)\" 
+ 
+ # path to toplevel directory from here
+ TOPDIR = ../..

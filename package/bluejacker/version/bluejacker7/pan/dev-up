@@ -1,0 +1,10 @@
+#!/bin/sh
+
+#/bin/brctl addbr br0
+#/bin/brctl addif br0 eth1
+#/bin/brctl addif br0 bnep0
+#/bin/ip addr add 10.73.88.1/24 dev br0
+#/bin/ip link set br0 up
+
+/bin/ip addr add 10.73.88.1/24 dev bnep0
+/bin/ip link set bnep0 up

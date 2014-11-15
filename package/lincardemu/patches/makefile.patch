@@ -1,0 +1,88 @@
+diff -urN lincardemu-0.21a/.depend lincardemu-0.21a-new/.depend
+--- lincardemu-0.21a/.depend	2004-05-10 01:32:29.000000000 +0300
++++ lincardemu-0.21a-new/.depend	2008-02-24 19:57:45.000000000 +0200
+@@ -59,5 +59,3 @@
+ md5.o: md5.c
+ newcamd-client.o: newcamd-client.c confutil.h common.h debug.h \
+  serfunc.h config.h des.h newcamd-client.h
+-6805_cpu.o: 6805_cpu.c 6805_cpu.h
+-NagraFxEmu.o: NagraFxEmu.c NagraFxEmu.h 6805_cpu.h
+diff -urN lincardemu-0.21a/Makefile lincardemu-0.21a-new/Makefile
+--- lincardemu-0.21a/Makefile	2005-03-15 00:03:12.000000000 +0200
++++ lincardemu-0.21a-new/Makefile	2008-02-24 20:16:43.000000000 +0200
+@@ -51,9 +51,6 @@
+         exit 2  
+ endif
+ 
+-CC=gcc
+-CXX=g++
+-CCXX=gcc
+ #to compile for Dreambox/dbox2, uncomment next 3 lines:
+ #CC=powerpc-tuxbox-linux-gnu-gcc
+ #CXX=powerpc-tuxbox-linux-gnu-g++
+@@ -173,18 +170,18 @@
+ all:	vecho $(PROGNAME)
+ 
+ $(PROGNAME):	main.o $(ALIBS)  $(OSUTILOBJ)
+-	$(CCXX) $(LDFLAGS)  $(LDLIBSLCE) -o $(PROGNAME) main.o $(ALIBS) $(OSUTILOBJ)
+-	strip $(PROGNAME)$(EXE)
++	$(CC) $(LDFLAGS)  $(LDLIBSLCE) -o $(PROGNAME) main.o $(ALIBS) $(OSUTILOBJ)
++	$(STRIP) $(PROGNAME)$(EXE)
+ 
+ hexupd:	hexupd.o util.a config.o nagra-rsa/librsa.a
+-	$(CCXX) $(LDFLAGS) $(LDLIBS) -o hexupd hexupd.o config.o util.a nagra-rsa/librsa.a
++	$(CC) $(LDFLAGS) $(LDLIBS) -o hexupd hexupd.o config.o util.a nagra-rsa/librsa.a
+ 
+ hexmmn4:	hexmmn4.o confutil.o 
+-	$(CCXX) $(LDFLAGS) -o hexmmn4  hexmmn4.o confutil.o 
++	$(CC) $(LDFLAGS) -o hexmmn4  hexmmn4.o confutil.o 
+ 
+ new:	$(ALIBS) main.o SerialWin_n.o
+ 	$(CCXX) $(LDFLAGS) -o $(PROGNAME) $(ALIBS) main.o SerialWin_n.o $(LDLIBSLCE)
+-	strip $(PROGNAME)$(EXE)
++	$(STRIP) $(PROGNAME)$(EXE)
+ 
+ lce:	main.o $(LCEOBJS) $(UTILOBJS) $(CRYPTOBJS) $(OSUTILOBJ) nagra-rsa/librsa.a
+ 	$(CCXX) $(LDFLAGS)  $(LDLIBSLCE) -o lce main.o $(LCEOBJS) $(UTILOBJS) $(CRYPTOBJS)  $(OSUTILOBJ) nagra-rsa/librsa.a
+@@ -287,16 +284,16 @@
+ 
+ 
+ lce.a:	$(LCEOBJS)
+-	ar r $@ $?
+-	ranlib $@
++	$(AR) r $@ $?
++	$(RANLIB) $@
+ 
+ util.a:	$(UTILOBJS)
+-	ar r $@ $?
+-	ranlib $@
++	$(AR) r $@ $?
++	$(RANLIB) $@
+ 
+ cryp.a:	$(CRYPTOBJS)
+-	ar r $@ $?
+-	ranlib $@
++	$(AR) r $@ $?
++	$(RANLIB) $@
+ 
+ 
+ nagra-rsa/librsa.a:
+diff -urN lincardemu-0.21a/nagra-rsa/Makefile lincardemu-0.21a-new/nagra-rsa/Makefile
+--- lincardemu-0.21a/nagra-rsa/Makefile	2004-04-15 10:57:17.000000000 +0300
++++ lincardemu-0.21a-new/nagra-rsa/Makefile	2008-02-24 20:02:18.000000000 +0200
+@@ -1,4 +1,3 @@
+-CC=gcc
+ CFLAGS=-Wall -O2
+ 
+ #to compile for Dreambox/dbox2, uncomment next line:
+@@ -19,8 +18,8 @@
+ 	$(CC) $(CFLAGS) -L. test.o -lrsa -o test
+ 
+ librsa.a:	$(RSAOBJFILES)
+-	ar r $@ $?
+-	ranlib $@
++	$(AR) r $@ $?
++	$(RANLIB) $@
+ 
+ xecho:
+ 	echo $(PROGNAME)-$(VERS)-x

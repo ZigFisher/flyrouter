@@ -1,0 +1,23 @@
+# Uncomment one of the OPTIONS line below.
+#
+# For WRT54G and WRT54GS it should be possible to find 1-wire adapter at
+#   /dev/tts/1 if you have added an extra serial-port.
+OPTIONS="-d /dev/ttyS1 -p 4304 --timeout_presence=3 --timeout_volatile=3 --timeout_directory=3"
+
+# USB to serial adapter is probably found at /dev/usb/tts/0
+#   Should probably force using 8 data-bits instead of 6 too.
+#OPTIONS="--8bit -d /dev/usb/tts/0 -p 4304"
+
+# For Asus wl500gd it's NOT possible to read/write to /dev/tts/1 since
+#   the kernel hangs and it will not even repond to ping.
+# To connect an USB-adapter you need to install some additional packages.
+# Try install kmod-usb-core, kmod-usb2, kmod-usb-storage, kmod-usb-uhci
+#   before starting owfs.
+#OPTIONS="-u -p 4304"
+#DISABLE="1"
+
+# uncomment this to start process at startup. Try to start manually with run-owfs first!
+ENABLESTARTUP="1"
+
+# Example
+#./owget -s 127.0.0.1 /28.64B7C7010000/temperature

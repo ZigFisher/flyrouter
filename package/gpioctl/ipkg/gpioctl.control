@@ -1,0 +1,4 @@
+Package: gpioctl
+Priority: optional
+Section: base
+Description: Tool for controlling gpio pins

@@ -1,0 +1,28 @@
+--- bluez-utils-2.25/hcid/dbus.c~	2006-01-08 02:03:05.000000000 +0000
++++ bluez-utils-2.25/hcid/dbus.c	2006-04-21 18:07:41.000000000 +0100
+@@ -54,7 +54,7 @@ static DBusConnection *connection;
+ static int default_dev = -1;
+ 
+ #define TIMEOUT				(30 * 1000)		/* 30 seconds */
+-#define DBUS_RECONNECT_TIMER		(5 * 1000 * 1000)	/* 5 sec */
++#define DBUS_RECONNECT_TIMER		5			/* 5 sec */
+ #define MAX_PATH_LENGTH			64
+ #define MAX_CONN_NUMBER			10
+ 
+@@ -1262,12 +1262,12 @@ static void reconnect_timer_start(void)
+ 	sigaction(SIGALRM, &sa, NULL);
+ 
+ 	/* expire after X  msec... */
+-	timer.it_value.tv_sec = 0;
+-	timer.it_value.tv_usec = DBUS_RECONNECT_TIMER;
++	timer.it_value.tv_sec = DBUS_RECONNECT_TIMER;
++	timer.it_value.tv_usec = 0;
+ 
+ 	/* ... and every x msec after that. */
+-	timer.it_interval.tv_sec = 0;
+-	timer.it_interval.tv_usec = DBUS_RECONNECT_TIMER;
++	timer.it_interval.tv_sec = DBUS_RECONNECT_TIMER;
++	timer.it_interval.tv_usec = 0;
+ 
+ 	setitimer(ITIMER_REAL, &timer, NULL);
+ }

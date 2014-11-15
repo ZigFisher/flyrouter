@@ -1,0 +1,50 @@
+#!/bin/sh
+
+BIN=owfs
+DEFAULT=/etc/default/$BIN
+RUN_D=/var/run
+PID_F=$RUN_D/$BIN.pid
+[ -f $DEFAULT ] && . $DEFAULT
+
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+
+if [ -z "$OPTIONS" ]; then
+        echo "OPTIONS is missing... Edit your $DEFAULT"
+	exit 0
+fi
+[ -z "$MOUNTDIR" ] && MOUNTDIR="/tmp/1wire"
+
+case $1 in
+ start)
+  [ "$DISABLE" = "1" ] && exit 0
+  if [ "$ENABLESTARTUP" != "1" -a "$2" != "force" ]; then
+      echo "You have to set ENABLESTARTUP=\"1\" in $DEFAULT"
+      exit 0
+  fi
+  mkdir -p $RUN_D
+  FUSE=`grep fuse /proc/modules`
+  if [ -z "$FUSE" ]; then
+      insmod fuse.o
+  fi
+  mkdir -p $MOUNTDIR
+  $BIN -P $PID_F $OPTIONS $MOUNTDIR
+  ;;
+ stop)
+  [ -f $PID_F ] && kill $(cat $PID_F)
+  sleep 2
+  FUSE=`grep fuse /proc/modules`
+  if [ ! -z "$FUSE" ]; then
+      NRUSE=`grep fuse /proc/modules | awk '{print $3}'`
+#      NRUSE=`grep fuse /proc/modules | cut -c32-`
+      if [ "$NRUSE" != "0"  ]; then
+	  fusermount -u $MOUNTDIR
+      fi
+      rmmod fuse
+  fi
+  ;;
+ *)
+  echo "usage: $0 (start|stop)"
+  exit 1
+esac
+
+exit $?

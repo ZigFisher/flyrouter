@@ -1,0 +1,4 @@
+Package: openobex
+Priority: optional
+Section: net 
+Description: OBEX is a session protocol and can best be described as a binary HTTP protocol

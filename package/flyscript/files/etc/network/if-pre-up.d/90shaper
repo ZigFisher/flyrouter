@@ -1,0 +1,28 @@
+#!/bin/sh
+
+[ -x `which tc` ] || exit 0
+
+LATENCY=${IF_TRAFFIC_SHAPE_LATENCY:-500ms}
+
+if [ -n "$IF_TRAFFIC_SHAPE" ]; then
+	echo q
+	case "$IF_TRAFFIC_SHAPE" in
+	[0-9]*bit)
+		tc qdisc replace dev $IFACE root tbf rate "$IF_TRAFFIC_SHAPE" burst 1540 latency $LATENCY
+		;;
+	rate*)
+		RATE=${IF_TRAFFIC_SHAPE##rate}
+		tc qdisc replace dev $IFACE root tbf rate "$RATE" burst 1540 latency $LATENCY
+		;;
+#	dev*)
+#		SHAPE_IFACE="`echo ${IF_TRAFFIC_SHAPE} | awk '{print $2}'`"
+#		if [ "`echo ${IF_TRAFFIC_SHAPE} | awk '{print $3}`" = "rate" ]; then
+#			RATE="`echo ${IF_TRAFFIC_SHAPE} | awk '{print $4}`"
+#			tc qdisc replace dev $SHAPE_IFACE root tbf rate "$RATE" burst 1540 latency $LATENCY
+#		fi
+#		;;
+	esac
+fi
+  
+
+

@@ -1,0 +1,5 @@
+Package: avrdude
+Priority: optional
+Section: net
+Depends: libncurses, libreadline, libusb
+Description: Avrdude is a program for downloading code and data to Atmel AVR microcontrollers

@@ -1,0 +1,22 @@
+debug
+noipdefault 
+usepeerdns
+defaultroute
+hide-password 
+noauth
+#persist
+refuse-eap
+#refuse-chap
+refuse-mschap
+refuse-mschap-v2
+#refuse-pap
+unit 800
+maxfail 3
+lcp-echo-interval 30
+lcp-echo-failure 5
+mtu 1400
+nocrtscts
+name "my_login"
+linkname pptp1
+pty "/usr/sbin/pptp 1.1.1.1 --nolaunchpppd"
+#pty "/usr/sbin/pptp 1.1.1.1 --nolaunchpppd --timeout 10 --nobuffer" # for bad provider's only

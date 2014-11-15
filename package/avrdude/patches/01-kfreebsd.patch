@@ -1,0 +1,29 @@
+--- avrdude-5.5.orig/debian/patches/01-kfreebsd.patch
++++ avrdude-5.5/debian/patches/01-kfreebsd.patch
+@@ -0,0 +1,26 @@
++Index: avrdude/ppi.c
++===================================================================
++--- avrdude.orig/ppi.c	2008-06-10 12:51:44.000000000 +0200
+++++ avrdude/ppi.c	2008-07-19 03:14:05.000000000 +0200
++@@ -33,7 +33,7 @@
++ #include <unistd.h>
++ #include <errno.h>
++ 
++-#if defined(__FreeBSD__)
+++#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
++ # include "freebsd_ppi.h"
++ #elif defined(__linux__)
++ # include "linux_ppdev.h"
++Index: avrdude/par.c
++===================================================================
++--- avrdude.orig/par.c	2008-06-10 12:51:44.000000000 +0200
+++++ avrdude/par.c	2008-07-19 03:14:05.000000000 +0200
++@@ -28,7 +28,7 @@
++ #include <unistd.h>
++ #include <errno.h>
++ 
++-#if defined(__FreeBSD__)
+++#if defined(__FreeBSD__) || defined(__FreeBSD_kernel__)
++ # include "freebsd_ppi.h"
++ #elif defined(__linux__)
++ # include "linux_ppdev.h"

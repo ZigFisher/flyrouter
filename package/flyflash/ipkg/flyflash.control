@@ -1,0 +1,4 @@
+Package: flyflash
+Priority: optional
+Section: base
+Description: flash save/restore/clear for FlyRouter devices

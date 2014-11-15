@@ -1,0 +1,308 @@
+diff -wuBr dbhub-0.451.orig/src/fileio.c dbhub-0.451/src/fileio.c
+--- dbhub-0.451.orig/src/fileio.c	2008-01-27 01:34:39.000000000 +0200
++++ dbhub-0.451/src/fileio.c	2009-03-02 23:06:57.000000000 +0200
+@@ -822,6 +822,12 @@
+ 		    i++;
+ 		  prottime = (unsigned int)(atoi(line + i));
+ 	       }
++	     /* Proxy bot: 0-disabled, 1-enabled */
++	     else if(!strncmp(line + i, "proxybot ", 9) || !strncmp(line + i, "proxybot=", 9)) {
++             while(!isdigit((int)line[i]))
++                 i++;
++             proxybot = (unsigned int)(atoi(line + i));
++         }
+ 	     /* Bot's name */
+              else if(strncmp(line + i, "botnick", 7) == 0)
+                {
+@@ -864,6 +870,44 @@
+                   if(*(opchatnick + strlen(opchatnick) - 1) == '"')
+                     *(opchatnick + strlen(opchatnick) - 1) = '\0';
+                }
++         else if(strncmp(line + i, "proxybotinfo", 12) == 0) {
++             if(strchr(line + i, '"') == NULL)
++                 {
++                     set_lock(fd, F_UNLCK);
++                     while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_config()/fclose(): Interrupted system call. Trying again.\n");
++
++                     if(erret != 0)
++                         {
++                             logprintf(0, "Error - In read_config()/fclose(): %s", strerror(errno));
++                             return -1;
++                         }
++
++                     return -1;
++                 }
++             strncpy(proxybotinfo, strchr(line + i, '"') + 1, 120);
++             if(*(proxybotinfo + strlen(proxybotinfo) - 1) == '"')
++                 *(proxybotinfo + strlen(proxybotinfo) - 1) = '\0';
++         }
++         else if(strncmp(line + i, "proxybotnick", 12) == 0) {
++             if(strchr(line + i, '"') == NULL)
++                 {
++                     set_lock(fd, F_UNLCK);
++                     while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_config()/fclose(): Interrupted system call. Trying again.\n");
++
++                     if(erret != 0)
++                         {
++                             logprintf(0, "Error - In read_config()/fclose(): %s", strerror(errno));
++                             return -1;
++                         }
++
++                     return -1;
++                 }
++             strncpy(proxybotnick, strchr(line + i, '"') + 1, 50);
++             if(*(proxybotnick + strlen(proxybotnick) - 1) == '"')
++                 *(proxybotnick + strlen(proxybotnick) - 1) = '\0';
++         }
+ 	     /* Clock-bot with current server time: 0-disabled, 1-enabled */
+ 	     else if(strncmp(line + i, "clockbot", 8) == 0)
+ 	       {
+@@ -1910,7 +1954,7 @@
+ 	return;
+      }
+    
+-   while(((fd = open(path, O_RDWR | O_CREAT, 0600)) < 0) && (errno == EINTR))
++   while(((fd = open(path, O_RDWR | O_CREAT, 0644)) < 0) && (errno == EINTR))
+      logprintf(0, "Error - In create_dailylog()/open(): Interrupted system call. Trying again.\n");
+    
+    if(fd < 0)
+@@ -1942,6 +1986,9 @@
+ }
+ 
+ /* Returns 1 if user is on the banlist.  */
++/* buf: contains nick to check
++ * user: user requesting the info
++ */
+ void check_if_saw(char *buf, struct user_t *user)
+ {
+    int i;
+@@ -1971,7 +2018,11 @@
+ 	uprintf(user, "<%s> %s: 3|", botnick, lp_charnumbers);  
+ 	return; 
+ 	}        
+-	if((seenus = get_human_user(snick)) != NULL) 
++	if((seenus = get_human_user(snick)) != NULL && 
++       (seenus->hide_share != 2 || user->type & (OWNER | ADMIN)) ||
++       (proxybotonline && 
++        !strncasecmp(snick, proxybotnick, strlen(proxybotnick)) && 
++        (strlen(snick) == strlen(proxybotnick))))
+ 	{ 
+ 	uprintf(user, "<%s> %s %s|", botnick, snick, lp_isonlinenow);  
+ 	return;
+@@ -2179,7 +2230,7 @@
+ while(human_user != NULL)
+ {
+ next_human = human_user->next;
+-if(match_with_wildcards(human_user->user->hostname, sip) != 0)
++            if(match_with_wildcards(human_user->user->hostname, sip) != 0 && human_user->user->hide_share != 2)
+ {
+ matches++;
+ uprintf(user, "%s (IP: %s), %s\r\n", human_user->user->nick, ip_to_string(human_user->user->ip), lp_loggedin);                
+@@ -3597,6 +3648,9 @@
+    char cirpass[51];
+    bt = 0;
+    
++    if (!strcasecmp (user_nick, proxybotnick))
++        return 5;
++
+    snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, REG_FILE);
+    //DB// Need to add extra space for exact match
+    snprintf(user_nicktmp, 51, "%s ", user_nick);    
+@@ -3683,6 +3737,9 @@
+    char* tmp;
+    time_t bt;
+ 
++    if (!strcasecmp(user->nick, proxybotnick))
++        return 0;
++
+    u = 0;
+    bt = 0;
+    
+@@ -3992,9 +4049,12 @@
+     fprintf(fp, "min_regme_share = %llu\n", min_regme_share);
+     fprintf(fp, "protection = %d\n", protection);
+     fprintf(fp, "prottime = %u\n", prottime);
++    fprintf(fp, "proxybot = %d\n", proxybot);    
+ 
+     fprintf(fp, "botnick = \"%s\"\n", botnick);
+     fprintf(fp, "opchatnick = \"%s\"\n", opchatnick);    
++    fprintf(fp, "proxybotnick = \"%s\"\n", proxybotnick);    
++    fprintf(fp, "proxybotinfo = \"%s\"\n", proxybotinfo);    
+     fprintf(fp, "clockbot = %d\n", clockbot);    
+     fprintf(fp, "count_bots = %d\n", count_bots);    
+ 
+@@ -4961,6 +5021,15 @@
+ 	  fprintf(newfp, "%s", fileline);
+ }
+ }
++                    else if(strstr(file, "warnfile") != NULL) {
++                        char tmpbuf[201];
++                        if(sscanf(fileline, "%200s %200s %lu", tmpbuf, fileword, &exp_time) == 3)
++                            {
++                                if((exp_time == 0) || (exp_time > now_time))
++                                    fprintf(newfp, "%s", fileline);
++                            }
++                    }
++                    
+ else 
+ {
+ if(sscanf(fileline, "%200s %lu", fileword, &exp_time) == 2)
+@@ -5353,7 +5422,8 @@
+ int check_warning(struct user_t *user, int type)
+ {
+    char *warnreason;
+-   char someone[51];
++   char nick[MAX_NICK_LEN+1];
++   char timestamp[18];
+    int warns = 0;
+    int i;
+    size_t j;
+@@ -5361,10 +5431,10 @@
+    int erret;
+    FILE *fp;
+    char path[MAX_FDP_LEN+1];
+-   char line[1024];
++   char line[1024+MAX_NICK_LEN];
+    char ban_host[MAX_HOST_LEN+1];
+ 
+-   if(mystristr(warn_mem, user->nick) == NULL)
++   if(mystristr(warn_mem, user->hostname) == NULL)
+    return 0;
+ 
+ 	snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
+@@ -5394,7 +5464,7 @@
+ 	return -1;
+      }
+    
+-   while(fgets(line, 1023, fp) != NULL)
++   while(fgets(line, 1023+MAX_NICK_LEN, fp) != NULL)
+      {
+ 	trim_string(line);
+ 	
+@@ -5406,10 +5476,10 @@
+ 	     while(line[i] == ' ')
+ 	       i++;
+ 
+-	     sscanf(line+i, "%120s %17s", ban_host, someone);
+-	     warnreason = line+i + strlen(someone) + 1 + strlen(ban_host) + 1;
++	     sscanf(line+i, "%120s %50s %17s", ban_host, nick, timestamp);
++	     warnreason = line+i + strlen(timestamp) + strlen(nick) + 1 + strlen(ban_host) + 1;
+ 
+-	     if(strcasecmp(user->nick, ban_host) == 0)
++	     if(strcasecmp(user->hostname, ban_host) == 0)
+ 		    {
+ 		    warns++;
+ 		    if(type == 0)
+@@ -5438,7 +5508,7 @@
+    return warns;
+ }
+ 
+-int remove_warnings(char *nick)
++int remove_warnings(char *host)
+ {
+    char someone[51];
+    int warns = 0;
+@@ -5450,6 +5520,7 @@
+    char path[MAX_FDP_LEN+1];
+    char line[1024];
+    char ban_host[MAX_HOST_LEN+1];
++   char timestamp[18];
+ 
+ 	snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
+    
+@@ -5490,12 +5561,12 @@
+ 	     while(line[i] == ' ')
+ 	       i++;
+ 
+-	     sscanf(line+i, "%120s %17s", ban_host, someone);
++	     sscanf(line+i, "%120s %120s %17s", ban_host, someone, timestamp);
+ 
+-	     if(strcasecmp(nick, ban_host) == 0)
++	     if(strcasecmp(host, ban_host) == 0)
+ 		    {
+ 		    warns++;
+-		    remove_line_from_file(nick, path, 0);
++		    remove_line_from_file(host, path, 0);
+ 		    }
+ 	       
+     	}
+@@ -5886,8 +5957,7 @@
+     int type = 0;
+     char awayuser[51];
+ 
+-   if((temp = malloc(sizeof(char) * (strlen(hide_mem) + 1))) == NULL)
+-     {
++    if((temp = malloc(sizeof(char) * (strlen(hide_mem) + 1))) == NULL) {
+ 	logprintf(0, "Error - In check_if_hidden()/malloc(): %s", strerror(errno));
+ 	quit = 1;
+ 	return 0;
+@@ -5896,36 +5966,28 @@
+ sprintf(temp, "%s", hide_mem);
+ k = temp;
+ 
+-    while(strstr(k, "\n") != NULL)
+-    {
+-	if(sscanf(k, "%s %d", awayuser, &type) == 2)
+-	{
+-	    if(strcasecmp(user_nick, awayuser) == 0)
+-	    {
+-	    if(type == 2)
+-	    {
++     while(strstr(k, "\n") != NULL) {
++        if(sscanf(k, "%s %d", awayuser, &type) == 2) {
++            if(strcasecmp(user_nick, awayuser) == 0) {
++                if(type == 2) {
+ 	    if(temp != NULL)
+ 	    free(temp);
+ 	    return 2;
+ 	    }
+-	    if(type == 1)
+-	    {
++                if(type == 1) {
+ 	    if(temp != NULL)
+ 	    free(temp);
+ 	    return 1;
+ 	    }
+ 	    }
+     }
+-if((k = strstr(k, "\n")) == NULL)
+-{
++        if((k = strstr(k, "\n")) == NULL) {
+ if(temp != NULL)                                                                                             
+ free(temp);                                                                                                  
+ return 0;
+ }
+-else
+-{
+-if(strlen(k) <= 1)
+-{
++        else {
++            if(strlen(k) <= 1) {
+ if(temp != NULL)                                                                                             
+ free(temp);                                                                                                  
+ return 0;
+@@ -5935,18 +5997,14 @@
+ }
+     }
+     
+-    if(sscanf(k, "%s %d", awayuser, &type) == 2)
+-    {
+-        if(strcasecmp(user_nick, awayuser) == 0)
+-    	{
+-	if(type == 2)
+-        {
++    if(sscanf(k, "%s %d", awayuser, &type) == 2) {
++        if(strcasecmp(user_nick, awayuser) == 0) {
++            if(type == 2) {
+ 	if(temp != NULL)                                                                                             
+ 	free(temp);                                                                                                  
+ 	return 2;
+         }
+-	if(type == 1)
+-        {
++            if(type == 1) {
+ 	if(temp != NULL)                                                                                             
+ 	free(temp);                                                                                                  
+ 	return 1;

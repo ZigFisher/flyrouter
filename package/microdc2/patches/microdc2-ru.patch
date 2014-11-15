@@ -1,0 +1,2190 @@
+diff -urwN orig/po/LINGUAS microdc2-0.15.6/po/LINGUAS
+--- orig/po/LINGUAS	2006-10-22 12:35:49.000000000 +0400
++++ po/LINGUAS	2007-03-11 21:17:47.000000000 +0300
+@@ -1,2 +1,3 @@
+ pl
++ru
+ sv
+diff -urwN orig/po/ru.po microdc2-0.15.6/po/ru.po
+--- orig/po/ru.po	1970-01-01 03:00:00.000000000 +0300
++++ po/ru.po	2007-03-11 21:08:27.000000000 +0300
+@@ -0,0 +1,2179 @@
++# Russian translation for microdc.
++# Copyright (C) 2007 Andrew Zabolotny <zap@homelink.ru>
++# This file is distributed under the same license as the microdc package.
++#
++msgid ""
++msgstr ""
++"Project-Id-Version: microdc 0.11.0\n"
++"Report-Msgid-Bugs-To: vladch@k804.mainet.msk.su\n"
++"POT-Creation-Date: 2007-03-11 10:43+0300\n"
++"PO-Revision-Date: 2007-03-11 10:44+0300\n"
++"Last-Translator: Andrew Zabolotny <zap@homelink.ru>\n"
++"Language-Team: Russian <ru@li.org>\n"
++"MIME-Version: 1.0\n"
++"Content-Type: text/plain; charset=UTF-8\n"
++"Content-Transfer-Encoding: 8bit\n"
++"Plural-Forms: nplurals=3; plural= n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 "
++"|| n%100>=20) ? 1 : 2;\n"
++
++#: lib/argmatch.c:137
++#, c-format
++msgid "invalid argument %s for %s"
++msgstr "неверный аргумент %s для %s"
++
++#: lib/argmatch.c:138
++#, c-format
++msgid "ambiguous argument %s for %s"
++msgstr "неоднозначный аргумент %s для %s"
++
++#: lib/argmatch.c:157
++#, c-format
++msgid "Valid arguments are:"
++msgstr "Допустимые аргументы:"
++
++#: lib/error.c:121
++msgid "Unknown system error"
++msgstr "Неизвестная ошибка системы"
++
++#: lib/gai_strerror.c:45
++msgid "Address family for hostname not supported"
++msgstr "Семейство адресов для имени узла не поддерживается"
++
++#: lib/gai_strerror.c:46
++msgid "Temporary failure in name resolution"
++msgstr "Преобразование имён временно недоступно"
++
++#: lib/gai_strerror.c:47
++msgid "Bad value for ai_flags"
++msgstr "Неверное значение для ai_flags"
++
++#: lib/gai_strerror.c:48
++msgid "Non-recoverable failure in name resolution"
++msgstr "Невосстановимый отказ при преобразовании имени"
++
++#: lib/gai_strerror.c:49
++msgid "ai_family not supported"
++msgstr "ai_family не поддерживается"
++
++#: lib/gai_strerror.c:50
++msgid "Memory allocation failure"
++msgstr "Ошибка выделения памяти"
++
++#: lib/gai_strerror.c:51
++msgid "No address associated with hostname"
++msgstr "Данному узлу не сопоставлен ни один адрес"
++
++#: lib/gai_strerror.c:52
++msgid "Name or service not known"
++msgstr "Имя или сервис неизвестны"
++
++#: lib/gai_strerror.c:53
++msgid "Servname not supported for ai_socktype"
++msgstr "Servname не поддерживается для ai_socktype"
++
++#: lib/gai_strerror.c:54
++msgid "ai_socktype not supported"
++msgstr "ai_socktype не поддерживается"
++
++#: lib/gai_strerror.c:55
++msgid "System error"
++msgstr "Системная ошибка"
++
++#: lib/gai_strerror.c:57
++msgid "Processing request in progress"
++msgstr "Идёт обработка запроса"
++
++#: lib/gai_strerror.c:58
++msgid "Request canceled"
++msgstr "Отмена запроса"
++
++#: lib/gai_strerror.c:59
++msgid "Request not canceled"
++msgstr "Запрос не отменён"
++
++#: lib/gai_strerror.c:60
++msgid "All requests done"
++msgstr "Все запросы выполнены"
++
++#: lib/gai_strerror.c:61
++msgid "Interrupted by a signal"
++msgstr "Прервано сигналом"
++
++#: lib/gai_strerror.c:62
++msgid "Parameter string not correctly encoded"
++msgstr "Строка параметра неверно закодирована"
++
++#: lib/gai_strerror.c:74
++msgid "Unknown error"
++msgstr "Неизвестная ошибка"
++
++#: lib/getopt.c:551 lib/getopt.c:570
++#, c-format
++msgid "%s: option `%s' is ambiguous\n"
++msgstr "%s: многозначная опция `%s'\n"
++
++#: lib/getopt.c:603 lib/getopt.c:607
++#, c-format
++msgid "%s: option `--%s' doesn't allow an argument\n"
++msgstr "%s: опция `--%s' не имеет аргументов\n"
++
++#: lib/getopt.c:616 lib/getopt.c:621
++#, c-format
++msgid "%s: option `%c%s' doesn't allow an argument\n"
++msgstr "%s: опция `%c%s' не имеет аргументов\n"
++
++#: lib/getopt.c:667 lib/getopt.c:689 lib/getopt.c:1020 lib/getopt.c:1042
++#, c-format
++msgid "%s: option `%s' requires an argument\n"
++msgstr "%s: опция `%s' требует аргумент\n"
++
++#: lib/getopt.c:727 lib/getopt.c:730
++#, c-format
++msgid "%s: unrecognized option `--%s'\n"
++msgstr "%s: неизвестная опция `--%s'\n"
++
++#: lib/getopt.c:738 lib/getopt.c:741
++#, c-format
++msgid "%s: unrecognized option `%c%s'\n"
++msgstr "%s: неизвестная опция `%c%s'\n"
++
++#: lib/getopt.c:796 lib/getopt.c:799
++#, c-format
++msgid "%s: illegal option -- %c\n"
++msgstr "%s: недопустимая опция `%c'\n"
++
++#: lib/getopt.c:805 lib/getopt.c:808
++#, c-format
++msgid "%s: invalid option -- %c\n"
++msgstr "%s: неверная опция `%c'\n"
++
++#: lib/getopt.c:863 lib/getopt.c:882 lib/getopt.c:1095 lib/getopt.c:1116
++#, c-format
++msgid "%s: option requires an argument -- %c\n"
++msgstr "%s: опция требует аргумента -- %c\n"
++
++#: lib/getopt.c:935 lib/getopt.c:954
++#, c-format
++msgid "%s: option `-W %s' is ambiguous\n"
++msgstr "%s: опция `-W %s' многозначна\n"
++
++#: lib/getopt.c:978 lib/getopt.c:999
++#, c-format
++msgid "%s: option `-W %s' doesn't allow an argument\n"
++msgstr "%s: опция `-W %s' не нуждается в аргументе\n"
++
++#: lib/human.c:486
++msgid "block size"
++msgstr "размер блока"
++
++#. TRANSLATORS:
++#. Get translations for open and closing quotation marks.
++#.
++#. The message catalog should translate "`" to a left
++#. quotation mark suitable for the locale, and similarly for
++#. "'".  If the catalog has no translation,
++#. locale_quoting_style quotes `like this', and
++#. clocale_quoting_style quotes "like this".
++#.
++#. For example, an American English Unicode locale should
++#. translate "`" to U+201C (LEFT DOUBLE QUOTATION MARK), and
++#. should translate "'" to U+201D (RIGHT DOUBLE QUOTATION
++#. MARK).  A British English Unicode locale should instead
++#. translate these to U+2018 (LEFT SINGLE QUOTATION MARK) and
++#. U+2019 (RIGHT SINGLE QUOTATION MARK), respectively.
++#.
++#. If you don't know what to put here, please see
++#. <http://en.wikipedia.org/wiki/Quotation_mark#Glyphs>
++#. and use glyphs suitable for your language.
++#: lib/quotearg.c:245
++msgid "`"
++msgstr ""
++
++#: lib/quotearg.c:246
++msgid "'"
++msgstr ""
++
++#. TRANSLATORS: Translate "(C)" to the copyright symbol
++#. (C-in-a-circle), if this symbol is available in the user's
++#. locale.  Otherwise, do not translate "(C)"; leave it as-is.
++#: lib/version-etc.c:72
++msgid "(C)"
++msgstr ""
++
++#: lib/version-etc.c:74
++msgid ""
++"\n"
++"This is free software.  You may redistribute copies of it under the terms "
++"of\n"
++"the GNU General Public License <http://www.gnu.org/licenses/gpl.html>.\n"
++"There is NO WARRANTY, to the extent permitted by law.\n"
++"\n"
++msgstr ""
++"\n"
++"Это свободная программа.  Вы можете распространять её копии\n"
++"при условии соблюдения Универсальной Общественной Лицензии GNU\n"
++"<http://www.gnu.org/licenses/gpl.html>.\n"
++"Не предоставляется НИКАКИХ ГАРАНТИЙ, в установленных законом пределах.\n"
++"\n"
++
++#. TRANSLATORS: %s denotes an author name.
++#: lib/version-etc.c:90
++#, c-format
++msgid "Written by %s.\n"
++msgstr "Автор: %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#: lib/version-etc.c:94
++#, c-format
++msgid "Written by %s and %s.\n"
++msgstr "Авторы: %s и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#: lib/version-etc.c:98
++#, c-format
++msgid "Written by %s, %s, and %s.\n"
++msgstr "Автора: %s, %s, и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:104
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s\n"
++"и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:110
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:116
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, %s, and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s, %s и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:123
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, %s, %s, and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s, %s, %s и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:130
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, %s, %s, %s,\n"
++"and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s, %s, %s, %s\n"
++"и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:138
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, %s, %s, %s,\n"
++"%s, and %s.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s, %s, %s, %s,\n"
++"%s и %s.\n"
++
++#. TRANSLATORS: Each %s denotes an author name.
++#. You can use line breaks, estimating that each author name occupies
++#. ca. 16 screen columns and that a screen line has ca. 80 columns.
++#: lib/version-etc.c:148
++#, c-format
++msgid ""
++"Written by %s, %s, %s,\n"
++"%s, %s, %s, %s,\n"
++"%s, %s, and others.\n"
++msgstr ""
++"Авторы: %s, %s, %s,\n"
++"%s, %s, %s, %s,\n"
++"%s, %s и другие.\n"
++
++#: lib/xalloc-die.c:38
++msgid "memory exhausted"
++msgstr "закончилась память"
++
++#: src/command.c:188
++msgid "browse [USER]"
++msgstr "browse [ИМЯ]"
++
++#: src/command.c:189
++msgid ""
++"If USER is specified, queue the file list for that user for download and "
++"start browsing the user's files as soon as the list is downloaded. With no "
++"arguments, stop browsing.\n"
++msgstr ""
++"Если задано ИМЯ, добавляет в очередь команду на получение списка файлов "
++"заданного пользователя и запускает процесс просмотра сразу по окончании "
++"запроса. Без аргументов - отменяет просмотр.\n"
++
++#: src/command.c:193
++msgid "cancel CONNECTION ..."
++msgstr "cancel СОЕДИНЕНИЕ ..."
++
++#: src/command.c:194
++msgid ""
++"Close a user connection. Use the `transfers' command to get a list of "
++"connections.\n"
++msgstr ""
++"Сбросить соединение с пользователем. Используйте команду `transfers', "
++"чтобы получить список соединений.\n"
++
++#: src/command.c:197
++msgid "cd [DIRECTORY]"
++msgstr "cd [КАТАЛОГ]"
++
++#: src/command.c:198
++msgid ""
++"Change directory when browsing another user's files. If DIRECTORY is not "
++"specified, change to the root directory (`/').\n"
++msgstr ""
++"Сменить каталог при просмотре списка файлов пользователя. Если КАТАЛОГ "
++"не задан, переход в корневой каталог (`/').\n"
++
++#: src/command.c:201
++msgid "connect HOST[:PORT]"
++msgstr "connect УЗЕЛ[:ПОРТ]"
++
++#: src/command.c:202
++msgid "Connect to a hub. If PORT is not specified, assume port 411.\n"
++msgstr "Присоединиться к узлу. Если порт не задан, подразумевается 411\n"
++
++#: src/command.c:204
++msgid "disconnect"
++msgstr ""
++
++#: src/command.c:205
++msgid "Disconnect from the hub.\n"
++msgstr "Закрыть соединение с узлом.\n"
++
++#: src/command.c:207
++msgid "exit"
++msgstr ""
++
++#: src/command.c:208
++msgid "Quit the program.\n"
++msgstr "Выход из программы.\n"
++
++#: src/command.c:210
++msgid "find [FILE ...]"
++msgstr "find [ФАЙЛ ...]"
++
++#: src/command.c:211
++msgid ""
++"List files and directories recursively. Assume current directory if FILE is "
++"not specified. Must be browsing a user's files to use this command.\n"
++msgstr ""
++"Рекурсивный поиск файла/каталога по списку пользователя. Поиск начинается "
++"в текущем каталоге если ФАЙЛ не задан. Данная команда работает только в режиме "
++"просмотра файлов пользователя.\n"
++
++#: src/command.c:214
++msgid "get FILE ..."
++msgstr "get ФАЙЛ ..."
++
++#: src/command.c:215
++msgid ""
++"Queue file for download. Must be browsing a user's files to use this "
++"command.\n"
++msgstr ""
++"Добавляет в очередь команду на скачивание указанного файла. Данная команда "
++"работает только в режиме просмотра файлов пользователя.\n"
++
++#: src/command.c:218
++msgid "grantslot [USER ...]"
++msgstr "grantslot [ИМЯ ...]"
++
++#: src/command.c:219
++msgid ""
++"Grant a download slot for the specified users, or remove granted slot if the "
++"user was already granted one. Without arguments, display a list of users "
++"with granted slots.\n"
++msgstr ""
++"Резервирует слот для указанного пользователя, или убирает выделенный ему "
++"ранее слот. Без аргументов выводит список закреплённых за пользователями  "
++"слотов.\n"
++
++#: src/command.c:223
++msgid "help [COMMAND ...]"
++msgstr "help [КОМАНДА ...]"
++
++#: src/command.c:224
++msgid ""
++"If COMMAND is specified, display help for that command. Otherwise list all "
++"available commands.\n"
++msgstr ""
++"Если указана КОМАНДА, вывести описание указанной команды. Иначе выводит "
++"полный список команд.\n"
++
++#: src/command.c:227
++msgid "ls [OPTION...] [FILE...]"
++msgstr "ls [ОПЦИЯ...] [ФАЙЛ...]"
++
++#: src/command.c:228
++msgid ""
++"List files and directories. Assume current directory if FILE is not\n"
++"specified.\n"
++"\n"
++"Options:\n"
++"  -l, --long    use a long listing format\n"
++msgstr ""
++"Вывод файлов и каталогов. Если ФАЙЛ не указан, поиск ведётся в текущем \n"
++"каталоге.\n"
++"\n"
++"Опции:\n"
++"  -l, --long    Расширенный формат вывода\n"
++
++#: src/command.c:234
++msgid "retry USER ..."
++msgstr "retry ИМЯ ..."
++
++#: src/command.c:235
++msgid "Try to connect and download files from the specified users.\n"
++msgstr "Заново открыть соединение к указанным пользователям.\n"
++
++#: src/command.c:237
++msgid "msg USER MESSAGE..."
++msgstr "msg ИМЯ СООБЩЕНИЕ..."
++
++#: src/command.c:238
++msgid ""
++"Send a private message to USER. Note that characters such as semicolon "
++"(`;'), double quote (`\"') and number sign (`#') in MESSAGE need to be "
++"escaped or quoted. Therefore it is recommended to put MESSAGE in double "
++"quotes.\n"
++"\n"
++"Example:\n"
++"  msg some_user \"hello, how are you?\"\n"
++msgstr ""
++"Послать приватное сообщение указанному пользователю. Имейте в виду, что "
++"спецсимволы `;', `\"' `#' в  сообщении должны быть защищены от неверной "
++"интерпретации, поэтому рекомендуется указывать сообщение в кавычках. "
++"\n"
++"Пример:\n"
++"  msg Вася \"Привет, как дела?\"\n"
++
++#: src/command.c:246
++msgid "pwd"
++msgstr ""
++
++#: src/command.c:247
++msgid "Display user being browsed and current directory.\n"
++msgstr "Вывод информации о текущем пользователе и каталоге.\n"
++
++#: src/command.c:249
++msgid "queue [USER ...]"
++msgstr "queue [ИМЯ ...]"
++
++#: src/command.c:250
++msgid ""
++"Display files queued for download from the specified users. Without "
++"arguments, display a list of users we have queued files for.\n"
++msgstr ""
++"Вывод списка команд в очереди для заданных пользователей. Без аргументов "
++"выводит список пользователей, для которых есть команды в очереди.\n"
++
++#: src/command.c:253
++msgid "raw DATA..."
++msgstr "raw ДАННЫЕ..."
++
++#: src/command.c:254
++msgid ""
++"Send some raw data to the hub. Note that characters such as semicolon (`;'), "
++"double quote (`\"') and number sign (`#') in DATA need to be escaped or "
++"quoted. Therefore it is recommended to put DATA in double quotes.\n"
++msgstr ""
++"Послать некоторые данные на узел. Имейте в виду, что символы `;', `\"' "
++"и `#' должны быть защищены от неверной интерпретации, поэтому рекомендуется "
++"указывать сообщение в кавычках.\n"
++
++#: src/command.c:259
++msgid "results [INDEX ...]"
++msgstr "results [ИНДЕКС ...]"
++
++#: src/command.c:260
++msgid ""
++"If INDEX is specified, display results for the search by that index. "
++"Otherwise, display a list of searches and statistics over those searches.\n"
++msgstr ""
++"Если указан ИНДЕКС, выводит результат поиска с данным индексом. "
++"Иначе выводит список поисковых запросов и статистику по ним.\n"
++
++#: src/command.c:263
++msgid "say MESSAGE..."
++msgstr "say СООБЩЕНИЕ..."
++
++#: src/command.c:264
++msgid ""
++"Send a public message to users on the hub. Note that characters such as "
++"semicolon (`;'), double quote (`\"') and number sign (`#') in MESSAGE need "
++"to be escaped or quoted. Therefore it is recommended to put MESSAGE in "
++"double quotes.\n"
++"\n"
++"Example:\n"
++"  say \"hi everyone!\"\n"
++msgstr ""
++"Послать публичное сообщение всем пользователям на узле. Имейте в виду, "
++"что символы `;', `\"' и `#' в СООБЩЕНИИ должны быть защищены от неверной "
++"интерпретации, поэтому рекомендуется указывать сообщение в кавычках.\n"
++"\n"
++"Пример:\n"
++"  msg \"Всем привет!\"\n"
++
++#: src/command.c:272
++msgid "search WORD..."
++msgstr "search СЛОВО..."
++
++#: src/command.c:273
++msgid "Issue a search for the specified search words.\n"
++msgstr "Создать поисковый запрос с заданными ключевыми словами.\n"
++
++#: src/command.c:275
++msgid "set [NAME [VALUE...]]"
++msgstr "set [ИМЯ [ЗНАЧЕНИЕ...]]"
++
++#: src/command.c:276
++msgid ""
++"Without arguments, display a list of variables and their current values. "
++"With only NAME argument, display the value of that variable. With NAME and "
++"VALUE arguments, change the value of a variable.\n"
++msgstr ""
++"Без аргументов выводит список переменных и их значений. Если указать только "
++"ИМЯ переменной, выдаёт значение указанной переменной. Если указать ИМЯ и "
++"ЗНАЧЕНИЕ, меняет значение переменной.\n"
++
++#: src/command.c:280
++msgid "status"
++msgstr ""
++
++#: src/command.c:281
++msgid "Display status information and some statistics.\n"
++msgstr "Вывести текущее состояние и кое-какую статистику.\n"
++
++#: src/command.c:283
++msgid "transfers"
++msgstr ""
++
++#: src/command.c:284
++msgid "Display a list of user connections.\n"
++msgstr "Вывести список соединений с пользователями.\n"
++
++#: src/command.c:286
++msgid "unqueue USER [RANGE]"
++msgstr "unqueue ИМЯ [ДИАПАЗОН]"
++
++#: src/command.c:287
++msgid ""
++"Remove all or a range of queued files for USER. If RANGE is not specified, "
++"remove all files from the queue. Use dash (`-') and comma (`,') in RANGE. "
++"Open ranges are accepted (e.g. `1-' or `-2').\n"
++msgstr ""
++"Удалить файлы из очереди запросов. Если ДИАПАЗОН не указан, удаляет все "
++"файлы из очереди указанного пользователя. Используйте `-' и ',' в ДИАПАЗОНЕ. "
++"Допустимы также полудиапазоны (`1-' или `-2').\n"
++
++#: src/command.c:291
++msgid "unsearch INDEX ..."
++msgstr "unsearch ИНДЕКС ..."
++
++#: src/command.c:292
++msgid "Remove a previously issued search and all results for that search.\n"
++msgstr "Сбросить поисковый запрос вместе с результатами с заданным ИНДЕКСом.\n"
++
++#: src/command.c:294
++msgid "who [USER ...]"
++msgstr "who [ИМЯ ...]"
++
++#: src/command.c:295
++msgid ""
++"If USER is specified, display information on that user. Otherwise, display a "
++"table of users with some user details.\n"
++msgstr ""
++"Если ИМЯ указано, выводит информацию о пользователе. Иначе выводит список "
++"пользователей с некоторыми деталями.\n"
++
++#: src/command.c:298
++msgid "alias [NAME[=VALUE] ...]"
++msgstr "alias [КОМАНДА[=ЗНАЧЕНИЕ] ...]"
++
++#: src/command.c:299
++msgid ""
++"Without arguments, display the list of aliases. With NAME argument, display "
++"what value (command) that alias is set to. With both NAME and VALUE "
++"argument, change alias. Note that VALUE is a single argument - you need to "
++"use quotes for more complex commands.\n"
++"\n"
++"Example:\n"
++"  alias ll \"ls -l\"\n"
++msgstr ""
++"Без аргументов выдаёт список псевдонимов. Если указать КОМАНДу, выводит "
++"значение (список команд) для указанного псевдонима. Если указать КОМАНДу "
++"и ЗНАЧЕНИЕ, задаёт новый псевдоним. Имейте в виду, что ЗНАЧЕНИЕ это один "
++"аргумент - используйте кавычки для сложных команд.\n"
++"\n"
++"Пример:\n"
++"  alias ll \"ls -l\"\n"
++
++#: src/command.c:307
++msgid "unalias NAME ..."
++msgstr "unalias КОМАНДА ..."
++
++#: src/command.c:308
++msgid "Remove aliases.\n"
++msgstr "Сброс псевдонима.\n"
++
++#: src/command.c:310
++msgid "shell [COMMAND [ARGUMENTS...]]"
++msgstr "shell [КОМАНДА [АРГУМЕНТЫ...]]"
++
++#: src/command.c:311
++msgid ""
++"Execute a system command. If no arguments are specified, the current shell "
++"will be started (SHELL environment variable or `/bin/sh' if that is not "
++"set). microdc will continue in the background while the command is "
++"executing.\n"
++msgstr ""
++"Выполнить команду оболочки. Если не указать аргументы, будет запущена текущая "
++"оболочка (заданной переменной окружения SHELL либо /bin/sh). Программа будет "
++"продолжать работу в фоновом режиме во время выполнения команды.\n"
++
++#: src/command.c:316
++msgid "lookup HOST ..."
++msgstr "lookup УЗЕЛ ..."
++
++#: src/command.c:317
++msgid "Lookup the IP address of specified hosts.\n"
++msgstr "Вывести IP адрес указанного узла.\n"
++
++#: src/command.c:319
++msgid "share DIR"
++msgstr "share КАТАЛОГ"
++
++#: src/command.c:320
++msgid "Add share directory to the processing list\n"
++msgstr "Добавить КАТАЛОГ к списку доступных пользователям\n"
++
++#: src/command.c:322
++msgid "unshare DIR"
++msgstr "unshare КАТАЛОГ"
++
++#: src/command.c:323
++msgid "Remove share directory from the processing list\n"
++msgstr "Запретить доступ пользователей к указанному каталогу\n"
++
++#: src/command.c:513
++#, c-format
++msgid "%s: Unknown command.\n"
++msgstr "%s: Неизвестная команда.\n"
++
++#: src/command.c:704
++#, c-format
++msgid "Cannot create child process - %s\n"
++msgstr "Не могу создать дочерний процесс - %s\n"
++
++#: src/command.c:719 src/command.c:722
++#, c-format
++msgid "%s: cannot execute - %s\n"
++msgstr "%s: ошибка выполнения - %s\n"
++
++#: src/command.c:737 src/command.c:740 src/command.c:743 src/command.c:746
++#: src/command.c:749 src/command.c:752
++#, c-format
++msgid "Hub state: %s\n"
++msgstr "Состояние узла: %s\n"
++
++#: src/command.c:737
++msgid "Not connected"
++msgstr "Не подсоединён"
++
++#: src/command.c:740
++msgid "Looking up IP address"
++msgstr "Преобразование имени"
++
++#: src/command.c:743
++msgid "Waiting for complete connection"
++msgstr "Ожидание завершения соединения"
++
++#: src/command.c:746
++msgid "Waiting for $Lock"
++msgstr "Ожидание $Lock"
++
++#
++#: src/command.c:749
++msgid "Waiting for $Hello"
++msgstr "Ждем $Hello"
++
++#: src/command.c:752
++msgid "Logged in"
++msgstr "Соединён"
++
++#: src/command.c:757 src/command.c:759
++#, c-format
++msgid "Hub users: %s\n"
++msgstr "Пользователи: %s\n"
++
++#: src/command.c:759
++msgid "(not logged in)"
++msgstr "(нет соединения)"
++
++#: src/command.c:778
++msgid "Shared directories:\n"
++msgstr "Доступные каталоги:\n"
++
++#: src/command.c:784
++#, c-format
++msgid "  %s - %<PRIu64> %s (%s)\n"
++msgstr ""
++
++#: src/command.c:787 src/command.c:799 src/command.c:805 src/command.c:809
++#: src/command.c:1623 src/command.c:2020 src/main.c:641 src/main.c:648
++#: src/user.c:477
++msgid "byte"
++msgid_plural "bytes"
++msgstr[0] "байт"
++msgstr[1] "байта"
++msgstr[2] "байт"
++
++#: src/command.c:794
++msgid "  (none)\n"
++msgstr "  (нет)\n"
++
++#: src/command.c:797
++#, c-format
++msgid "Total share size: %<PRIu64> %s (%s)\n"
++msgstr "Размер файлов: %<PRIu64> %s (%s)\n"
++
++#: src/command.c:801
++#, c-format
++msgid "FileList was updated last time on %s\n"
++msgstr "Последнее обновление списка файлов: %s\n"
++
++#: src/command.c:803
++#, c-format
++msgid "Bytes received: %<PRIu64> %s (%s)\n"
++msgstr "Принято байт: %<PRIu64> %s (%s)\n"
++
++#: src/command.c:807
++#, c-format
++msgid "Bytes sent: %<PRIu64> %s (%s)\n"
++msgstr "Послано байт: %<PRIu64> %s (%s)\n"
++
++#: src/command.c:813
++#, c-format
++msgid "%s\n"
++msgstr ""
++
++#: src/command.c:837
++#, c-format
++msgid "Usage: %s MESSAGE..\n"
++msgstr "Формат: %s СООБЩЕНИЕ..\n"
++
++#: src/command.c:841 src/command.c:888 src/command.c:931 src/command.c:973
++#: src/command.c:987 src/command.c:1389 src/command.c:1420 src/command.c:1536
++#: src/command.c:1611 src/command.c:1741
++msgid "Not connected.\n"
++msgstr "Нет соединения.\n"
++
++#: src/command.c:884
++#, c-format
++msgid "Usage: %s USER MESSAGE..\n"
++msgstr "Формат: %s ИМЯ СООБЩЕНИЕ..\n"
++
++#: src/command.c:893 src/command.c:1006 src/command.c:1103 src/command.c:1398
++#: src/command.c:1441 src/command.c:1541 src/command.c:1621
++#, c-format
++msgid "%s: No such user on this hub\n"
++msgstr "%s: Нет такого пользователя на узле\n"
++
++#: src/command.c:927
++#, c-format
++msgid "Usage: %s DATA...\n"
++msgstr "Формат: %s ДАННЫЕ...\n"
++
++#: src/command.c:947
++#, c-format
++msgid "Usage: %s HOST[:PORT]\n"
++msgstr "Формат: %s УЗЕЛ[:ПОРТ]\n"
++
++#: src/command.c:951
++msgid "Connection in progress, disconnect first.\n"
++msgstr "Соединение активно, сначала следует его сбросить.\n"
++
++#: src/command.c:959
++#, c-format
++msgid "Invalid port number %s\n"
++msgstr "Неверный номер порта %s\n"
++
++#: src/command.c:975
++msgid "Disconnecting from hub.\n"
++msgstr "Отсоединяемся от узла.\n"
++
++#: src/command.c:1010
++#, c-format
++msgid "%s has been granted a slot.\n"
++msgstr "Зарезервирован слот для %s.\n"
++
++#: src/command.c:1012
++#, c-format
++msgid "%s is no longer granted a slot.\n"
++msgstr "Резервный слот для %s удалён.\n"
++
++#: src/command.c:1064
++#, c-format
++msgid "Now browsing %s.\n"
++msgstr "Просмотр файлов %s.\n"
++
++#: src/command.c:1082 src/command.c:1180 src/command.c:1196 src/command.c:1259
++#: src/command.c:1335 src/command.c:1976
++msgid "Not browsing any user.\n"
++msgstr "Режим просмотра файлов неактивен.\n"
++
++#: src/command.c:1123 src/command.c:2090 src/command.c:2125
++#: src/filelist-in.c:284 src/fs.c:87 src/fs.c:545 src/fs.c:660 src/fs.c:674
++#: src/fs.c:688 src/main.c:1404 src/main.c:1422 src/user.c:625 src/util.c:109
++#: src/variables.c:447 src/variables.c:468
++#, c-format
++msgid "%s: Cannot get file status - %s\n"
++msgstr "%s: Невозможно получить информацию о файле - %s\n"
++
++#: src/command.c:1152
++msgid "No free connections. Queued file for download.\n"
++msgstr "Лимит соединений исчерпан. Запрос добавлен в очередь.\n"
++
++#: src/command.c:1182
++#, c-format
++msgid "(%s) Waiting for file list.\n"
++msgstr "(%s) Ожидание списка файлов.\n"
++
++#: src/command.c:1185
++#, c-format
++msgid "(%s) %s\n"
++msgstr ""
++
++#: src/command.c:1207
++msgid "No previous path.\n"
++msgstr "Нет предыдущего каталога.\n"
++
++#: src/command.c:1236
++#, c-format
++msgid "%s: not a directory\n"
++msgstr "%s: это не каталог\n"
++
++#: src/command.c:1300 src/command.c:1377
++#, c-format
++msgid "%s: No such file or directory\n"
++msgstr "%s: Файл или каталог не существует\n"
++
++#: src/command.c:1404
++#, c-format
++msgid "%s: Already connected to user.\n"
++msgstr "%s: Соединение с пользователем уже активно.\n"
++
++#: src/command.c:1524
++#, c-format
++msgid "Usage: %s USER [RANGE]\n"
++msgstr "Usage: %s ИМЯ [ДИАПАЗОН]\n"
++
++#: src/command.c:1545
++#, c-format
++msgid "%s: Invalid range, or index out of range (1-%d)\n"
++msgstr "%s: Неверный диапазон либо индекс вне диапазона (1-%d)\n"
++
++#: src/command.c:1624
++#, c-format
++msgid "Nick: %s\n"
++msgstr "Имя: %s\n"
++
++#: src/command.c:1625
++#, c-format
++msgid "Description: %s\n"
++msgstr "Описание: %s\n"
++
++#: src/command.c:1626
++#, c-format
++msgid "Speed: %s\n"
++msgstr "Скорость: %s\n"
++
++#: src/command.c:1627
++#, c-format
++msgid "Level: %d\n"
++msgstr "Уровень: %d\n"
++
++#: src/command.c:1628
++#, c-format
++msgid "E-mail: %s\n"
++msgstr "Почта: %s\n"
++
++#: src/command.c:1629
++#, c-format
++msgid "Operator: %d\n"
++msgstr "Оператор: %d\n"
++
++#: src/command.c:1630
++#, c-format
++msgid "Share Size: %<PRIu64> %s (%<PRIu64> MB)\n"
++msgstr "Размер файлов: %<PRIu64> %s (%<PRIu64> MB)\n"
++
++#: src/command.c:1692 src/command.c:1759 src/main.c:265 src/main.c:658
++#: src/search.c:657 src/search.c:725
++#, c-format
++msgid "Cannot get current time - %s\n"
++msgstr "Не могу получить текущее время - %s\n"
++
++#: src/command.c:1704
++#, c-format
++msgid "Upload slots: %d/%d  Download slots: %d/unlimited\n"
++msgstr "Исходящих слотов: %d/%d  Входящих слотов: %d/нелимитировано\n"
++
++#: src/command.c:1714
++#, c-format
++msgid "Usage: %s CONNECTION ...\n"
++msgstr "Usage: %s СОЕДИНЕНИЕ ...\n"
++
++#: src/command.c:1723
++#, c-format
++msgid "%s: No such user connection.\n"
++msgstr "%s: Нет такого соединения.\n"
++
++#: src/command.c:1737
++#, c-format
++msgid "Usage: %s STRING...\n"
++msgstr "Формат: %s СТРОКА...\n"
++
++#: src/command.c:1770
++msgid "Closed"
++msgstr "Закрыто"
++
++#: src/command.c:1770
++msgid "Open"
++msgstr "Открыто"
++
++#: src/command.c:1771
++#, c-format
++msgid "%d. %s (%s) Results: %d\n"
++msgstr "%d. %s (%s) Результатов: %d\n"
++
++#: src/command.c:1782 src/command.c:1817
++#, c-format
++msgid "%s: Invalid search index.\n"
++msgstr "%s: Неверный индекс поиска.\n"
++
++#: src/command.c:1786
++#, c-format
++msgid "Search %d:\n"
++msgstr "Поиск %d:\n"
++
++#: src/command.c:1809
++#, c-format
++msgid "Usage: %s INDEX\n"
++msgstr "Формат: %s ИНДЕКС\n"
++
++#: src/command.c:1857 src/command.c:1897
++#, c-format
++msgid "%s: No such alias.\n"
++msgstr "%s: Нет такого псевдонима.\n"
++
++#: src/command.c:1863
++#, c-format
++msgid "%s: Invalid alias name\n"
++msgstr "%s: Неправильное имя псевдонима\n"
++
++#: src/command.c:1878
++#, c-format
++msgid "%s: Cannot override built-in command.\n"
++msgstr "%s: Нельзя переопределять встроенные команды.\n"
++
++#: src/command.c:1890
++#, c-format
++msgid "Usage: %s NAME ...\n"
++msgstr "Формат: %s ИМЯ ...\n"
++
++#: src/command.c:1934
++msgid "Queue already contains this file, ignoring\n"
++msgstr "Данный файл уже в очереди, игнорируем\n"
++
++#: src/command.c:1972
++#, c-format
++msgid "Usage: %s FILE ...\n"
++msgstr "Формат: %s ФАЙЛ ...\n"
++
++#: src/command.c:2010
++#, c-format
++msgid "Matched %s\n"
++msgstr "Найден %s\n"
++
++#: src/command.c:2019
++#, c-format
++msgid "Downloading %<PRIu64> %s in %<PRIu32> %s\n"
++msgstr "Скачиваем %<PRIu64> %s в %<PRIu32> %s\n"
++
++#: src/command.c:2021
++msgid "file"
++msgid_plural "files"
++msgstr[0] "файл"
++msgstr[1] "файла"
++msgstr[2] "файлов"
++
++#: src/command.c:2024
++#, c-format
++msgid "%s: No files to download.\n"
++msgstr "%s: Не найдено файлов.\n"
++
++#: src/command.c:2032
++msgid "No free connections. Queued files for download.\n"
++msgstr "Лимит соединений исчерпан. Добавляем файлы в очередь на скачку.\n"
++
++#: src/command.c:2062
++msgid "missing host argument\n"
++msgstr "не задан узел\n"
++
++#: src/command.c:2079 src/command.c:2114 src/variables.c:327
++#: src/variables.c:342 src/variables.c:354 src/variables.c:364
++#: src/variables.c:399 src/variables.c:428 src/variables.c:443
++#: src/variables.c:464 src/variables.c:484 src/variables.c:569
++#: src/variables.c:586 src/variables.c:610 src/variables.c:729
++#: src/variables.c:748 src/variables.c:772 src/variables.c:799
++msgid "too many arguments\n"
++msgstr "слишком много аргументов\n"
++
++#: src/command.c:2084 src/command.c:2119
++msgid "missing directory argument\n"
++msgstr "не задан каталог\n"
++
++#: src/command.c:2095 src/command.c:2130 src/variables.c:451
++#: src/variables.c:472
++#, c-format
++msgid "%s: Not a directory\n"
++msgstr "%s: Это не каталог\n"
++
++#: src/command.c:2101 src/command.c:2136
++#, c-format
++msgid "%s: Cannot process directory - %s\n"
++msgstr "%s: Не могу обработать каталог - %s\n"
++
++#: src/connection.c:44
++msgid "Invalid $Lock message: Key to short\n"
++msgstr "Неверное сообщение $Lock: Ключ слишком короткий\n"
++
++#: src/filelist-in.c:294 src/user.c:654
++#, c-format
++msgid "%s: Cannot open file for reading - %s\n"
++msgstr "%s: Ошибка открытия файла для чтения - %s\n"
++
++#: src/filelist-in.c:300 src/main.c:120 src/main.c:892
++#, c-format
++msgid "%s: Cannot read from file - %s\n"
++msgstr "%s: Не могу читать данные файла - %s\n"
++
++#: src/filelist-in.c:302 src/main.c:122
++#, c-format
++msgid "%s: Premature end of file\n"
++msgstr "%s: Неожиданный конец файла\n"
++
++#: src/filelist-in.c:305 src/filelist-in.c:309 src/fs.c:770 src/fs.c:775
++#: src/main.c:894 src/main.c:898 src/screen.c:126 src/user.c:325
++#, c-format
++msgid "%s: Cannot close file - %s\n"
++msgstr "%s: Не могу закрыть файл - %s\n"
++
++#: src/filelist-in.c:313
++#, c-format
++msgid "%s: Invalid data, cannot decode\n"
++msgstr "%s: Неверные данные, не могу декодировать\n"
++
++#: src/filelist-in.c:485 src/lookup.c:309 src/main.c:395 src/main.c:1195
++#: src/user.c:1441
++#, c-format
++msgid "Cannot create pipe pair - %s\n"
++msgstr ""
++
++#: src/filelist-in.c:490 src/hub.c:339 src/lookup.c:314 src/main.c:411
++#: src/main.c:1011 src/main.c:1052 src/user.c:1487
++#, c-format
++msgid "Cannot set non-blocking flag - %s\n"
++msgstr ""
++
++#: src/filelist-in.c:496 src/lookup.c:320 src/main.c:401
++#, c-format
++msgid "Cannot create process - %s\n"
++msgstr "Не могу создать процесс - %s\n"
++
++#: src/fs.c:91 src/util.c:113
++#, c-format
++msgid "%s: Cannot create directory - %s\n"
++msgstr "%s: Не могу создать каталог - %s\n"
++
++#: src/fs.c:524
++#, c-format
++msgid "%s: Cannot open directory - %s\n"
++msgstr "%s: Не могу открыть каталог - %s\n"
++
++#: src/fs.c:588
++#, c-format
++msgid "%s: Not a regular file or directory, ignoring\n"
++msgstr "%s: Необычный файл или каталог, игнорируем\n"
++
++#: src/fs.c:597
++#, c-format
++msgid "%s: Cannot read directory - %s\n"
++msgstr "%s: Не могу прочитать каталог - %s\n"
++
++#: src/fs.c:599
++#, c-format
++msgid "%s: Cannot close directory - %s\n"
++msgstr "%s: Не могу закрыть каталог - %s\n"
++
++#: src/fs.c:663 src/fs.c:677 src/fs.c:691 src/main.c:1409 src/main.c:1427
++#, c-format
++msgid "%s: Cannot remove file - %s\n"
++msgstr "%s: Не могу удалить файл - %s\n"
++
++#: src/fs.c:701 src/fs.c:707 src/fs.c:712 src/user.c:497
++#, c-format
++msgid "%s: Cannot open file for writing - %s\n"
++msgstr "%s: Не могу открыть файл для записи - %s\n"
++
++#: src/fs.c:740 src/fs.c:748 src/fs.c:754 src/main.c:117
++#, c-format
++msgid "%s: Cannot write to file - %s\n"
++msgstr "%s: Не могу записать в файл - %s\n"
++
++#: src/fs.c:794
++#, c-format
++msgid "Scanning directory %s\n"
++msgstr "Сканируем каталог %s\n"
++
++#: src/hub.c:88
++msgid "Automatically reconnecting to hub\n"
++msgstr "Автоматически пересоединяемся к узлу\n"
++
++#: src/hub.c:210 src/main.c:233
++msgid "UL"
++msgstr ""
++
++#: src/hub.c:215 src/main.c:233
++msgid "DL"
++msgstr ""
++
++#: src/hub.c:267
++#, c-format
++msgid "Cannot append to hub send queue - %s\n"
++msgstr "Не могу добавить к очереди отсылки на узел - %s\n"
++
++#: src/hub.c:272 src/user.c:216
++msgid "-->"
++msgstr ""
++
++#: src/hub.c:276 src/hub.c:989 src/hub.c:1056
++msgid "hub"
++msgstr "узел"
++
++#: src/hub.c:296
++#, c-format
++msgid "%s: Cannot look up address - %s\n"
++msgstr "%s: Не могу преобразовать имя - %s\n"
++
++#: src/hub.c:321
++#, c-format
++msgid "Looking up IP address for %s\n"
++msgstr "Преобразовываем %s в IP адрес\n"
++
++#: src/hub.c:332 src/main.c:1006 src/main.c:1045 src/user.c:1476
++#, c-format
++msgid "Cannot create socket - %s\n"
++msgstr "Не могу создать сокет - %s\n"
++
++#: src/hub.c:344
++#, c-format
++msgid "Connecting to hub on %s.\n"
++msgstr "Соединяемся к узлу по адресу %s.\n"
++
++#: src/hub.c:347
++#, c-format
++msgid "%s: Cannot connect - %s\n"
++msgstr "%s: Не могу подсоединиться - %s\n"
++
++#: src/hub.c:362
++msgid "Shutting down hub connection.\n"
++msgstr "Закрываем соединение с узлом.\n"
++
++#: src/hub.c:371 src/main.c:414 src/main.c:991 src/main.c:1113
++#, c-format
++msgid "Cannot close socket - %s\n"
++msgstr "Не могу закрыть сокет - %s\n"
++
++#: src/hub.c:398 src/user.c:160 src/user.c:1017 src/user.c:1108
++#: src/user.c:1133 src/user.c:1145 src/user.c:1158 src/user.c:1169
++#: src/user.c:1178
++#, c-format
++msgid "Received %s message in wrong state.\n"
++msgstr ""
++
++#: src/hub.c:452 src/user.c:890
++msgid "Invalid $Lock message: Missing Pk value\n"
++msgstr ""
++
++#: src/hub.c:484
++msgid "Hub requires password.\n"
++msgstr "Узел требует пароль.\n"
++
++#: src/hub.c:488
++msgid "Sending password to hub.\n"
++msgstr "Посылаем пароль на узел.\n"
++
++#: src/hub.c:493
++msgid "Password not accepted.\n"
++msgstr "Пароль отвергнут.\n"
++
++#: src/hub.c:497
++msgid "You have received operator status.\n"
++msgstr "Вы получаете статус оператора.\n"
++
++#: src/hub.c:502
++#, c-format
++msgid "Hub name is %s.\n"
++msgstr "Название узла: %s.\n"
++
++#: src/hub.c:514
++msgid "Hub did not accept nick. Nick may be in use.\n"
++msgstr "Узел не принял Ваше имя. Возможно, оно уже кем-то используется.\n"
++
++#: src/hub.c:525
++msgid "Nick accepted. You are now logged in.\n"
++msgstr "Ваше имя принято. Вход на узел завершён.\n"
++
++#: src/hub.c:532
++#, c-format
++msgid "Nick accepted but modified to %s. You are now logged in.\n"
++msgstr "Имя принято но модифицировано в %s. Вход на узел завершён.\n"
++
++#: src/hub.c:550
++#, c-format
++msgid "User %s logged in.\n"
++msgstr "На узел зашёл пользователь %s.\n"
++
++#: src/hub.c:572
++msgid "Invalid $MyINFO message: Missing $ALL parameter, ignoring\n"
++msgstr ""
++
++#: src/hub.c:579
++msgid "Invalid $MyINFO message: Missing nick parameter, ignoring\n"
++msgstr ""
++
++#: src/hub.c:604
++msgid "Invalid $MyINFO message: Missing description parameter, ignoring\n"
++msgstr ""
++
++#: src/hub.c:613
++msgid "Invalid $MyINFO message: Missing description separator, ignoring\n"
++msgstr ""
++
++#: src/hub.c:620
++msgid "Invalid $MyINFO message: Missing connection speed, ignoring\n"
++msgstr ""
++
++#: src/hub.c:636
++msgid "Invalid $MyINFO message: Missing e-mail address, ignoring\n"
++msgstr ""
++
++#: src/hub.c:645
++msgid "Invalid $MyINFO message: Missing share size, ignoring\n"
++msgstr ""
++
++#: src/hub.c:650
++msgid "Invalid $MyINFO message: Invalid share size, ignoring\n"
++msgstr ""
++
++#: src/hub.c:663
++msgid "Hub is full.\n"
++msgstr "Лимит пользователей на узле исчерпан.\n"
++
++#: src/hub.c:698 src/hub.c:701
++#, c-format
++msgid "Public: %s\n"
++msgstr "Всем: %s\n"
++
++#: src/hub.c:698 src/hub.c:701 src/hub.c:735 src/hub.c:741
++#, c-format
++msgid " | %s\n"
++msgstr ""
++
++#: src/hub.c:713
++msgid "Invalid $To message: Missing text separator, ignoring\n"
++msgstr ""
++
++#: src/hub.c:732 src/hub.c:739
++#, c-format
++msgid "Private: [%s] %s\n"
++msgstr "Приватно: [%s] %s\n"
++
++#: src/hub.c:751
++msgid "Invalid $ConnectToMe message: Missing or invalid nick\n"
++msgstr ""
++
++#: src/hub.c:755
++msgid "Invalid $ConnectToMe message: Invalid address specification.\n"
++msgstr ""
++
++#: src/hub.c:759
++#, c-format
++msgid "Connecting to user on %s\n"
++msgstr "Соединяемся с пользователем %s\n"
++
++#: src/hub.c:769
++msgid "Invalid $RevConnectToMe message: Missing nick parameter\n"
++msgstr ""
++
++#: src/hub.c:773
++msgid "Invalid $RevConnectToMe message: Remote nick is our nick\n"
++msgstr ""
++
++#: src/hub.c:779
++#, c-format
++msgid "Invalid $RevConnectToMe message: Unknown user %s, ignoring\n"
++msgstr ""
++
++#: src/hub.c:786 src/main.c:202 src/main.c:216
++#, c-format
++msgid "No more connections to user %s allowed.\n"
++msgstr "Исчерпано количество допустимых соединений с пользователем %s.\n"
++
++#: src/hub.c:792
++#, c-format
++msgid "User %s is also passive. Cannot establish connection.\n"
++msgstr "%s также работает в пассивном режиме. Соединение невозможно.\n"
++
++#: src/hub.c:868
++#, c-format
++msgid "Invalid $Quit message: Unknown user %s.\n"
++msgstr ""
++
++#: src/hub.c:882
++msgid "Invalid $Search message: Missing source specification.\n"
++msgstr ""
++
++#: src/hub.c:896
++#, c-format
++msgid "Invalid $Search message: %s: Invalid search specification.\n"
++msgstr ""
++
++#: src/hub.c:905
++#, c-format
++msgid "Invalid $Search message: Unknown user %s.\n"
++msgstr ""
++
++#: src/hub.c:939
++msgid "Invalid $Search message: Invalid address specification.\n"
++msgstr ""
++
++#: src/hub.c:998 src/user.c:1223
++msgid "<--"
++msgstr ""
++
++#: src/hub.c:1024 src/user.c:1248
++#, c-format
++msgid "Cannot get error status - %s\n"
++msgstr "Невозможно получить описание ошибки - %s\n"
++
++#: src/hub.c:1029 src/user.c:1253 src/user.c:1498
++#, c-format
++msgid "Cannot connect - %s\n"
++msgstr "Невозможно соединиться - %s\n"
++
++#: src/hub.c:1037 src/main.c:1088
++#, c-format
++msgid "Cannot get socket address - %s\n"
++msgstr "Невозможно получить адрес сокета - %s\n"
++
++#: src/hub.c:1044
++#, c-format
++msgid "Connected to hub from %s.\n"
++msgstr "Присоединён к узлу с адреса %s.\n"
++
++#: src/hub.c:1091
++#, c-format
++msgid "ConnectToMe already sent to user %s. Waiting.\n"
++msgstr ""
++
++#: src/hub.c:1100
++#, c-format
++msgid "RevConnectToMe already sent to user %s. Waiting.\n"
++msgstr ""
++
++#: src/hub.c:1105
++#, c-format
++msgid "User %s is also passive. Cannot communicate.\n"
++msgstr "%s также работает в пассивном режиме. Общение невозможно.\n"
++
++#: src/huffman.c:335
++msgid "Incorrect parity, ignoring\n"
++msgstr "Неверная чётность, игнорируем\n"
++
++#: src/main.c:177
++#, c-format
++msgid "User connection %s renamed to %s.\n"
++msgstr "Соединение %s переименовано в %s.\n"
++
++#: src/main.c:268
++#, c-format
++msgid " in %s (%s/s)"
++msgstr " в %s (%s/сек)"
++
++#: src/main.c:282
++#, c-format
++msgid "%s: %s of %s %s%s. %s %s%s.\n"
++msgstr "%s: %s из %s %s%s. %s %s%s.\n"
++
++#: src/main.c:284
++msgid "Upload"
++msgstr "Закачка"
++
++#: src/main.c:284
++msgid "Download"
++msgstr "Скачка"
++
++#: src/main.c:286
++msgid "succeeded"
++msgstr "успешна"
++
++#: src/main.c:286
++msgid "failed"
++msgstr "неудачна"
++
++#: src/main.c:289
++msgid "transferred"
++msgid_plural "transferred"
++msgstr[0] "передано"
++msgstr[1] "передано"
++msgstr[2] "передано"
++
++#: src/main.c:363
++#, c-format
++msgid "%s: Cannot rename file to %s - %s\n"
++msgstr "%s: Не смог переименовать файл в %s - %s\n"
++
++#: src/main.c:364
++msgid "cannot rename file"
++msgstr "ошибка переименования файла"
++
++#: src/main.c:408 src/main.c:493 src/user.c:1438 src/user.c:1551
++#: src/user.c:1553
++#, c-format
++msgid "Cannot close pipe - %s\n"
++msgstr ""
++
++#. TRANSLATORS: This represents the connection name used when
++#. * the user name is not yet known. It must not contains '|',
++#. * because that's used to distinguish between 'unknown' and
++#. * (perhaps partially) identified connections.
++#.
++#: src/main.c:443
++#, c-format
++msgid "unknown%<PRIu32>"
++msgstr "неизвестно%<PRIu32>"
++
++#: src/main.c:464
++#, c-format
++msgid "Shutting down user connection process for %s.\n"
++msgstr "Закрытие соединения с пользователем %s.\n"
++
++#: src/main.c:518
++#, c-format
++msgid "Downloading %3d%% (at %5d kb/s) %s"
++msgstr "Скачиваем  %3d%% (скорость %5d kb/s) %s"
++
++#: src/main.c:519
++#, c-format
++msgid "Uploading   %3d%% (at %5d kb/s) %s"
++msgstr "Закачиваем %3d%% (скорость %5d kb/s) %s"
++
++#: src/main.c:522
++msgid "Idle"
++msgstr "Спим"
++
++#: src/main.c:544 src/main.c:559
++#, c-format
++msgid "user process %s"
++msgstr "процесс пользователя %s"
++
++#: src/main.c:573
++#, c-format
++msgid "User %s: %s"
++msgstr "Пользователь %s: %s"
++
++#: src/main.c:635
++#, c-format
++msgid "%s: Starting %s of %s (%<PRIu64> of %<PRIu64> %s).\n"
++msgstr "%s: Задание: %s %s (%<PRIu64> из %<PRIu64> %s).\n"
++
++#: src/main.c:637 src/main.c:645
++msgid "upload"
++msgstr "закачать"
++
++#: src/main.c:637 src/main.c:645
++msgid "download"
++msgstr "скачать"
++
++#: src/main.c:643
++#, c-format
++msgid "%s: Starting %s of %s (%<PRIu64> %s).\n"
++msgstr "%s: Задание %s %s (%<PRIu64> %s).\n"
++
++#: src/main.c:755
++#, c-format
++msgid "Received unknown message %d from user process, shutting down process.\n"
++msgstr ""
++"Получено неизвестное сообщение %d от процесса пользователя, завершаем процесс.\n"
++
++#: src/main.c:799 src/main.c:800 src/user.c:1347 src/user.c:1348
++#, c-format
++msgid "Cannot write to signal pipe - %s\n"
++msgstr "Ошибка записи в сигнальный канал - %s\n"
++
++#: src/main.c:815 src/user.c:1363
++#, c-format
++msgid "Cannot read from signal pipe - %s\n"
++msgstr "Ошибка чтения из сигнального канала - %s\n"
++
++#: src/main.c:821 src/user.c:1369
++msgid "Received TERM signal, shutting down.\n"
++msgstr "Получен сигнал TERM, завершение работы.\n"
++
++#: src/main.c:837
++msgid "Shell process"
++msgstr "Процесс оболочки"
++
++#: src/main.c:839
++msgid "Lookup process"
++msgstr "Процесс поиска"
++
++#: src/main.c:842
++msgid "Parse process"
++msgstr "Процесс анализатора"
++
++#: src/main.c:845
++msgid "FileList Update process"
++msgstr "Процесс обновления списка файлов"
++
++#: src/main.c:849
++msgid "User process"
++msgstr "Процесс пользователя"
++
++#: src/main.c:852
++#, c-format
++msgid "%s exited with return code %d.\n"
++msgstr "%s завершён с кодом возврата %d.\n"
++
++#: src/main.c:858
++#, c-format
++msgid "%s terminated by signal %s.\n"
++msgstr "%s завершён сигналом %s.\n"
++
++#: src/main.c:862
++#, c-format
++msgid "Cannot wait for processes - %s\n"
++msgstr "Не могу ждать завершения процессов - %s\n"
++
++#: src/main.c:881
++#, c-format
++msgid "%s: Cannot open file - %s\n"
++msgstr "%s: Ошибка открытия файла - %s\n"
++
++#: src/main.c:951 src/main.c:975
++msgid "user (search result)"
++msgstr ""
++
++#: src/main.c:955
++msgid "<=="
++msgstr ""
++
++#: src/main.c:971
++msgid "==>"
++msgstr ""
++
++#: src/main.c:1017 src/main.c:1060
++#, c-format
++msgid "Cannot enable address reusing - %s\n"
++msgstr ""
++
++#: src/main.c:1025 src/main.c:1073
++#, c-format
++msgid "Cannot bind to address - %s\n"
++msgstr ""
++
++#: src/main.c:1081
++#, c-format
++msgid "Cannot listen - %s\n"
++msgstr ""
++
++#: src/main.c:1093
++#, c-format
++msgid "Listening on %s.\n"
++msgstr "Слушаем на адресе %s.\n"
++
++#: src/main.c:1132
++#, c-format
++msgid "Cannot accept user connection - %s\n"
++msgstr ""
++
++#: src/main.c:1136
++#, c-format
++msgid "User from %s connected.\n"
++msgstr "Подсоединён пользователь %s.\n"
++
++#: src/main.c:1152
++#, c-format
++msgid "%s: Cannot set locale: %s\n"
++msgstr "%s: Ошибка смены локали: %s\n"
++
++#: src/main.c:1155
++#, c-format
++msgid "%s: Cannot bind message domain: %s\n"
++msgstr "%s: Ошибка привязки домена сообщений: %s\n"
++
++#: src/main.c:1157
++#, c-format
++msgid "%s: Cannot set message domain: %s\n"
++msgstr "%s: Ошибка установки домена сообщений: %s\n"
++
++#: src/main.c:1179
++#, c-format
++msgid "Usage: %s [OPTION]...\n"
++msgstr "Формат: %s [OPTION]...\n"
++
++#: src/main.c:1180
++msgid "Start microdc, a command-line based Direct Connect client.\n"
++msgstr "Запустить microdc, командно-строчный клиент для протокола DC++.\n"
++
++#: src/main.c:1181
++#, c-format
++msgid "  -n, --no-config  do not read config file on startup\n"
++msgstr "  -n, --no-config  не читать файл конфигурации при старте\n"
++
++#: src/main.c:1182
++#, c-format
++msgid "      --help       display this help and exit\n"
++msgstr "      --help       вывести текст помощи и остановиться\n"
++
++#: src/main.c:1183
++#, c-format
++msgid "      --version    output version information and exit\n"
++msgstr "      --version    вывести информацию о версии и остановиться\n"
++
++#: src/main.c:1184
++#, c-format
++msgid ""
++"\n"
++"Report bugs to <%s>.\n"
++msgstr ""
++"\n"
++"Отчёты об ошибках отправляйте на адрес <%s>.\n"
++
++#: src/main.c:1202 src/user.c:1446
++#, c-format
++msgid "Cannot empty signal set - %s\n"
++msgstr ""
++
++#: src/main.c:1216 src/main.c:1221 src/user.c:1459 src/user.c:1466
++#, c-format
++msgid "Cannot register signal handler - %s\n"
++msgstr ""
++
++#: src/main.c:1254
++#, c-format
++msgid "Cannot find directory for temporary files - %s\n"
++msgstr "Не могу найти каталог для временных файлов - %s\n"
++
++#: src/main.c:1305 src/user.c:1516
++#, c-format
++msgid "Cannot select - %s\n"
++msgstr ""
++
++#: src/main.c:1434
++#, c-format
++msgid "Cannot close search results socket - %s\n"
++msgstr ""
++
++#: src/main.c:1436
++#, c-format
++msgid "Cannot close user connections socket - %s\n"
++msgstr ""
++
++#: src/main.c:1438 src/main.c:1440 src/user.c:1547 src/user.c:1549
++#, c-format
++msgid "Cannot close signal pipe - %s\n"
++msgstr ""
++
++#: src/screen.c:133
++msgid "No longer logging to file.\n"
++msgstr "Прекращаем журналирование в файл.\n"
++
++#: src/screen.c:138
++#, c-format
++msgid "%s: Cannot open file for appending - %s\n"
++msgstr "%s: Не могу открыть файл для дописки - %s\n"
++
++#: src/screen.c:143
++#, c-format
++msgid "Logging to `%s'.\n"
++msgstr "Открываем журнал `%s'.\n"
++
++#: src/screen.c:396
++#, c-format
++msgid "%s: Cannot write history - %s\n"
++msgstr "%s: Не могу записать историю - %s\n"
++
++#: src/screen.c:597
++#, c-format
++msgid "%s: Cannot read history - %s\n"
++msgstr "%s: Не могу прочесть историю - %s\n"
++
++#: src/search.c:124
++#, c-format
++msgid "incoming hash: %s\n"
++msgstr "входящий хэш: %s\n"
++
++#: src/search.c:423 src/search.c:425
++#, c-format
++msgid "Sent %d/%d search results to %s.\n"
++msgstr "Отослал %d/%d результатов поиска на %s.\n"
++
++#: src/search.c:428
++msgid "No search results.\n"
++msgstr "Нет результатов поиска.\n"
++
++#: src/search.c:646
++msgid "No pattern to match.\n"
++msgstr "Не задана маска поиска.\n"
++
++#: src/search.c:669
++#, c-format
++msgid "Reissuing search %d.\n"
++msgstr "Перезапуск поиска %d.\n"
++
++#: src/search.c:679
++#, c-format
++msgid "Issuing new search with index %d.\n"
++msgstr "Запуск нового поиска с индексом %d.\n"
++
++#: src/search.c:731
++#, c-format
++msgid "Unterminated or invalid $SR, discarding: %s\n"
++msgstr ""
++
++#: src/search.c:748
++#, c-format
++msgid "Result has been added earlier to search %d.\n"
++msgstr "Результат уже был добавлен к поиску %d.\n"
++
++#: src/search.c:754
++#, c-format
++msgid "Added result to search %d (now %d result).\n"
++msgid_plural "Added result to search %d (now %d results).\n"
++msgstr[0] "Добавлен результат к поиску %d (теперь %d результат).\n"
++msgstr[1] "Добавлен результат к поиску %d (теперь %d результата).\n"
++msgstr[2] "Добавлен результат к поиску %d (теперь %d результатов).\n"
++
++#: src/user.c:135
++msgid "main process"
++msgstr "основной процесс"
++
++#: src/user.c:220 src/user.c:1203 src/user.c:1301 src/user.c:1321
++msgid "user"
++msgstr "пользователь"
++
++#: src/user.c:266
++msgid "Too many connections to user, or no free slots.\n"
++msgstr "Исчерпаны все соединения к пользователю, либо нет свободных слотов.\n"
++
++#: src/user.c:308
++#, c-format
++msgid "User %s not on hub, or too many connections to user.\n"
++msgstr "На узле нет пользователя %s, либо слишком много соединений к нему.\n"
++
++#: src/user.c:378
++msgid "No more files to download.\n"
++msgstr "Нет больше файлов для скачки.\n"
++
++#: src/user.c:421
++#, c-format
++msgid "%s: Cannot get file status: %s\n"
++msgstr "%s: Не могу получить информацию о файле: %s\n"
++
++#: src/user.c:422 src/user.c:431 src/user.c:498 src/user.c:504 src/user.c:627
++#: src/user.c:656 src/user.c:663 src/user.c:833 src/user.c:1291
++msgid "local error"
++msgstr "локальная ошибка"
++
++#: src/user.c:430
++#, c-format
++msgid "%s: File exists and is not a regular file\n"
++msgstr "%s: Файл существует, но это не обычный файл\n"
++
++#: src/user.c:443 src/user.c:449 src/user.c:510 src/user.c:696 src/user.c:718
++#: src/user.c:738 src/user.c:790 src/user.c:1302
++msgid "communication error"
++msgstr "ошибка коммуникации"
++
++#: src/user.c:476
++#, c-format
++msgid ""
++"remote file is smaller than local (expected %<PRIu64>, got %<PRIu64> %s)"
++msgstr ""
++"удалённый файл меньше чем локальный (ожидалось %<PRIu64> а там %<PRIu64> %s)"
++
++#: src/user.c:503
++#, c-format
++msgid "%s: Cannot seek to resume position - %s\n"
++msgstr "%s: Не могу перейти к точке продолжения - %s\n"
++
++#: src/user.c:525 src/user.c:806
++msgid "no data to transfer"
++msgstr "нет данных для передачи"
++
++#: src/user.c:574
++#, c-format
++msgid "%s: Incorrect offset in tthl request\n"
++msgstr "%s: Неверное смещение в запросе tthl\n"
++
++#: src/user.c:576
++msgid "Incorrect offset in tthl request"
++msgstr "Неверное смещение в запросе tthl"
++
++#: src/user.c:615
++#, c-format
++msgid "%s: File Not Available\n"
++msgstr "%s: Файл недоступен\n"
++
++#: src/user.c:617
++msgid "no such shared file"
++msgstr "нет такого файла"
++
++#: src/user.c:636
++#, c-format
++msgid "%s: Resume offset %<PRIu64> outside tthl file\n"
++msgstr "%s: Точка продолжения %<PRIu64> находится вне tthl файла\n"
++
++#: src/user.c:638
++msgid "resume offset out of tthl range"
++msgstr "точка продолжения вне tthl диапазона"
++
++#: src/user.c:646
++#, c-format
++msgid "%s: Resume offset %<PRIu64> outside file\n"
++msgstr "%s: Точка продолжения %<PRIu64> вне файла\n"
++
++#: src/user.c:648
++msgid "resume offset out of range"
++msgstr "точка продолжения вне диапазона"
++
++#: src/user.c:661
++#, c-format
++msgid "%s: Cannot seek in file - %s\n"
++msgstr "%s: Не могу перейти к точке в файле - %s\n"
++
++#: src/user.c:771
++#, c-format
++msgid "User requests entire file <%s> starting from %<PRIu64>\n"
++msgstr "Запрошен файла <%s> целиком начиная с %<PRIu64>\n"
++
++#: src/user.c:773 src/user.c:1121
++#, c-format
++msgid "User requests %<PRIu64> bytes of <%s> starting from %<PRIu64>\n"
++msgstr "Запрошено %<PRIu64> байт файла <%s> начиная с %<PRIu64>\n"
++
++#: src/user.c:842 src/user.c:1311
++msgid "transfer complete"
++msgstr "передача завершена"
++
++#: src/user.c:944
++msgid "Invalid $Direction message: Missing direction parameter\n"
++msgstr ""
++
++#: src/user.c:953
++msgid "Invalid $Direction message: Invalid direction parameter\n"
++msgstr ""
++
++#: src/user.c:960
++msgid "Invalid $Direction message: Missing challenge parameter\n"
++msgstr ""
++
++#: src/user.c:965
++msgid "Invalid $Direction message: Invalid challenge parameter\n"
++msgstr ""
++
++#: src/user.c:986
++msgid "User does not want to download, nor do we.\n"
++msgstr "Пользователь не хочет качать файл, а мы тем более.\n"
++
++#: src/user.c:1003
++msgid "Invalid $Key message: Incorrect key, ignoring\n"
++msgstr ""
++
++#: src/user.c:1028
++msgid "Invalid $Get message: Missing offset, assuming start\n"
++msgstr ""
++
++#: src/user.c:1034
++msgid "Invalid $Get message: Offset not integer\n"
++msgstr ""
++
++#: src/user.c:1046
++msgid "remote did not want file"
++msgstr "удалённый пользователь не желает файл"
++
++#: src/user.c:1068
++msgid "remote is maxed out"
++msgstr ""
++
++#: src/user.c:1077
++msgid "protocol error: invalid $FileLength message"
++msgstr ""
++
++#: src/user.c:1086
++msgid "file not available on remote"
++msgstr "файл недоступен на удалённом пользователе"
++
++# fixme
++#: src/user.c:1088
++#, c-format
++msgid "remote error: %s"
++msgstr "ошибка удалённого пользователя: %s"
++
++#: src/user.c:1093
++#, c-format
++msgid "Received error from user: %s\n"
++msgstr "Получена ошибка от пользователя: %s\n"
++
++#: src/user.c:1114
++msgid "Invalid $UGetBlock message\n"
++msgstr ""
++
++#: src/user.c:1184
++#, c-format
++msgid "Ignoring $ADCGET flags: %s\n"
++msgstr ""
++
++#: src/user.c:1269
++msgid "Connected to user.\n"
++msgstr "Установлено соединение с пользвателем.\n"
++
++#: src/user.c:1372
++#, c-format
++msgid "Idle timeout (%d seconds)\n"
++msgstr "Тайм-аут по бездействию (%d секунд)\n"
++
++#: src/user.c:1403
++msgid "Received unknown message from main process, shutting down process.\n"
++msgstr "Получено неизвестное сообщение от основного процесса, останов.\n"
++
++#: src/user.c:1545
++#, c-format
++msgid "Cannot close transfer file - %s\n"
++msgstr "Не могу закрыть передаваемый файл - %s\n"
++
++#: src/user.c:1555
++#, c-format
++msgid "Cannot close user connection - %s\n"
++msgstr "Не могу закрыть соединение - %s\n"
++
++#. TRANSLATORS: This comma-separated list specifies
++#. * all strings which are considered negative boolean
++#. * values for variables such as `active'.
++#. * Retain the default English strings and add the
++#. * localized ones.
++#.
++#: src/variables.c:54
++msgid "0,off,no,false"
++msgstr "0,off,no,false,нет,выкл"
++
++#. TRANSLATORS: This comma-separated list specifies
++#. * all strings which are considered positive boolean
++#. * values for variables such as `active'.
++#. * Retain the default English strings and add the
++#. * localized ones.
++#.
++#: src/variables.c:61
++msgid "1,on,yes,true"
++msgstr "1,on,yes,true,да,вкл"
++
++#: src/variables.c:366
++msgid "Nick cannot be empty.\n"
++msgstr "Имя не может быть пустым.\n"
++
++#: src/variables.c:368
++msgid "Nick is too long - max length is 35 characters.\n"
++msgstr "Имя слишком длинное - максимальная длина - 35 символов.\n"
++
++#: src/variables.c:370
++msgid "Nick may not contain `$', `|' or space characters.\n"
++msgstr "Имя не может содержать символы пробела, `$' или `|'.\n"
++
++#: src/variables.c:383
++msgid "Description may not contain `$' or `|' characters.\n"
++msgstr "Описание не может содержать символы `$' или `|'.\n"
++
++#: src/variables.c:386
++msgid "Description is too long - max length is 35 characters.\n"
++msgstr "Описание слишком длинно - максимальная длина 35 символов.\n"
++
++#: src/variables.c:401
++msgid "E-mail may not contain `$' or `|' characters.\n"
++msgstr "E-mail не может содержать символы `$' или `|'.\n"
++
++#: src/variables.c:403
++msgid "E-mail is too long - max length is 35 characters.\n"
++msgstr "E-mail слишком длинный - максимальная длина 35 символов.\n"
++
++#: src/variables.c:416
++msgid "Tag may not contain `$' or `|' characters.\n"
++msgstr "Тег не может содержать символы  `$' или `|'.\n"
++
++#: src/variables.c:430
++msgid "Speed may not contain `$' or `|' characters.\n"
++msgstr "Скорость не может содержать символы  `$' или `|'.\n"
++
++#: src/variables.c:488
++#, c-format
++msgid "Invalid slot number `%s'\n"
++msgstr "Неверный номер слота `%s'\n"
++
++#: src/variables.c:573
++msgid "Specify active as `0', `no', `off', `1', `yes', or `on'.\n"
++msgstr "Значение может быть 0|no|off|нет|выкл либо 1|yes|on|да|вкл.\n"
++
++#: src/variables.c:577 src/variables.c:741
++msgid "Active setting not changed.\n"
++msgstr "Статус активности не изменился.\n"
++
++#: src/variables.c:590
++msgid "Specify value as `0', `no', `off', `1', `yes', or `on'.\n"
++msgstr "Значение может быть 0|no|off|нет|выкл либо 1|yes|on|да|вкл.\n"
++
++#: src/variables.c:615
++msgid "Removing listening address.\n"
++msgstr "Удаляем адрес для входящих соединений.\n"
++
++#: src/variables.c:620
++#, c-format
++msgid "%s: Specify listen address as an IP address\n"
++msgstr "%s: Укажите IP адрес для входящих соединений\n"
++
++#: src/variables.c:635
++#, c-format
++msgid "Listening address set to %s.\n"
++msgstr "Адрес для входящих соединений установлен в %s.\n"
++
++#: src/variables.c:700
++#, c-format
++msgid "No flag by the name %s, display flags not changed.\n"
++msgstr "Флаг по имени %s не существует, флаги отображения не изменились.\n"
++
++#: src/variables.c:707
++msgid "Cannot set and add or delete flags at the same time.\n"
++msgstr "Не могу установить и добавлять либо удалять флаги одной командой.\n"
++
++#: src/variables.c:736
++#, c-format
++msgid "Invalid value `%s' for port number.\n"
++msgstr "Неверное значение `%s' для номера порта.\n"
++
++#: src/variables.c:765
++msgid "on"
++msgstr "Вкл"
++
++#: src/variables.c:765
++msgid "off"
++msgstr "Выкл"
++
++#: src/variables.c:776
++msgid "Removing current password.\n"
++msgstr "Удаляем текущий пароль.\n"
++
++#: src/variables.c:780
++msgid "Password may not contain `|' characters.\n"
++msgstr "Пароль не может содержать символов `|'.\n"
++
++#: src/variables.c:806
++#, c-format
++msgid "Invalid value `%s' for interval.\n"
++msgstr "Неверное значение `%s' для интервала.\n"
++
++#: src/variables.c:910
++#, c-format
++msgid "No value is set for `%s'.\n"
++msgstr "Значение для `%s' не задано.\n"
++
++#: src/variables.c:912
++#, c-format
++msgid ""
++"Current value for `%s':\n"
++"%s\n"
++msgstr ""
++"Текущее значение для `%s':\n"
++"%s\n"
++
++#: src/common/optparser.c:93
++#, c-format
++msgid "option `--%s' is ambiguous"
++msgstr "опция `--%s' многозначна"
++
++#: src/common/optparser.c:101
++#, c-format
++msgid "unrecognized option `--%s'"
++msgstr "неизвестная опция `--%s'"
++
++#: src/common/optparser.c:181 src/common/optparser.c:186
++#, c-format
++msgid "invalid option -- %c"
++msgstr "неверная опция -- %c"
++
++#: src/common/optparser.c:206
++#, c-format
++msgid "option requires an argument -- %c"
++msgstr "опция требует аргумента -- %c"
++
++#: src/common/optparser.c:258
++#, c-format
++msgid "option `--%s' doesn't allow an argument"
++msgstr "опция `--%s' не нуждается в аргументе"
++
++#: src/common/optparser.c:266
++#, c-format
++msgid "option `--%s' requires an argument"
++msgstr "опции `--%s' требуется аргумент"

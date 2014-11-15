@@ -1,0 +1,5 @@
+Package: obexftp-server
+Priority: optional
+Section: net 
+Description: Server for transfer files to/from any OBEX enabled device
+Depends: openobex, obexftp-lib

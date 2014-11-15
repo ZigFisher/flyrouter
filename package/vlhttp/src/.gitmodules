@@ -1,0 +1,3 @@
+[submodule "liblog"]
+	path = liblog
+	url = git@github.com:slayer/liblog.git

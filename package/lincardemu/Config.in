@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LINCARDEMU
+	prompt "lincardemu........................ LINCARDEMU"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  LINCARDEMU - 
+	  
+	  http://streamboard.gmc.to

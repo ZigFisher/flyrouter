@@ -1,0 +1,80 @@
+diff -ur iputils/Makefile iputils_new/Makefile
+--- iputils/Makefile	2002-09-20 18:23:55.000000000 +0000
++++ iputils_new/Makefile	2007-05-17 13:59:55.000000000 +0000
+@@ -27,8 +27,8 @@
+ CCOPT=-D_GNU_SOURCE -O2 -Wstrict-prototypes -Wall -g
+ CFLAGS=$(CCOPT) $(GLIBCFIX) -I$(KERNEL_INCLUDE) -I../include $(DEFINES) 
+ 
+-IPV4_TARGETS=tracepath ping clockdiff rdisc arping tftpd rarpd
+-IPV6_TARGETS=tracepath6 traceroute6 ping6
++IPV4_TARGETS=tracepath ping clockdiff rdisc arping 
++IPV6_TARGETS=#tracepath6 traceroute6 ping6
+ TARGETS=$(IPV4_TARGETS) $(IPV6_TARGETS)
+ 
+ all: check-kernel $(TARGETS)
+diff -ur iputils/clockdiff.c iputils_new/clockdiff.c
+--- iputils/clockdiff.c	2002-02-23 00:10:59.000000000 +0000
++++ iputils_new/clockdiff.c	2007-05-17 13:53:41.000000000 +0000
+@@ -1,3 +1,5 @@
++#include <asm/types.h>
++#include <asm/byteorder.h>
+ #include <time.h>
+ #include <sys/types.h>
+ #include <sys/param.h>
+diff -ur iputils/ping.c iputils_new/ping.c
+--- iputils/ping.c	2002-09-20 15:08:11.000000000 +0000
++++ iputils_new/ping.c	2007-05-17 13:52:30.000000000 +0000
+@@ -58,10 +58,13 @@
+  *	This program has to run SUID to ROOT to access the ICMP socket.
+  */
+ 
++#include <asm/types.h>
++#include <asm/byteorder.h>
++#include <linux/icmp.h>
+ #include "ping_common.h"
+ 
+ #include <netinet/ip.h>
+-#include <netinet/ip_icmp.h>
++//#include <netinet/ip_icmp.h>
+ 
+ 
+ #define	MAXIPLEN	60
+diff -ur iputils/ping_common.c iputils_new/ping_common.c
+--- iputils/ping_common.c	2002-09-20 16:02:32.000000000 +0000
++++ iputils_new/ping_common.c	2007-05-17 13:39:52.000000000 +0000
+@@ -1,3 +1,4 @@
++#include <asm/types.h>
+ #include "ping_common.h"
+ #include <ctype.h>
+ #include <sched.h>
+diff -ur iputils/rdisc.c iputils_new/rdisc.c
+--- iputils/rdisc.c	2001-08-24 17:39:00.000000000 +0000
++++ iputils_new/rdisc.c	2007-05-17 13:58:31.000000000 +0000
+@@ -26,6 +26,8 @@
+  * Mountain View, California  94043
+  */
+ #include <stdio.h>
++#include <asm/types.h>
++#include <asm/byteorder.h>
+ #include <errno.h>
+ #include <signal.h>
+ #include <unistd.h>
+@@ -1504,5 +1506,6 @@
+ 	if (logging)
+ 		syslog(LOG_ERR, "%s: %m", str);
+ 	else
+-		(void) fprintf(stderr, "%s: %s\n", str, sys_errlist[errno]);
++		(void) fprintf(stderr, "%s: %d\n", str, errno);
++		//(void) fprintf(stderr, "%s: %s\n", str, sys_errlist[errno]);
+ }
+diff -ur iputils/tracepath.c iputils_new/tracepath.c
+--- iputils/tracepath.c	2002-02-23 00:10:59.000000000 +0000
++++ iputils_new/tracepath.c	2007-05-17 13:31:21.000000000 +0000
+@@ -13,6 +13,7 @@
+ #include <stdlib.h>
+ #include <unistd.h>
+ #include <sys/socket.h>
++#include <asm/types.h>
+ #include <linux/errqueue.h>
+ #include <errno.h>
+ #include <string.h>

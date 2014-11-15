@@ -1,0 +1,24 @@
+#menu "nsca............................. NSCA - Nagios Service Check Acceptor"
+
+config BR2_COMPILE_NSCA
+	tristate
+	default y
+	depends BR2_PACKAGE_NSCA || BR2_PACKAGE_SEND-NSCA
+	
+config BR2_PACKAGE_NSCA
+	prompt "nsca.......................... NSCA daemon - Nagios Service Check Acceptor"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_NSCA
+	help
+	  NSCA daemon - Nagios Service Check Acceptor
+
+config BR2_PACKAGE_SEND-NSCA
+	prompt "send-nsca..................... NSCA client - Nagios Service Check Acceptor"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_SEND-NSCA
+	help
+	  NSCA client - Nagios Service Check Acceptor
+
+#endmenu

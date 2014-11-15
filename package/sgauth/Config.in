@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SGAUTH
+	prompt "sgauth............................ Stargazer Internet authorization system"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_UCLIBCXX
+	select BR2_PACKAGE_LIBPTHREAD
+	help
+	  Stargazer Internet authorization system.
+	  
+	  http://drool-linux.pisem.net/

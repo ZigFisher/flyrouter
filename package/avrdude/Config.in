@@ -1,0 +1,13 @@
+config BR2_PACKAGE_AVRDUDE
+	prompt "avrdude........................... Atmel AVR microcontrollers programmer"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBREADLINE
+	select BR2_PACKAGE_LIBNCURSES
+	select BR2_PACKAGE_LIBUSB
+	help
+
+	  Avrdude is a program for downloading code and data to Atmel AVR microcontrollers
+	  
+	  http://ftp.de.debian.org/debian/pool/main/a/avrdude/
+

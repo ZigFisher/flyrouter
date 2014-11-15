@@ -1,0 +1,55 @@
+#! /bin/sh
+#
+# Add for FlyRouter (with small changes) by ZigFisher, 2007
+
+config="/etc/ppp/chap-secrets"
+ERROR="Usage:\n$0 add <username> <passwd> or\n$0 del <username> or\n$0 show [<username>] or\n$0 domain <username> <domain>"
+
+# See how we were called.
+case "$1" in
+  add)
+        if [ "$(echo $2)" != "" ] & [ "$(echo $3)" != "" ]; then
+	    echo -e "$2\t\t*\t\t$3\t\t*" >> $config
+            chmod 600 $config
+	else
+	    echo -e $ERROR
+	    exit 1
+	fi
+	;;
+  del)
+        if [ "$(echo $2)" != "" ]; then
+	    grep -vw "$2" $config > /tmp/pppblaat
+            mv /tmp/pppblaat $config
+            chmod 600 $config
+	else
+	    echo -e $ERROR
+	    exit 1
+	fi
+	;;
+  show)
+	    echo "-------------------------------------------------------------"
+        if [ "$(echo $2)" != "" ]; then
+	    grep -w $2 $config
+	else
+	    cat $config
+	fi
+	;;
+  domain)
+        if [ "$(echo $2)" != "" ] & [ "$(echo $3)" != "" ]; then
+	    grep -vw "$2" $config > /tmp/pppblaat
+	    DATA=`grep -w "$2" $config`
+	    mv /tmp/pppblaat $config
+	    DOM=`echo $3 | tr a-z A-Z`
+	    dom=`echo $3 | tr A-Z a-z`
+            echo "$DOM\\\\$DATA" >> $config
+            echo "$dom\\\\$DATA" >> $config
+	    chmod 600 $config
+	else
+	    echo -e $ERROR
+	    exit 1
+	fi
+	;;
+  *)
+	echo -e $ERROR
+	exit 1
+esac

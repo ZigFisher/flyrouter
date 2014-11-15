@@ -1,0 +1,5 @@
+Package: obexftp-lib
+Priority: optional
+Section: net 
+Description: Lib for transfer files to/from any OBEX enabled device
+Depends: openobex, libusb

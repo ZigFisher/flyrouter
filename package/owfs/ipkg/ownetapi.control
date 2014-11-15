@@ -1,0 +1,6 @@
+Package: ownetapi
+Priority: optional
+Section: net
+Source: http://home.mag.cx/
+Depends: owlib
+Description: 1-Wire file system

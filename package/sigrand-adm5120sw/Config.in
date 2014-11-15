@@ -1,0 +1,13 @@
+config BR2_PACKAGE_SIGRAND_ADM5120SW
+	prompt "adm5120sw ................. ADM5120 switch driver"
+	tristate
+	default y if CONFIG_DEVEL
+	depends on BR2_LINUX_2_6_SIGRAND5120
+
+config BR2_PACKAGE_SIGRAND_ADM5120SW_LINKCTRL
+	prompt "adm5120sw-link-control..... ADM5120 switch link control"
+	bool
+	default n
+	depends on BR2_PACKAGE_SIGRAND_ADM5120SW
+	depends on BR2_LINUX_2_6_SIGRAND5120
+	

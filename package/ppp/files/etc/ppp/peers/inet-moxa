@@ -1,0 +1,21 @@
+debug
+noipdefault 
+usepeerdns
+defaultroute
+hide-password 
+noauth
+#persist
+refuse-eap
+refuse-chap
+refuse-mschap
+refuse-mschap-v2
+refuse-pap
+unit 400
+maxfail 3
+lcp-echo-interval 30
+lcp-echo-failure 5
+mtu 1400
+nocrtscts
+#name "my_login"
+linkname moxa
+pty "/usr/bin/nc 172.28.200.41 4001"

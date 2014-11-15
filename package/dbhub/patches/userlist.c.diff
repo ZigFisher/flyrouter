@@ -1,0 +1,22 @@
+diff -wuBr dbhub-0.451.orig/src/userlist.c dbhub-0.451/src/userlist.c
+--- dbhub-0.451.orig/src/userlist.c	2008-01-21 05:38:59.000000000 +0200
++++ dbhub-0.451/src/userlist.c	2009-03-01 19:16:46.000000000 +0200
+@@ -650,6 +650,18 @@
+ 
+    sprintfa(op_list, "%s$$", opchatnick);   
+ 
++    if (proxybotonline) {
++        if((op_list = realloc(op_list, sizeof(char)
++                              * (strlen(op_list) + strlen(proxybotnick) + 3))) == NULL)
++            {
++                logprintf(LOG_EMERG, "Error - In get_op_list()/realloc(): %s",strerror(errno));
++                quit = 1;
++                return NULL;
++            }
++
++        sprintfa(op_list, "%s$$", proxybotnick);
++    }
++
+ if(clockbot == 1)
+ {
+ 		  if((op_list = realloc(op_list, sizeof(char)

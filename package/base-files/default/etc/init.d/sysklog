@@ -1,0 +1,9 @@
+#!/bin/sh
+
+test -r /bin/midge_functions && . /bin/midge_functions
+test -f /bin/router_functions && . /bin/router_functions
+
+msg "Starting logging daemons..."
+mkdir -p /var/log
+test -x /sbin/syslogd && okfail "  syslogd" /sbin/syslogd -L -D -C64
+test -x /sbin/klogd && okfail "  klogd" /sbin/klogd

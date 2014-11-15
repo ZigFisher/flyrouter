@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SHC
+	prompt "shc............................... Generic shell script compiler"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Generic shell script compiler
+	
+	  http://www.datsi.fi.upm.es/~frosal/
+	  Example: shc -v -T -f demo.sh
+

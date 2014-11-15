@@ -1,0 +1,217 @@
+#!/bin/sh
+
+# Test suite for kdb
+
+export KDB=${KDB:-/tmp/kdbtest}
+kdb=${kdb:-/tmp/kdb}
+
+t(){
+	local name=$1
+	if $@ ; then
+		echo $name ok
+	else
+		echo $name fail
+		exit 1
+	fi
+}
+
+rand(){
+	for i in `seq 0 20`; do $kdb set sys_name_$RANDOM=value_$i ; done
+}
+
+create(){
+	$kdb create $KDB
+	[ -r $KDB ] || return 1
+}
+
+_set(){
+	$kdb set name1=value1 : set name2=value2 : set name3=value3
+	eval `$kdb ls`
+	[ $name1 = value1 ] || return 1
+	[ $name2 = value2 ] || return 1
+	[ $name3 = value3 ] || return 1
+	export exporttest="qwerty qwerty"
+	$kdb set exporttest=%ENV
+	unset exporttest
+	eval `$kdb -qq ls`
+	[ "$exporttest" = "qwerty qwerty" ] || return 1
+	unset exporttest
+	$kdb rm exporttest
+	$kdb set exporttest=%ENV
+	[ "`$kdb ls exporttest`" = "exporttest=" ] || return 1
+}
+
+list(){
+	$kdb create $KDB
+	$kdb set sys_name1=value1 : set sys_name2=value2 : set sys_name3=value3
+	eval `$kdb ls`
+	[ $sys_name1 = value1 ] || return 1
+	[ $sys_name3 = value3 ] || return 1
+	[ "`$kdb ls sys_*`" = "sys_name1=value1
+sys_name2=value2
+sys_name3=value3" ] || return 1
+	[ `$kdb ls sys_na*1` = 'sys_name1=value1' ] || return 1
+}
+
+kls(){
+	$kdb create $KDB
+	$kdb set keyname1=value1
+	[ `$kdb kls keyname1` = 'keyname1' ] || return 1
+	$kdb set name1=value1
+	$kdb set name2=value2
+	$kdb set name3=value3
+	[ "`$kdb kls name*`" = "name1
+name2
+name3" ] || return 1
+}
+
+get(){
+	$kdb create $KDB
+	$kdb set name=value
+	[ "`$kdb get name`" = value ] || return 1
+	$kdb set name1=value1 : set name2=value2
+	[ "`$kdb get name*`" = "value
+value1
+value2" ] || return 1
+}
+
+isset(){
+	local name="name${RANDOM}"
+	$kdb set $name=value
+	$kdb isset $name || return 1
+	$kdb isset nonexist && return 1
+	true
+}
+
+_rm(){
+	rand
+	$kdb set delme=value
+	$kdb rm delme || return 1
+	[ "`$kdb ls delme`" = "" ] || return 1
+	$kdb rm '*' || return 1
+	[ "`$kdb ls `" = "" ] || return 1
+}
+
+sls(){
+	$kdb create $KDB
+	$kdb set sys_name1=value1
+	[ `$kdb sls sys_` = 'name1=value1' ] || return 1
+}
+
+lrm(){
+	$kdb create $KDB
+	for i in `seq 0 10`; do $kdb set sys_name_$i=value_$i ; done
+	$kdb lrm sys_name_5
+	[ "`$kdb ls sys_name_5`" = 'sys_name_5=value_6' ] || return 1
+	[ "`$kdb ls sys_name_9`" = 'sys_name_9=value_10' ] || return 1
+	[ "`$kdb ls sys_name_10`" = '' ] || return 1
+}
+
+ladd(){
+	$kdb create $KDB
+	for i in `seq 0 10`; do $kdb set sys_name_$i=value_$i ; done
+	$kdb ladd sys_name_=value_11
+	[ "`$kdb ls sys_name_5`" = 'sys_name_5=value_5' ] || return 1
+	[ "`$kdb ls sys_name_11`" = 'sys_name_11=value_11' ] || return 1
+	eval "`$kdb -c ls sys_name_*`"
+	[ "$sys_name_11" = 'value_11' ] || return 1
+	[ "$kdb_lines_count" = '12' ] || return 1
+	export sys_name_=value_12
+	$kdb ladd sys_name_=%ENV
+	eval "`$kdb -c ls sys_name_*`"
+	[ "$sys_name_12" = 'value_12' ] || return 1
+	[ "$kdb_lines_count" = '13' ] || return 1
+}
+
+import(){
+	$kdb create $KDB
+	cat <<END | $kdb import
+KDB
+name1=value1
+name2=value2
+name3=value3
+KDB END
+END
+	[ "`$kdb ls name2`" = 'name2=value2' ] || return 1
+}
+
+_rename(){
+	$kdb create $KDB
+	$kdb set name1=value1 : set name2=value2 : set name3=value3
+	$kdb rename name1 name2
+	[ "`$kdb ls name2`" = "name2=value1" ] || return 1
+	[ "`$kdb ls name1`" = "" ] || return 1
+}
+	
+
+kdbdefault(){
+	tmp1=`tempfile`
+	tmp2=`tempfile`
+	[ -r files/etc/kdb.default ] || return 0
+	cp files/etc/kdb.default $KDB 
+	$kdb export >$tmp1
+	$kdb set sys_iface_eth0_mac=00:01:02:03:04:05
+	[ "`$kdb ls sys_iface_eth0_mac`" = "sys_iface_eth0_mac=00:01:02:03:04:05" ] || return 1
+	$kdb rm "sys_iface_eth0_mac*"
+	$kdb export >$tmp2
+
+	s1=`md5sum $tmp1 | cut -f1 -d" "`
+	s2=`md5sum $tmp2 | cut -f1 -d" "`
+
+	rm $tmp1
+	rm $tmp2
+
+	[ "$s1" = "$s2" ] || return 1
+	true
+}
+
+stress() {
+	tmp1=`tempfile`
+	tmp2=`tempfile`
+	for i in `seq 0 200`; do $kdb set sys_name1_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	for i in `seq 0 200`; do $kdb set sys_name2_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	$kdb rm "sys_name2_*"
+	for i in `seq 0 200`; do $kdb set sys_name3_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	local str=$(for i in $(seq 0 $(($RANDOM%50))); do echo " : set sys_name4_${i}=value_${RANDOM} "; done)
+	$kdb $str
+	$kdb ls >$tmp1
+	str=""
+	for i in `seq 0 50`; do
+		for i in $(seq 0 $(($RANDOM%100))); do 
+			str="$str : set sys_name5_${i}_$RANDOM=value_${RANDOM} "; 
+		done
+		$kdb $str
+	done
+	for i in `seq 0 100`; do $kdb set `echo $RANDOM| md5sum | cut -f1 -d" "`=`echo $RANDOM| md5sum | cut -f1 -d" "`; done
+	for a in 0 1 2 3 4 5 6 7 8 9 a b c d e f; do $kdb rm "$a*"; done
+	$kdb rm "sys_name5_*"
+	$kdb ls >$tmp2
+
+	s1=`md5sum $tmp1 | cut -f1 -d" "`
+	s2=`md5sum $tmp2 | cut -f1 -d" "`
+
+	rm $tmp1
+	rm $tmp2
+
+	[ "$s1" = "$s2" ] || return 1
+	true
+}
+
+[ ! -x $kdb -a -x "`which kdb`" ] && kdb=`which kdb`
+[ -x $kdb ] || { echo "$kdb not found"; exit 1; }
+
+t create
+t _set 
+t list 
+t kls 
+t get 
+t isset
+t _rm 
+t sls 
+t lrm
+t ladd
+t import
+t _rename
+t kdbdefault
+#t stress
+

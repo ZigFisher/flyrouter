@@ -1,0 +1,5 @@
+Package: owfs
+Priority: optional
+Section: net
+Source: http://home.mag.cx/
+Description: 1-Wire file system

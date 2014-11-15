@@ -1,0 +1,150 @@
+#!/bin/sh
+
+kdb="kdb"
+e1_cfg="/sys/bus/pci/drivers/mr16g"
+ifcfg="/sbin/ifconfig"
+
+. /etc/templates/sigrand-lib
+
+# checks that DSL service is enabled
+_e1_init_svc(){
+	return 0;
+}
+
+# stops service
+_e1_stop_svc(){
+	return 0;
+}
+
+# insmod DSL drivers
+_e1_init_drv(){
+	return 0;
+}
+
+# rmmod DSL drivers
+_e1_stop_drv(){
+	return 0;
+}
+
+
+_e1_if_defconfig(){
+# TODO: describe defconfig
+	return 0;
+}
+
+_e1_if_stop(){
+	ifconfig $1 down
+}
+
+_e1_apply_cfg(){
+# TODO: describe defconfig	
+	iface=$1
+	eval `$kdb -qq sls sys_e1_${iface}_`
+	# apply configuration
+	$ifcfg $iface down
+	# bind driver with protocol
+	
+	case "${proto}" in
+	
+	hdlc*)
+#		echo "sethdlc $iface $proto ${hdlc_enc} ${hdlc_parity}" >> /root/e1.log
+		sethdlc $iface $proto ${hdlc_enc} ${hdlc_parity}
+		;;
+	cisco)
+#		echo "cisco_int=${cisco_int},cisco_to=${cisco_int}." >> /root/e1.log
+		if [ "${cisco_int}" = 0 ]; then
+			cisco_int=""
+		elif [ -z "${cisco_int}" ]; then
+			cisco_int=""		
+		else
+			cisco_int="interval ${cisco_int}"
+		fi
+		
+		if [ "${cisco_to}" = 0 ]; then
+			cisco_to=""
+		elif [ -z "${cisco_to}" ]; then
+			cisco_to=""		
+		else
+			cisco_to="timeout ${cisco_to}"
+		fi
+#		echo "sethdlc $iface $proto ${cisco_int} ${cisco_to}" >> /root/e1.log
+		sethdlc $iface $proto ${cisco_int} ${cisco_to}
+		;;
+	*)
+		if [ -n "$proto" ]; then
+		    sethdlc $iface $proto
+		elif [ -z "$proto" ]; then
+		    sethdlc $iface cisco
+		    kdb set sys_e1_${iface}_smap=cisco
+		fi
+	esac
+		
+#	echo "fram=$fram ts16=$ts16 smap=$smap clk=$clk" >> /root/e1.log
+#	echo "crc4=$crc4 cas=$cas lhaul=$lhaul" >> /root/e1.log	
+	DIR=`pwd`
+	cd $e1_cfg/$iface
+	echo $fram 	> framed
+	echo $ts16 	> map_ts16
+	echo "$smap" 	> slotmap
+	smap=`cat slotmap`
+	kdb set sys_e1_${iface}_smap="$smap"
+	echo $clk 	> clck
+	echo $crc4 	> crc4
+	echo $cas 	> cas
+	echo $lhaul 	> long_haul
+	echo $lcode	> hdb3
+	echo $hcrc	> crc16
+	echo $fill	> fill_7e
+	echo $inv	> inv
+	cd $DIR
+	enabled=`kdb get sys_iface_${iface}_enabled`
+	[ "$enabled" = 1 ] && $ifcfg $iface up
+}
+
+	
+_e1_start(){
+	
+	# start service if enabled
+	_e1_init_svc || return 0
+
+	# init service
+	_e1_init_drv || echo "Cannot find DSL modules"
+
+	_sg_if_refresh "hdlc" "sys_e1"
+	
+	#apply defconfig if no configuration
+	for iface in `$kdb get sys_e1_ifaces`; do
+	    echo "if=$iface"
+	    _e1_if_defconfig $iface
+	    _e1_apply_cfg $iface
+	done
+}
+
+_e1_stop(){
+
+	# stop all interfaces
+	for iface in `$kdb get sys_e1_ifaces`; do
+		_e1_if_stop $iface
+	done
+	
+	# stop driver
+	_e1_stop_drv
+
+	# stop service
+	_e1_stop_svc 
+}
+
+_e1_restart(){
+        iface=$1
+        _e1_apply_cfg $iface
+	
+}
+
+case "$1" in
+	start) 
+		_e1_start ;;
+	stop)
+		_e1_stop ;;
+	restart)
+		_e1_restart $2 ;;
+esac

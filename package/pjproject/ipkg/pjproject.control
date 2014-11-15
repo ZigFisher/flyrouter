@@ -1,0 +1,5 @@
+Package: pjproject
+Priority: optional
+Section: net
+Description: PJSUA is a command line SIP user agent (UA).
+#Depends: 

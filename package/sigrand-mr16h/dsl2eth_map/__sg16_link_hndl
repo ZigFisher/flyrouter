@@ -1,0 +1,24 @@
+#!/bin/sh
+
+CONFIG_NAME=/etc/sigrand/dsl2eth.map
+ifname=$1
+lstate=$2
+
+[ -f "${CONFIG_NAME}" ] || exit -1
+
+tmp=`grep $ifname $CONFIG_NAME`
+set $tmp
+
+if [ $# -ne "2" ]; then
+    # configuration file syntax error
+    exit 0;
+fi
+[ -f "/proc/sys/net/adm5120sw/force_lnk_down_$2" ] || exit -1
+
+if [ "$lstate" -eq "0" ]; then
+
+    echo 1 >  /proc/sys/net/adm5120sw/force_lnk_down_$2
+else
+    echo 0 >  /proc/sys/net/adm5120sw/force_lnk_down_$2
+fi
+

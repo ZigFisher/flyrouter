@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Example for get SNMP data
+# snmpwalk -v 2c -c flyrouter vbox.flyrouter.net
+
+NAME=mini_snmpd
+PROG=/usr/sbin/$NAME
+
+case "$1" in
+start)
+	$PROG -a -t 5 \
+		-D "VBox from FlyRouter" \
+		-L "Simferopol, UA" \
+		-C "flyrouter@gmail.com" \
+		-c "flyrouter" \
+		-i "lo,eth0" \
+		-d "\rom" \
+		&
+	;;
+stop)
+	killall $PROG
+        ;;
+*)
+	echo "Usage: $0 {start|stop}" >&2
+        exit 1
+        ;;
+esac
+                                          
+exit $?
+                                          
+

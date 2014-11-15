@@ -1,0 +1,5 @@
+Package: libber
+Priority: optional
+Section: libs
+Description: A Basic Encoding Rules (ITU X.690) implementation
+Depends: libabz, libdebug

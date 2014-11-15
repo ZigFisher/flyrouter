@@ -1,0 +1,56 @@
+#!/bin/sh
+
+. /bin/midge_functions
+
+required kdb
+required ifconfig
+required grep
+required hexdump
+required head
+required cut
+required printf
+required dd
+
+
+[ -f /etc/kdb ] || cp /etc/kdb.default /etc/kdb
+/etc/templates/Update dns
+
+# MAC address generation section
+
+[ -z "$RANDOM" ] && die "\$RANDOM is not available"
+
+VENDOR_MAC_BASE="00:FF:0F"
+BAD_MAC_BASE="00:FF:0F:00:00"
+
+INTERFACE_RX_STR=$(for i in 0 1 2 3; do ifconfig eth${i} | grep "RX packets:[^0]" 2>/dev/null; done)
+
+RANDOM=$(dd if=/dev/urandom bs=1 count=1 skip=10 2>/dev/null | hexdump -e "16/2 \"%02d\"\"\\n\"")
+
+if [ -z "`kdb get sys_ifaces_mac_base`" ]; then
+	# Generate mac addresses
+	mac4="`cat /dev/urandom | hexdump  | head -1 | cut -c9,10`"
+	mac5="`cat /dev/urandom | hexdump  | head -1 | cut -c9,10`"
+	sys_ifaces_mac_base="$VENDOR_MAC_BASE:$mac4:$mac5"
+	next=$(($RANDOM%230))
+	if [ "$BAD_MAC_BASE" = $sys_ifaces_mac_base ]; then
+		echo "Non random MAC_BASE, storing skipped"
+	else
+		kdb set "sys_ifaces_mac_base=$VENDOR_MAC_BASE:$mac4:$mac5" : set "sys_ifaces_mac_next=$next"
+	fi
+fi
+
+eval `kdb -q ls sys_ifaces_mac*`
+eval `kdb -q ls sys_iface_*_mac`
+
+if [ -n "$sys_ifaces_mac_base" -a -n "$sys_ifaces_mac_next" ]; then
+	for iface in dsl0 dsl1 eth0 eth1 eth2 eth3 eth4 eth5; do
+		eval 'mac=$sys_iface_'${iface}'_mac'
+		if [ -z "$mac" ]; then
+			echo "Storing MAC for $iface"
+			mac6=$( printf %x $sys_ifaces_mac_next )
+			sys_ifaces_mac_next=$(($sys_ifaces_mac_next+1))
+			kdb set sys_iface_${iface}_mac=$sys_ifaces_mac_base:$mac6 : set sys_ifaces_mac_next=$sys_ifaces_mac_next
+		fi
+	done
+fi
+

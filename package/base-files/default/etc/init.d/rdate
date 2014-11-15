@@ -1,0 +1,18 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+case "$1" in
+  start)
+	if [ -x /usr/sbin/rdate ]; then
+		msg "Syncing time...";
+		/usr/sbin/rdate -s ntp.time.in.ua 2>/dev/null &
+	fi
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

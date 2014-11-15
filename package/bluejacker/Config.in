@@ -1,0 +1,9 @@
+config BR2_PACKAGE_BLUEJACKER
+	prompt "bluejacker........................ Bluejacker script for BluePoint system"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Bluejacker script for BluePoint system. 
+	  
+	  http://bluez.org
+

@@ -1,0 +1,181 @@
+diff -wuBr dbhub-0.451.orig/src/main.c dbhub-0.451/src/main.c
+--- dbhub-0.451.orig/src/main.c	2008-02-02 20:47:46.000000000 +0200
++++ dbhub-0.451/src/main.c	2009-03-10 00:15:04.000000000 +0200
+@@ -159,8 +159,11 @@
+ 	min_regme_share = 0;
+ 	protection = 0;	
+ 	prottime = 14;
++    proxybot = 1;
+ 	sprintf(botnick, "Security");
+ 	sprintf(opchatnick, "OpChat");
++	sprintf(proxybotnick, "Admin");
++	sprintf(proxybotinfo, "[P] [20]<FlylinkDC++ V:(r371),M:P,H:0/0/1,S:5>$ $0.005$$0$");
+ 	clockbot = 1;
+ 	count_bots = 1;
+ 	hide_opshare = 0;
+@@ -547,7 +550,10 @@
+ 		    if(now - human_user->user->jointime > 30)
+ 		    {
+ 			logprintf(LOG_CRIT, "Timeout for non logged in user at %s, removing user\n", human_user->user->hostname);
++            if (human_user->user->hide_share != 2)
+ 			human_user->user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++            else
++                human_user->user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		    }
+ 		}
+ 		else
+@@ -2351,6 +2357,9 @@
+ 
+ 			uprintf(user, "$MyINFO $ALL %s [BOT] Hub-Security <DB V:%s,M:A,H:0/0/1,S:0>$ $$hub-security$0$|", botnick, VERSION);
+ 	    		uprintf(user, "$MyINFO $ALL %s [BOT] Op Chat <DB V:%s,M:A,H:0/0/1,S:0>$ $$opchat$0$|", opchatnick, VERSION);
++                            if (proxybotonline)
++                                uprintf(user, "$MyINFO $ALL %s %s|", proxybotnick, proxybotinfo);
++
+ 	    		if(clockbot == 1)
+ 			uprintf(user, "$MyINFO $ALL %s [BOT] Server Time <DB V:%s,M:A,H:0/0/1,S:0>$ $$clock$0$|", clocknick, VERSION);
+ 			send_myinfo(user);
+@@ -2551,7 +2560,7 @@
+ 					}
+ 					else
+ 					{
+-					uprintf(user, "<%s> %s. %s|", botnick, lp_notallowedtochat, lp_canonlypmtoops);
++                                                uprintf(user, "<%s> %s.|", botnick, lp_notallowedtochat);
+ 					}
+ 					}
+ 				}
+@@ -2736,6 +2745,9 @@
+ 
+ }
+ 
++/*
++ * Send a message to the connecting user
++ */
+ void hub_mess(struct user_t *user, int mess_type)
+ {
+ 	char *send_string;
+@@ -3332,12 +3344,12 @@
+ snprintf(joinstring, 300, "<%s> %s %s %s|", botnick, lp_class8, our_user->nick, partmsg);
+ send_to_humans(joinstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+ }
+-else if((our_user->type == CHEEF) && (strlen(welcomecheef) > 0))
++                    else if((our_user->type == CHEEF) && (strlen(welcomecheef) > 0) && (our_user->hide_share != 2))
+ {
+ snprintf(joinstring, 300, "<%s> %s %s %s|", botnick, lp_class7, our_user->nick, partmsg);
+ send_to_humans(joinstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+ }
+-else if((our_user->type == OP) && (strlen(welcomeop) > 0) && (our_user->tmpop == 0))
++                    else if((our_user->type == OP) && (strlen(welcomeop) > 0) && (our_user->tmpop == 0) && (our_user->hide_share != 2))
+ {
+ snprintf(joinstring, 300, "<%s> %s %s %s|", botnick, lp_class6, our_user->nick, partmsg);
+ send_to_humans(joinstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+@@ -3400,7 +3412,7 @@
+ }
+ }
+ if((quit == 0) && (redall == 0) && (strcmp(our_user->nick, "removed user") != 0)) {
+-if(check_if_registered(our_user->nick) >= seen_class)
++                if(check_if_registered(our_user->nick) >= seen_class && our_user->hide_share != 2)
+ {
+ snprintf(seenbuf, 100, "%s %s", our_user->nick, our_user->hostname);
+ add_seen_user(seenbuf);
+@@ -3532,7 +3544,10 @@
+ 					logprintf(LOG_ALERT, "%s from %s at socket %d hung up\n", user->nick, user->hostname, user->sock);
+ 				else
+ 					logprintf(LOG_ALERT, "User at socket %d from %s hung up\n", user->sock, user->hostname);
++                            if (user->hide_share != 2)
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		  		
++                            else
++                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 			}
+ 			else
+ 			{
+@@ -3557,7 +3572,10 @@
+ 					logprintf(LOG_ALERT, "%s from %s at socket %d hung up (Connection reset by peer)\n", user->nick, user->hostname, user->sock);
+ 				else
+ 					logprintf(LOG_ALERT, "User at socket %d from %s hung up (Connection reset by peer)\n", user->sock, user->hostname);
++                            if (user->hide_share != 2)
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                            else
++                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 			}	     
+ 			else
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
+@@ -3571,7 +3589,10 @@
+ 					logprintf(LOG_ALERT, "%s from %s at socket %d hung up (Connection timed out)\n", user->nick, user->hostname, user->sock);
+ 				else
+ 					logprintf(LOG_ALERT, "User at socket %d from %s hung up (Connection timed out)\n", user->sock, user->hostname);
++                            if (user->hide_share != 2)
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                            else
++                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 			}	     
+ 			else
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
+@@ -3585,7 +3606,11 @@
+ 					logprintf(LOG_ALERT, "%s from %s at socket %d hung up (No route to host)\n", user->nick, user->hostname, user->sock);
+ 				else
+ 					logprintf(LOG_ALERT, "User at socket %d from %s hung up (No route to host)\n", user->sock, user->hostname);
++                            if (user->hide_share != 2)
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                            else
++                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
++
+ 			}
+ 			else
+ 				user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
+@@ -3617,7 +3642,10 @@
+ 			{
+ 				if(handle_command(command_buf, user) == 0)
+ 				{
++                                    if (user->hide_share != 2)
+ 					user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                                    else
++                                        user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 					free(command_buf);
+ 					return 0;
+ 				}
+@@ -3632,7 +3660,10 @@
+ 				user->away_flag = 2;
+ 		if(send_user_info(user, user->version) == 0)
+ 		{
++                                                            if (user->hide_share != 2)
+ 		user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                                                            else
++                                                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		free(command_buf);
+ 		return 0;
+ 		}
+@@ -3698,7 +3729,10 @@
+ 			{
+ 				if(handle_command(command_buf, user) == 0)
+ 				{
++                                    if (user->hide_share != 2)
+ 					user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                                    else
++                                        user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 					free(command_buf);
+ 					return 0;
+ 				}
+@@ -3711,9 +3745,11 @@
+ 				if((difftime(now, user->last_write) > (60 * user->autoawaytime)) && (difftime(now, user->last_pm_write) > (60 * user->autoawaytime)) && (difftime(now, user->jointime) > 300))
+ 				{
+ 				user->away_flag = 2;
+-		if(send_user_info(user, user->version) == 0)
+-		{
++                                                    if(send_user_info(user, user->version) == 0) {
++                                                        if (user->hide_share != 2)
+ 		user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                                                        else
++                                                            user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		free(command_buf);
+ 		return 0;
+ 		}
+@@ -4358,6 +4394,9 @@
+ 		if(clockbot == 1)
+ 		clockset();
+ 		clear_user_list();
++#if HAVE_UNISTD_H
++        usleep(100);
++#endif 
+ 	}
+ 	quit_program();
+ 	FreeAllMOTDs();

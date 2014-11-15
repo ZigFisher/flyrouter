@@ -1,0 +1,8 @@
+config BR2_PACKAGE_ETHERDUMP
+	prompt "etherdump......................... etherdump is an extremely small packet sniffer"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  etherdump is an extremely small packet sniffer (alternative of tcpdump and utcpdump)
+
+	  http://freshmeat.net/projects/etherdump/

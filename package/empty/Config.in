@@ -1,0 +1,11 @@
+config BR2_PACKAGE_EMPTY
+	prompt "empty............................. empty - run applications under pseudo-terminal (PTY) sessions"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  empty - run applications under pseudo-terminal (PTY) sessions.
+	  Replace TCL/Expect with a simple tool and use your favorite shell (sh, bash, csh, tcsh, ksh, zsh, etc).
+	  
+	  http://sourceforge.net/project/empty
+	  http://www.hamradio.crimea.ua/downloads/linux/source/
+

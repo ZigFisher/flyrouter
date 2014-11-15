@@ -1,0 +1,158 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2008 | http://www.flyrouter.net
+# Simple OpenVPN configure and start script
+# Version 1.2a 20081026
+
+[ -z "$IF_BRTUN" -a -z "$IF_BRTUN0" ] && exit 0
+[ -z "$IF_BRTUN" ] && IF_BRTUN="$IF_BRTUN0"
+
+die () { echo $@ >&2 exit 1; }
+required(){ prg="`which $1`"; test -x "$prg" || die "$0: Error $1 is required"; }
+                
+required ifconfig
+required grep
+required brctl
+required openvpn
+required cut
+required sed
+
+br=${IFACE:?Error: IFACE is not set}
+MODE=${MODE:?Error: MODE is not set}
+
+tunstr="`echo $IF_BRTUN | cut -d' ' -f1`"
+params="`echo $IF_BRTUN | cut -d' ' -f2-`"
+ltun="`echo $tunstr | cut -d- -f1`"
+rtun="`echo $tunstr | cut -d- -f2`"
+
+[ -z "$ltun" ] && die "Incorrect brtun syntax"
+[ -z "$rtun" ] && die "Incorrect brtun syntax"
+
+laddr="`echo $ltun | cut -d: -f1`"
+lport="`echo $ltun | cut -d: -f2`"
+raddr="`echo $rtun | cut -d: -f1`"
+rport="`echo $rtun | cut -d: -f2`"
+
+[ -z "$laddr" ] && die "Incorrect brtun syntax"
+[ -z "$lport" ] && die "Incorrect brtun syntax"
+[ -z "$raddr" ] && die "Incorrect brtun syntax"
+[ -z "$rport" ] && rport="$lport"
+tap="tap${lport}"
+
+parse_params() {
+	while [ "x$1" != "x" ]; do
+		case "$1" in
+		iface=*) brifaces="`echo $1 | sed 's/iface=//g' | sed 's/,/ /g' `" ;;
+		vlans=*) SPLIT_MODE=1; trunk="`echo $1 | sed 's/vlans=//g' | cut -d: -f1`"; vlans="`echo $1 | sed 's/vlans=//g' | cut -d: -f2- | sed 's/,/ /g'`";;
+		--*) optarg="$@"; break;;
+		esac
+		shift
+	done
+}
+
+parse_params $params
+
+pidfile=/var/run/openvpn-${IFACE}-${tap}.pid
+echo $optarg | grep -- "--proto" >/dev/null 2>&1 || optarg="$optarg --proto udp"
+echo $optarg | grep -- "--ping " >/dev/null 2>&1 || optarg="$optarg --ping 10"
+echo $optarg | grep -- "--ping-restart " >/dev/null 2>&1 || optarg="$optarg --ping-restart 60"
+[ -r "/etc/openvpn/${IFACE}.key" ] && optarg="$optarg --secret /etc/openvpn/${IFACE}.key"
+
+get_bridge_ifaces() {
+ local lbr="$1"
+ local i1 i2 i3 i4
+ brctl show | grep -A20 $lbr | \
+ 	while read i1 i2 i3 i4; do 
+ 		[ "$i1" = "$lbr" ] && { echo -n "$i4 "; continue; }; 
+ 		[ -z "$i4" -a -z "$i2" ] && { echo -n "$i1 "; continue; } || break; 
+ 	done	
+}
+
+
+handle_brtunn() {
+	# handle brtun1, brtun2, brtunX params
+	local n
+	if [ -z "$NODEEP" ]; then
+		export NODEEP=1
+		for n in `seq 1 30`; do 
+			eval "brtunn=\"\$IF_BRTUN${n}\"";
+			[ -n "$brtunn" ] && env IF_BRTUN="$brtunn" $0;
+		done
+	fi
+}
+
+case "$MODE" in
+   start)
+	openvpn --mktun --dev $tap
+	ifconfig $tap promisc up
+	if [ 1 = "$SPLIT_MODE" ]; then
+		for v in $vlans; do
+			env IFACE=${tap}.${v} /etc/network/if-pre-up.d/10vlan
+			env IFACE=${trunk}.${v} /etc/network/if-pre-up.d/10vlan
+			ifconfig ${tap}.${v} up
+			ifconfig ${trunk}.${v} up
+			brctl addbr ${IFACE}${v}
+			brctl addif ${IFACE}${v} ${tap}.${v}
+			brctl addif ${IFACE}${v} ${trunk}.${v}
+			ifconfig ${IFACE}${v} up
+		done
+	
+	else
+		# check presence of bridge
+		if ! brctl showmacs $IFACE 2>/dev/null >/dev/null; then
+			brctl addbr $IFACE
+		fi
+		brctl addif $IFACE $tap
+		for i in $brifaces; do 
+			env IFACE=$i /etc/network/if-pre-up.d/10vlan 
+			brctl addif $IFACE $i
+			ifconfig $i promisc up
+		done
+	fi
+	
+	#for f in /proc/sys/net/bridge/*; do echo 0 >$f; done # allow count traffic
+	[ "${raddr}" != auto ] && remote_opt="--remote ${raddr} --rport ${rport}" || remote_opt="" 
+	[ "${laddr}" != auto ] && local_opt="--local ${laddr} " || local_opt="" 
+		
+	openvpn --daemon "tunnel-$IFACE-$tap" --mode p2p --dev "${tap}" ${local_opt} ${remote_opt} --lport ${lport} --writepid "${pidfile}" $optarg
+	if [ $? != 0 ]; then
+		echo
+		echo "Error: something wrong, please check logs:"
+		echo
+		logread | tail -n 10
+		echo 
+		echo
+		env MODE=stop $0
+		exit 1
+	fi
+	[ 1 != "$SPLIT_MODE" ] && handle_brtunn
+   ;;
+   stop)
+   	[ -r $pidfile ] && kill "`cat $pidfile`" 2>/dev/null
+   	ifconfig $tap down
+	if [ 1 = "$SPLIT_MODE" ]; then
+		for v in $vlans; do
+			brctl delif ${IFACE}${v} ${tap}.${v}
+			brctl delif ${IFACE}${v} ${trunk}.${v}
+			env IFACE=${tap}.${v} /etc/network/if-post-down.d/vlan
+			env IFACE=${trunk}.${v} /etc/network/if-post-down.d/vlan
+			ifconfig ${IFACE}${v} down
+			brctl delbr ${IFACE}${v}
+		done
+	else
+	   	ifconfig $IFACE down
+	   	# for i in `get_bridge_ifaces $br`; do brctl delif $br $i; done
+	   	brctl delif $IFACE $tap
+		for i in $brifaces; do 
+			ifconfig $i down
+			if [ -x /etc/network/if-post-down.d/vlan ]; then
+				env IFACE=$i /etc/network/if-post-down.d/vlan
+		        fi
+		done
+	   	ifconfig $IFACE down
+	   	brctl delbr $IFACE
+		handle_brtunn
+	fi
+   ;;
+esac
+exit 0

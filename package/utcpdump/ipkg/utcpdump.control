@@ -1,0 +1,5 @@
+Package: utcpdump
+Priority: optional
+Section: net
+Description: utcpdump - little applications tcpdump.
+Depends: libpcap

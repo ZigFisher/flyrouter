@@ -1,0 +1,5 @@
+Package: rxecho
+Section: hamradio
+Priority: optional
+Description: rxecho - route AX.25 packets between ports transparently
+Depends: libax25, kissattach

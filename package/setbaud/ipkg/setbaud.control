@@ -1,0 +1,4 @@
+Package: setbaud
+Priority: optional
+Section: console
+Description: simple configuration utility for serial ports

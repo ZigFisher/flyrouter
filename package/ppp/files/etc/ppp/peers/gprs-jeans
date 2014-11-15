@@ -1,0 +1,24 @@
+debug
+noipdefault 
+usepeerdns
+defaultroute
+hide-password 
+noauth
+#persist
+refuse-eap
+refuse-chap
+refuse-mschap
+refuse-mschap-v2
+#refuse-pap
+unit 300
+maxfail 3
+lcp-echo-interval 30
+lcp-echo-failure 5
+mtu 576
+/dev/ttyS1
+57600
+nocrtscts
+name "jeans"
+linkname gprs1
+connect "/usr/sbin/chat -v -f /etc/ppp/chat/gprs-jeans.chat"
+disconnect "/usr/sbin/chat -v -f /etc/ppp/chat/disconnect.chat"

@@ -1,0 +1,64 @@
+#!/bin/sh
+
+
+. /etc/templates/lib
+
+sg16cfg="/bin/sg16cfg"
+
+dsl_iface_tmpl()
+{
+    local rate;      	# dsl line rate
+    local mode;         # dsl modem role
+    local code;       	# dsl line coding
+    local cfg;		# dsl remote configuration
+    local mac;		# Ethernet Mac addres of DSL adapter
+    local annex;	# 
+    local crc32;        # crc length
+    local fill;		# channel filling
+    local inv;		# data inversion
+
+    iface="$1"
+    
+    eval `kdb sls "sys_dsl_${iface}_"`
+
+    cmdargs="${iface}"
+
+    # rate process    
+    is_number "$rate" || die "Bad line rate value $rate"
+    [ -n "$rate" ] && cmdargs="${cmdargs} rate $rate"
+    
+    # mode process MY BE CHECK!
+    cmdargs="${cmdargs} $mode"    
+
+    #code process
+    cmdargs="${cmdargs} $code"        
+    
+    #cfg process
+    cmdargs="${cmdargs} $cfg"
+    
+    #mac process
+    [ -n "$mac" ] && cmdargs="${cmdargs} mac-addr $mac"
+    
+    #annex process
+    [ -n "$annex" ] && cmdargs="${cmdargs} annex $annex"
+    
+    #crc process
+    cmdargs="${cmdargs} $crc32"
+    
+    #fill process
+#    cmdargs="${cmdargs} $fill"
+    
+    #annex process
+#    cmdargs="${cmdargs} $inv"
+    
+
+    echo "${sg16cfg} ${cmdargs}"
+    `${sg16cfg} ${cmdargs}`
+}
+
+show_header $0
+    echo "#!/bin/sh"
+    
+    iface="$1"
+    dsl_iface_tmpl $iface
+    echo

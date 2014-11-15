@@ -1,0 +1,38 @@
+# /etc/inittab
+#
+# Copyright (C) 2001 Erik Andersen <andersen@codepoet.org>
+#
+# Format for each entry: <id>:<runlevels>:<action>:<process>
+#
+# id        == tty to run on, or empty for /dev/console
+# runlevels == ignored
+# action    == one of sysinit, respawn, askfirst, wait, and once
+# process   == program to run
+
+
+# Startup the system
+::sysinit:/bin/mount -a
+::sysinit:/etc/init.d/rcS
+
+# Set up a couple of getty's
+null::respawn:/sbin/getty -L ttyS0 115200 xterm
+null::respawn:/sbin/getty -L ttyS1 115200 xterm
+#ttyS1::respawn:/etc/bluetooth/bluejacker
+
+# Logging junk
+#null::sysinit:/bin/touch /var/log/messages
+#null::restart:/usr/local/sbin/monitor
+
+# Stuff to do before rebooting
+null::restart:/etc/init.d/Kreboot
+null::restart:/bin/sync
+null::restart:/usr/bin/killall klogd
+null::restart:/usr/bin/killall syslogd
+null::restart:/bin/umount -a -r
+
+# Stuff to do before shutdown
+null::shutdown:/etc/init.d/Kshutdown
+null::shutdown:/bin/sync
+null::shutdown:/usr/bin/killall klogd
+null::shutdown:/usr/bin/killall syslogd
+null::shutdown:/bin/umount -a -r

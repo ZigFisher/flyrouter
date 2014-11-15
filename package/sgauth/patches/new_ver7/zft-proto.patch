@@ -1,0 +1,12 @@
+diff -ur my/proto_unit.cpp external/proto_unit.cpp
+--- sgauth-2/proto_unit.cpp	2007-10-09 01:23:45.000000000 +0300
++++ sgauth-2/proto_unit.cpp	2005-01-17 23:57:38.000000000 +0200
+@@ -683,7 +683,7 @@
+ //---------------------------------------------------------------------------
+ char CLIENTPROT::GetProtoVer()
+ {
+-#define IA_PROTO_VER (6)
++#define IA_PROTO_VER (7)
+ return IA_PROTO_VER;
+ }
+ //---------------------------------------------------------------------------

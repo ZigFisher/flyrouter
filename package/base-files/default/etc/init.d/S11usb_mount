@@ -1,0 +1,35 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+test -r /etc/XXX.conf && . /etc/XXX.conf
+
+[ "$USB_MOUNT" = yes ] || exit 0
+
+if [ "$USB_DIR" -a "$USB_DEV" ]; then
+	mkdir -p $USB_DIR
+	sleep 2
+	msg "Mounting USB-Storage $USB_DEV to $USB_DIR..."
+	mount -o ${USB_OPTIONS:-"ro,sync,check,errors=remount-ro"} -t $USB_FSTYPE $USB_DEV $USB_DIR
+	if [ -d $USB_DIR/etc/init.d ]; then
+		for i in $USB_DIR/etc/init.d/S??*; do
+			$i start
+		done
+	fi
+	
+	export USB_DIR
+	[ "$USB_SYMLINK" = yes ] && \
+		cd $USB_DIR && \
+		for d in bin lib sbin usr; do  
+		    [ -d $d ] && find $d | \
+			( while read f; do
+				if [ -d $f ]; then
+				    mkdir -p /${f}
+				elif [ -f $f -o -L $f ]; then
+				    ln -s $USB_DIR/$f /$f
+				    msg "Create USB symlinks..."
+				fi;
+			done; );
+		done
+		
+fi
+

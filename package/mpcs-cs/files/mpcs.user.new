@@ -1,0 +1,16 @@
+#.user is auto reload... then make changes to file  relaod automaticly not need restart
+[account]
+User = user
+Pwd  = 54546
+Uniq  = 1
+Group = 1
+#AU disable
+AU = 0
+# this is auto AU reader all reader
+#AU = 1
+#AU single reader
+#AU = myreader
+EndDate = 2009-01-05
+#or both are ok
+#EndDate = 2009/01/05
+#Betatunnel = 1833.0081:1702,1833.0082:1702

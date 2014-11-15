@@ -1,0 +1,286 @@
+diff -wuBr dbhub-0.451.orig/src/lang.c dbhub-0.451/src/lang.c
+--- dbhub-0.451.orig/src/lang.c	2008-01-21 05:37:01.000000000 +0200
++++ dbhub-0.451/src/lang.c	2009-03-10 00:34:37.000000000 +0200
+@@ -89,6 +89,7 @@
+ sprintf(lp_musthavedot, "Partial IP address should contain at least one dot");
+ sprintf(lp_categlist, "List of allowed categories");
+ sprintf(lp_forother, "for other releases from category");
++sprintf(lp_changedhost, "changed host");
+ sprintf(lp_charnumbers, "Required number of characters for that command is");
+ sprintf(lp_searchresults, "Search results for");
+ sprintf(lp_bannedby, "Banned by");
+@@ -124,6 +125,7 @@
+ sprintf(lp_couldntaddentry, "Couldn't add entry to");
+ sprintf(lp_couldntremoveentry, "Couldn't remove entry from");
+ sprintf(lp_currentdate, "Current date is");
++sprintf(lp_currenthost, "current host");
+ sprintf(lp_cut_, "cut");
+ sprintf(lp_datashared, "Data shared");
+ sprintf(lp_days, "days");
+@@ -166,6 +168,7 @@
+ sprintf(lp_hi_, "Hi");
+ sprintf(lp_hidingpresence, "Hiding your presence...");
+ sprintf(lp_hidingshare, "Hiding your share...");
++sprintf(lp_host_, "IP");
+ sprintf(lp_hours, "hours");
+ sprintf(lp_hubaddr, "Hub address");
+ sprintf(lp_hubdesc, "Hub description");
+@@ -231,7 +234,7 @@
+ sprintf(lp_never_, "never");
+ sprintf(lp_newcommand, "New file-command added");
+ sprintf(lp_newregistered, "New registered user");
+-sprintf(lp_nextwarningban, "next warning will make you banned!");
++sprintf(lp_nextwarningban, "next warning will make you gagged");
+ sprintf(lp_nick_, "nickname");
+ sprintf(lp_nickban_, "nickban");
+ sprintf(lp_nickbans, "nickbans");
+@@ -252,8 +255,9 @@
+ sprintf(lp_nosuchfile, "No such file");
+ sprintf(lp_nosuchvariable, "No such variable");
+ sprintf(lp_notallowedtodelreg, "You are not allowed to remove this user");
+-sprintf(lp_nowarnings, "No warnings for user");
++sprintf(lp_nowarnings, "No warnings for IP");
+ sprintf(lp_number_, "number");
++sprintf(lp_oldhost, "old host");
+ sprintf(lp_opped_, "opped");
+ sprintf(lp_ops_, "ops");
+ sprintf(lp_owners_, "owners");
+@@ -295,7 +299,7 @@
+ sprintf(lp_registered_, "registered");
+ sprintf(lp_regular_, "regular");
+ sprintf(lp_releases, "releases");
+-sprintf(lp_removedallwarns, "Removed all warnings for user");
++sprintf(lp_removedallwarns, "Removed all warnings for IP");
+ sprintf(lp_removedentryfrom, "Removed entry from");
+ sprintf(lp_requiredatleast, "Required at least");
+ sprintf(lp_requests, "requests");
+@@ -509,7 +513,7 @@
+ sprintf(lp_us114, "Remove release");
+ sprintf(lp_us115, "Remove request");
+ sprintf(lp_us116, "Remove URL");
+-sprintf(lp_us117, "Remove warn");
++sprintf(lp_us117, "Remove IP's warn");
+ sprintf(lp_us118, "Add welcome");
+ sprintf(lp_us119, "Get randomwelcomes");
+ sprintf(lp_us120, "Remove welcome");
+@@ -569,7 +573,7 @@
+ sprintf(lp_he039, "adds REG user to reglist");
+ sprintf(lp_he040, "adds VIP user to reglist");
+ sprintf(lp_he041, "adds KVIP user to reglist");
+-sprintf(lp_he042, "sends warning to specified user");
++sprintf(lp_he042, "issues a warning to specified user's IP address");
+ sprintf(lp_he043, "bans permanently user's IP and nickname");
+ sprintf(lp_he044, "bans permanently IP");
+ sprintf(lp_he045, "bans permanently nickname");
+@@ -635,12 +639,12 @@
+ sprintf(lp_he108, "removes an entry from releases list");
+ sprintf(lp_he109, "removes an entry from req list");
+ sprintf(lp_he110, "removes an entry from urls list");
+-sprintf(lp_he111, "removes all warnings from specified user");
++sprintf(lp_he111, "removes all warnings from specified IP");
+ sprintf(lp_he112, "adds 'welcome' to randomwelomes");
+ sprintf(lp_he113, "displays the randomwelomes list");
+ sprintf(lp_he114, "removes 'welcome' from randomwelomes");
+ sprintf(lp_he116, "terminates the program");
+-sprintf(lp_he117, "shows the users with warnings");
++sprintf(lp_he117, "shows IP's (and users) with warnings");
+ sprintf(lp_he118, "creates new command-file");
+ sprintf(lp_he119, "removes command-file");
+ sprintf(lp_he120, "removes all IP bans");                                                                                          
+@@ -653,6 +657,7 @@
+ sprintf(lp_he127, "changes the class of the registered user");
+ sprintf(lp_he128, "changes the nickname of the registered user");
+ sprintf(lp_he129, "resets share and users records");
++sprintf(lp_he130, "issues a warning to specified IP address");
+ }
+ 
+ #ifdef HAVE_LANG
+@@ -1400,6 +1405,24 @@
+                   if(*(lp_category_ + strlen(lp_category_) - 1) == '"')
+                     *(lp_category_ + strlen(lp_category_) - 1) = '\0';
+                }
++             else if(strncmp(line + i, "lp_changedhost", 14) == 0)
++               {
++                  if(strchr(line + i, '"') == NULL)
++                    {
++                       set_lock(fd, F_UNLCK);
++                       while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_lang()/fclose(): Interrupted system call. Trying again.\n");
++                       if(erret != 0)
++                         {
++                            logprintf(0, "Error - In read_lang()/fclose(): %s", strerror(errno));
++                            return -1;
++                         }
++                       return -1;
++                    }
++                  strncpy(lp_changedhost, strchr(line + i, '"') + 1, 100);
++                  if(*(lp_changedhost + strlen(lp_changedhost) - 1) == '"')
++                    *(lp_changedhost + strlen(lp_changedhost) - 1) = '\0';
++               }
+              else if(strncmp(line + i, "lp_charnumbers", 14) == 0)
+                {
+                   if(strchr(line + i, '"') == NULL)
+@@ -1760,6 +1783,24 @@
+                   if(*(lp_currentdate + strlen(lp_currentdate) - 1) == '"')
+                     *(lp_currentdate + strlen(lp_currentdate) - 1) = '\0';
+                }
++             else if(strncmp(line + i, "lp_currenthost", 14) == 0)
++               {
++                  if(strchr(line + i, '"') == NULL)
++                    {
++                       set_lock(fd, F_UNLCK);
++                       while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_lang()/fclose(): Interrupted system call. Trying again.\n");
++                       if(erret != 0)
++                         {
++                            logprintf(0, "Error - In read_lang()/fclose(): %s", strerror(errno));
++                            return -1;
++                         }
++                       return -1;
++                    }
++                  strncpy(lp_currenthost, strchr(line + i, '"') + 1, 50);
++                  if(*(lp_currenthost + strlen(lp_currenthost) - 1) == '"')
++                    *(lp_currenthost + strlen(lp_currenthost) - 1) = '\0';
++               }
+              else if(strncmp(line + i, "lp_cut_", 7) == 0)
+                {
+                   if(strchr(line + i, '"') == NULL)
+@@ -4173,6 +4214,24 @@
+                   if(*(lp_number_ + strlen(lp_number_) - 1) == '"')
+                     *(lp_number_ + strlen(lp_number_) - 1) = '\0';
+                }
++             else if(strncmp(line + i, "lp_oldhost", 10) == 0)
++               {
++                  if(strchr(line + i, '"') == NULL)
++                    {
++                       set_lock(fd, F_UNLCK);
++                       while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_lang()/fclose(): Interrupted system call. Trying again.\n");
++                       if(erret != 0)
++                         {
++                            logprintf(0, "Error - In read_lang()/fclose(): %s", strerror(errno));
++                            return -1;
++                         }
++                       return -1;
++                    }
++                  strncpy(lp_oldhost, strchr(line + i, '"') + 1, 50);
++                  if(*(lp_oldhost + strlen(lp_oldhost) - 1) == '"')
++                    *(lp_oldhost + strlen(lp_oldhost) - 1) = '\0';
++               }
+              else if(strncmp(line + i, "lp_opped_", 9) == 0)
+                {
+                   if(strchr(line + i, '"') == NULL)
+@@ -11450,7 +11509,24 @@
+                   if(*(lp_he129 + strlen(lp_he129) - 1) == '"')
+                     *(lp_he129 + strlen(lp_he129) - 1) = '\0';
+                }	       
+-	       
++             else if(strncmp(line + i, "lp_he130", 8) == 0)
++               {
++                  if(strchr(line + i, '"') == NULL)
++                    {
++                       set_lock(fd, F_UNLCK);
++                       while(((erret = fclose(fp)) != 0) && (errno == EINTR))
++                         logprintf(0, "Error - In read_lang()/fclose(): Interrupted system call. Trying again.\n");
++                       if(erret != 0)
++                         {
++                            logprintf(0, "Error - In read_lang()/fclose(): %s", strerror(errno));
++                            return -1;
++                         }
++                       return -1;
++                    }
++                  strncpy(lp_he130, strchr(line + i, '"') + 1, 100);
++                  if(*(lp_he130 + strlen(lp_he130) - 1) == '"')
++                    *(lp_he130 + strlen(lp_he130) - 1) = '\0';
++               }	       
+      }
+    }
+    set_lock(fd, F_UNLCK);
+@@ -11742,6 +11818,13 @@
+ lp_category_[cut_string(buf, '|')] = '\0';
+ uprintf(user, "<%s> [ lp_category_ ] %s \"%s\"|", botnick, lp_setto, lp_category_);
+ }
++else if(strncmp(buf, "lp_changedhost ", 15) == 0)
++{
++buf += 15;
++strncpy(lp_changedhost, buf, (cut_string(buf, '|') > 100) ? 100 : cut_string(buf, '|'));
++lp_changedhost[cut_string(buf, '|')] = '\0';
++uprintf(user, "<%s> [ lp_changedhost ] %s \"%s\"|", botnick, lp_setto, lp_changedhost);
++}
+ else if(strncmp(buf, "lp_charnumbers ", 15) == 0)
+ {
+ buf += 15;
+@@ -11882,6 +11965,13 @@
+ lp_currentdate[cut_string(buf, '|')] = '\0';
+ uprintf(user, "<%s> [ lp_currentdate ] %s \"%s\"|", botnick, lp_setto, lp_currentdate);
+ }
++else if(strncmp(buf, "lp_currenthost ", 15) == 0)
++{
++buf += 15;
++strncpy(lp_currenthost, buf, (cut_string(buf, '|') > 50) ? 50 : cut_string(buf, '|'));
++lp_currenthost[cut_string(buf, '|')] = '\0';
++uprintf(user, "<%s> [ lp_currenthost ] %s \"%s\"|", botnick, lp_setto, lp_currenthost);
++}
+ else if(strncmp(buf, "lp_cut_ ", 8) == 0)
+ {
+ buf += 8;
+@@ -12813,6 +12903,13 @@
+ lp_number_[cut_string(buf, '|')] = '\0';
+ uprintf(user, "<%s> [ lp_number_ ] %s \"%s\"|", botnick, lp_setto, lp_number_);
+ }
++else if(strncmp(buf, "lp_oldhost ", 11) == 0)
++{
++buf += 10;
++strncpy(lp_oldhost, buf, (cut_string(buf, '|') > 50) ? 50 : cut_string(buf, '|'));
++lp_oldhost[cut_string(buf, '|')] = '\0';
++uprintf(user, "<%s> [ lp_oldhost ] %s \"%s\"|", botnick, lp_setto, lp_oldhost);
++}
+ else if(strncmp(buf, "lp_opped_ ", 10) == 0)
+ {
+ buf += 10;
+@@ -15644,6 +15741,13 @@
+ lp_he129[cut_string(buf, '|')] = '\0';
+ uprintf(user, "<%s> [ lp_he129 ] %s \"%s\"|", botnick, lp_setto, lp_he129);
+ }
++else if(strncmp(buf, "lp_he130 ", 9) == 0)
++{
++buf += 9;
++strncpy(lp_he130, buf, (cut_string(buf, '|') > 100) ? 100 : cut_string(buf, '|'));
++lp_he130[cut_string(buf, '|')] = '\0';
++uprintf(user, "<%s> [ lp_he130 ] %s \"%s\"|", botnick, lp_setto, lp_he130);
++}
+ 
+ else                                                                                                                                                                
+ {                                                                                                                                                                   
+@@ -15725,6 +15829,7 @@
+     fprintf(fp, "lp_categlist = \"%s\"\n", lp_categlist);
+     fprintf(fp, "lp_categnotfound = \"%s\"\n", lp_categnotfound);
+     fprintf(fp, "lp_category_ = \"%s\"\n", lp_category_);
++    fprintf(fp, "lp_changedhost = \"%s\"\n", lp_changedhost);
+     fprintf(fp, "lp_charnumbers = \"%s\"\n", lp_charnumbers);
+     fprintf(fp, "lp_chatting_ = \"%s\"\n", lp_chatting_);
+     fprintf(fp, "lp_cheefs_ = \"%s\"\n", lp_cheefs_);
+@@ -15745,6 +15850,7 @@
+     fprintf(fp, "lp_couldntaddentry = \"%s\"\n", lp_couldntaddentry);
+     fprintf(fp, "lp_couldntremoveentry = \"%s\"\n", lp_couldntremoveentry);
+     fprintf(fp, "lp_currentdate = \"%s\"\n", lp_currentdate);
++    fprintf(fp, "lp_currenthost = \"%s\"\n", lp_currenthost);
+     fprintf(fp, "lp_cut_ = \"%s\"\n", lp_cut_);
+     fprintf(fp, "lp_datashared = \"%s\"\n", lp_datashared);
+     fprintf(fp, "lp_days = \"%s\"\n", lp_days);
+@@ -15878,6 +15984,7 @@
+     fprintf(fp, "lp_notenoughslots = \"%s\"\n", lp_notenoughslots);
+     fprintf(fp, "lp_nowarnings = \"%s\"\n", lp_nowarnings);
+     fprintf(fp, "lp_number_ = \"%s\"\n", lp_number_);
++    fprintf(fp, "lp_oldhost = \"%s\"\n", lp_oldhost);
+     fprintf(fp, "lp_opped_ = \"%s\"\n", lp_opped_);
+     fprintf(fp, "lp_ops_ = \"%s\"\n", lp_ops_);
+     fprintf(fp, "lp_owners_ = \"%s\"\n", lp_owners_);
+@@ -16284,6 +16391,7 @@
+     fprintf(fp, "lp_he127 = \"%s\"\n", lp_he127);            
+     fprintf(fp, "lp_he128 = \"%s\"\n", lp_he128);                
+     fprintf(fp, "lp_he129 = \"%s\"\n", lp_he129);                
++    fprintf(fp, "lp_he130 = \"%s\"\n", lp_he130);                
+ 
+    set_lock(fd, F_UNLCK);
+    while(((erret = fclose(fp)) != 0) && (errno == EINTR))

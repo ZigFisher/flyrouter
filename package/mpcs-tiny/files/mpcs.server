@@ -1,0 +1,53 @@
+[reader]
+Label             = NTV
+Protocol          = newcamd
+Key               = 0102030405060708091011121314
+Device            = x.x.x.x,yyyyy
+Account           = login,password
+Fallback          = 0
+Group             = 1
+CAID              = 0500
+IDENT             = 023700
+ReconnectTimeout  = 20
+InactivityTimeOut = 10
+
+[reader]
+Label             = TK
+Protocol          = newcamd
+Key               = 0102030405060708091011121314
+Device            = x.x.x.x,yyyyy
+Account           = login,password
+Fallback          = 0
+Group             = 1
+CAID              = 4AE0
+IDENT             = 000000
+ReconnectTimeout  = 20
+InactivityTimeOut = 10
+
+
+
+
+
+
+
+
+### Not actual section
+
+#[reader]
+#Label          = NTV
+#Protocol       = camd35
+#Device         = 192.168.1.6,8000
+#Account        = login,password
+#CAID           = 0500
+#Ident          = 020710
+#Class          = 05,06,07,08,3C
+#Fallback       = 0
+#Group          = 1
+
+#[reader]
+#Label          = NTV
+#Protocol       = cs378x
+#Device         = 192.168.1.6,6001
+#Account        = login,password
+#Fallback       = 0
+#Group          = 1

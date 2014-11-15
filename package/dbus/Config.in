@@ -1,0 +1,8 @@
+config BR2_PACKAGE_DBUS
+	prompt "dbus.............................. D-BUS is a simple IPC framework based on messages"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	      D-BUS is a simple IPC framework based on messages.
+
+	      http://www.freedesktop.org/Software/dbus

@@ -1,0 +1,6 @@
+# Sample configuration file for dnrd master DNS - /etc/dnrd/master
+#
+domain gps.crimea.ua auth+
+192.168.1.1 auto1
+192.168.1.1 auto2
+192.168.1.1 auto2

@@ -1,0 +1,19 @@
+--- cln-0.1/Makefile	2005-05-29 13:52:58.000000000 +0300
++++ cln-0.1/Makefile_new	2008-02-14 16:29:00.000000000 +0200
+@@ -1,6 +1,4 @@
+ 
+-CC=gcc
+-CFLAGS= -O2 -Wall
+ PROGNAME=cln
+ 
+ OBJ= client.o hex.o deslib.o param.o strlib.o logs.o\
+@@ -12,8 +10,7 @@
+ all: $(PROGNAME)
+ 
+ $(PROGNAME): $(OBJ) Makefile
+-	$(CC) -O2 -Wall -o $(PROGNAME) $(OBJ) -lcrypto
+-	strip $(PROGNAME)
++	$(CC) -O2 -Wall $(CFLAGS) $(LDFLAGS) -o $(PROGNAME) $(OBJ) -lcrypto
+ 
+ dep: clean
+ 	$(CC) -MM *.c > Makefile.dep

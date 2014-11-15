@@ -1,0 +1,12 @@
+[account]
+User  = tuner
+Pwd   = tuner
+#Uniq  = 1
+Group = 1
+IDENT=0500:023700;4AE0:000000
+
+#[account]
+#User     = monitor
+#Pwd      = monitor
+#MonLevel = 4
+#Group = 0

@@ -1,0 +1,5 @@
+Package: empty
+Priority: optional
+Section: console
+Description: empty - run applications under pseudo-terminal (PTY) sessions.
+Depends:

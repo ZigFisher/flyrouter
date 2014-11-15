@@ -1,0 +1,12 @@
+#!/bin/sh
+
+
+. /etc/templates/lib
+
+show_header $0
+
+# ------------------------
+# TODO: 
+echo MST-2MDT
+
+#kdb get sys_hostname

@@ -1,0 +1,4 @@
+Package: webadmin
+Priority: optional
+Section: net
+Description: FlyRouter WEB administration interface 

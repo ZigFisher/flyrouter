@@ -1,0 +1,5 @@
+Package: yapp
+Section: hamradio
+Priority: optional
+Description: this is test
+Depends: 

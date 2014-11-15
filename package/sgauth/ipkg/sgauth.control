@@ -1,0 +1,5 @@
+Package: sgauth
+Priority: optional
+Section: net
+Description: sgauth - a StarGazer Internet authorization system
+Depends: uclibc++, libpthread

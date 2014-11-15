@@ -1,0 +1,5 @@
+Package: mpcs-cs
+Priority: optional
+Section: net
+Description: mpcs-cs
+Depends: libpthread

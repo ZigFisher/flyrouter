@@ -1,0 +1,218 @@
+#!/bin/sh
+
+#---------------------------------------------------------
+
+print_stat()
+{
+
+    if [ $# -lt 1 ]; then
+            exit
+    fi
+    iface=$1
+    echo "---------------------------------------"
+    echo "Sigrand MR16G E1 adapter"
+    echo "Common E1 settings:"
+    sethdlc $iface
+    echo "Sigrand E1 settings:"
+    echo "    slotmap:   "`cat slotmap`
+    echo "    hdb3:      "`cat hdb3`
+    fr=`cat framed`
+    echo "    mode:      "$fr
+    if [ "$fr" != "unframed" ]; then
+	echo "    crc4:      "`cat crc4`
+        echo "    cas:       "`cat cas`       			
+	echo "    ts16:      "`cat map_ts16`
+    fi
+    echo "    long haul: "`cat long_haul`    
+    echo "HDLC controller settings:"
+    echo "    "`cat crc16`" "`cat inv`" "`cat fill_7e`" "`cat rburst`" "`cat wburst`
+}					    
+
+#---------------------------------------------------------
+
+# Check that interface name specifyed
+if [ $# = 0 ]; then
+    echo "Sigrand MR16G configuration tool"
+    echo "Usage:"
+    echo "  mr16gcfg <if> [args]        - set MR16G card parameters"
+    echo "  <if> - MR16G network interface name (hdlcX)"
+    echo "Possible arguments:"
+    echo "E1 options:"    
+    echo "  framed | unframed          - set framed/unframed mode"
+    echo "  ts16 on|off                - use timeslot 16"        
+    echo "  slotmap SLOTMAP            - set slotmap in format: \"2-3,6-9,15-20\""
+    echo "  clk int|ext                - transmit clock: internal/extrnal(from receiver)"
+    echo "  hdb3|ami                   - E1 HDB3/AMI line code"    
+    echo "  crc4 on|off                - enable/disable E1 CRC4 multiframe"
+    echo "  cas  on|off                - enable/disable E1 CAS multiframe"
+    echo "  lhaul on|off               - enable/disable E1 long haul mode"
+    echo "HDLC options:"
+    echo "  crc32 | crc16              - HDLC checksum type"
+    echo "  fill_ff | fill_7e          - interframe fill byte"
+    echo "  normal | invert            - data inversion"
+    echo "PCI options:"
+    echo "  rboff | rbon               - PCI read burst mode off"
+    echo "  wboff | wbon               - PCI write burst mode off"
+    exit
+fi
+cdir=`pwd`
+
+cd /sys/bus/pci/drivers
+if [ ! -d mr16g ]; then
+    echo "mr16g_hdlc driver was not loaded!"
+    exit
+fi
+cd mr16g
+
+
+# CD to the device dir
+if [ ! -d $1 ]; then
+    echo $0": No such device "$1
+    exit
+fi
+cd $1
+interf=$1
+
+# settings
+if [ $# = 1 ]; then
+    print_stat $interf
+    exit
+fi
+
+ifisup=`ifconfig $interf | grep UP`
+echo "ifisup=$ifisup"
+if [ -n "$ifisup" ]; then
+    echo $0:" error, bring "$interf" down first"
+    exit;
+fi
+							    
+
+# initial config
+shift
+while [ ! -z "$1" ]; do
+
+    case "$1" in
+    
+    "framed")
+	echo 1 > framed ;;
+    "unframed")
+	echo 0 > framed ;;
+	
+    "slotmap")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"slotmap\" "
+	    break
+	fi
+	echo "$2" > slotmap
+	shift
+	;;
+	
+    "ts16")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"ts16\" "
+	    break
+	fi
+	if [ "$2" = "on" ]; then
+	    echo 1 > map_ts16
+	elif [ "$2" = "off" ]; then
+	    echo 0 > map_ts16
+	fi
+	shift	
+	;;    
+
+    "lhaul")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"ts16\" "
+	    break
+	fi
+	if [ "$2" = "on" ]; then
+	    echo 1 > long_haul
+	elif [ "$2" = "off" ]; then
+	    echo 0 > long_haul
+	fi
+	shift	
+	;;    
+
+    "clk")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"clk\" "
+	    break
+	fi
+	if [ "$2" = "int" ]; then
+	    echo 1 > clck
+	elif [ "$2" = "ext" ]; then
+	    echo 0 > clck
+	fi
+	shift	
+	;;    
+
+    "hdb3")
+	echo 1 > hdb3   
+	;;    
+    "ami")
+	echo 0 > hdb3
+	;;    
+
+    "crc4")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"crc4\" "
+	    break
+	fi
+	if [ $2 = "on" ]; then
+	    echo 1 > crc4
+	elif [ $2 = "off" ]; then
+	    echo 0 > crc4
+	fi
+	shift	
+	;;    
+
+    "cas")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"cas\" "
+	    break
+	fi
+	if [ $2 = "on" ]; then
+	    echo 1 > cas
+	elif [ $2 = "off" ]; then
+	    echo 0 > cas
+	fi
+	shift	
+	;;    
+
+    "crc32")
+	echo 0 > crc16
+	;;
+    "crc16")
+	echo 1 > crc16
+	;;
+    "rboff")
+	echo 0 > rburst
+	;;
+    "wboff")
+	echo 0 > wburst
+	;;
+    "rbon")
+	echo 1 > rburst
+	;;
+    "wbon")
+	echo 1 > wburst
+	;;
+
+    "normal")
+	echo 0 > inv
+	;;
+    "invert")
+	echo 1 > inv
+	;;
+    "fill_ff")
+	echo 0 > fill_7e
+	;;
+    "fill_7e")
+	echo 1 > fill_7e
+	;;
+    *)
+	echo $0": error parameter - "$1
+	;;
+    esac
+    shift
+done

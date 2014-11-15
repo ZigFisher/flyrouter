@@ -1,0 +1,4 @@
+Package: arpingping
+Section: net
+Priority: optional
+Description: Tools to send ICMP echo requests to an ARP address

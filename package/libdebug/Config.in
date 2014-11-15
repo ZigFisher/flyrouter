@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBDEBUG
+	prompt "libdebug.......................... Memory leak detection system and logging library"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+		Memory leak detection system and logging library
+
+		http://oasis.frogfoot.net/code/libdebug/

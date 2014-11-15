@@ -1,0 +1,180 @@
+diff -ur etc/a.sv etc_new/a.sv
+--- linsv-0.5.2/etc/a.sv	2005-10-20 21:09:29.000000000 +0000
++++ linsv-0.5.2/etc_new/a.sv	2006-10-26 14:33:21.000000000 +0000
+@@ -1 +1 @@
+-!FERSV    2 9A0XFE-0
++!USER     3 BUXX-5
+diff -ur etc/b.sv etc_new/b.sv
+--- linsv-0.5.2/etc/b.sv	2005-10-20 21:09:50.000000000 +0000
++++ linsv-0.5.2/etc_new/b.sv	2006-10-26 14:33:09.000000000 +0000
+@@ -1 +1 @@
+-ZAPRUD:9A0XZP Linux SuperVozelj - Zagreb - JN75XT
+\ No newline at end of file
++CRMTST:MYCALL Test Node
+diff -ur etc/h.sv etc_new/h.sv
+--- linsv-0.5.2/etc/h.sv	2004-12-14 09:29:25.000000000 +0000
++++ linsv-0.5.2/etc_new/h.sv	2006-10-26 14:22:25.000000000 +0000
+@@ -1,31 +1,29 @@
+ ===========================================================================
+-                   ***** Linux SuperVozelj Help tekst *****      
++                     ***** Linux SuperVozelj Help *****      
+ ===========================================================================
+  
+-           NAREDBE                                (COMMANDS):
++             COMMANDS:
+  
+-A          - Upisana lista za automatski konekt   (Fixed auto routing list)
+-C call     - Poziv za konekt s <call>             (Connect call)
+-C n call   - Poziv za konekt na kanalu n          (Connect on channel n)
+-C n call-0 - Poziv uz upotrebu  SIDD-a 0
+-             (12-15 automatski raskid veze)
+-D          - Ispise univerzalno vrijeme (UTC)     (Date, time)
+-G          - Popis dosadasnjih korisnika          (Ex. user status report)
+-G call     - Zadnji ulaz korisnika po kanalima    (Last user connect)
+-H          - Ispise ovaj tekst                    (Show this text)
+-I          - Ispise info tekst                    (Info)
+-N          - Ispise tekst novosti                 (News)
+-O          - Odzivi susjednih cvorova             (Recall)
+-S call tekst  - Salji tekst za call               (Send text to call)
+-S * tekst     - Salji tekst svima                 (Send text to all)
+-P          - Lista slusanih po kanalima           (Heard list - beacon)
+-R          - Stastiska rada cvora                 (SV status report)
+-%          - Stastiska SV po kanalima             (Show advanced statist.)
+-U          - Lista trenutnih korisnika            (User list)
+-U <n>      - Lista korisnika po kanalu <n>        (User list on channel n)
+-V          - Lista znakova za automatski konekt   (Auto routing list)
+-W          - Prikaz susjednjih SV                 (Show neighbour SV)
+-Q          - Prekid rada                          (Disconnect - quit)
++A            - Fixed auto routing list
++C call       - Connect call
++C n call     - Connect on channel n
++D            - Date, time
++G            - Ex. user status report
++G call       - Last user connect
++H            - Show this text
++I            - Info
++N            - News
++O            - Recall
++S call tekst - Send text to call
++S * tekst    - Send text to all
++P            - Heard list - beacon
++R            - SV status report
++%            - Show advanced statistics
++U            - User list
++U <n>        - User list on channel n
++V            - Auto routing list
++W            - Show neighbour SV
++Q            - Disconnect - quit
+ 
+-For more info about SuperVozelj cmd. please refer to S50BOX bbs in DSP3MV
+ ===========================================================================
++
+Only in etc/help: 9a.hlp
+diff -ur etc/help/g.hlp etc_new/help/g.hlp
+--- linsv-0.5.2/etc/help/g.hlp	2005-10-10 13:24:28.000000000 +0000
++++ linsv-0.5.2/etc_new/help/g.hlp	2006-10-26 14:22:25.000000000 +0000
+@@ -78,7 +78,7 @@
+ 32=Linux informations
+ 33=Load average............ :
+ 34=AX.25 informations
+-35=#  PortName   RX_bytes RX_packets  RX Errors   TX Bytes TX Packets  TX Errors
++35=# PortName   RX_bytes RX_packets  RX Errors   TX Bytes TX Packets  TX Errors
+ 36=Message sent to
+ 37=There is no callsign that can get message
+ 38=Heard list deleted
+Only in etc/help: s5.hlp
+diff -ur etc/i.sv etc_new/i.sv
+--- linsv-0.5.2/etc/i.sv	2005-10-20 21:13:22.000000000 +0000
++++ linsv-0.5.2/etc_new/i.sv	2006-10-26 14:36:25.000000000 +0000
+@@ -1,13 +1,23 @@
+-                      Linux SuperVozelj ZAPRUD:9A0XZP
+-                          Zaprudje, Zagreb JN75XT
+-=============================================================================
+-Kanal  Brzina  Modulacija   QRG      Antena   Pol Namjena
+-        (b/s)              (MHz)
+-=============================================================================
+- 1.      100M   Ethernet     -        -        -  AXUDP users
+- 2.      100M   Ethernet     -        -        -  AXUDP link FERSV:9A0XFE
+------------------------------------------------------------------------------
+-   HW: Asus WL-500g wireless router (CPU MIPS 125MHz)
+-   SW: 9A4GL
+-   Sysop: Tihomir, 9a4gl@9a0tcp.ampr.org
+------------------------------------------------------------------------------
++
++                                     _\\|//_
++                                    (' O-O ')
++===================================ooO-(_)-Ooo==================================
++
++                                  MYCALL:CRMTST
++                    Crimean Amateur Digital Telemetry System
++                                    Test Node
++
++--------------------------------------------------------------------------------
++Ch. Mod. Speed RX freq TX freq Ant. Pol. Link
++--------------------------------------------------------------------------------
++ 1  LBK   38k4    -       -     -    -   Internal LoopBack
++ 2  UDP   38k4    -       -     -    -   For ARLiX Club members
++ 3  AFSK   1k2 433.800 433.800  GP   V   User access 
++ 3  AFSK   1k2 144.800 144.800  GP   V   APRS & DXC 
++--------------------------------------------------------------------------------
++  HW: Router Edimax BR-6104K, 16MB RAM, 2MB internal FLASH, Simple KISS TNC
++  SW: Linux for ADM5120 - http://midge.vlad.org.ua/forum/viewtopic.php?t=415
++    Amateur Radio LinuX (ARLiX) package, and 9A4GL soft (axip & linsv)
++
++  Sysop: ...
++  
++================================================================================
+diff -ur etc/n.sv etc_new/n.sv
+--- linsv-0.5.2/etc/n.sv	2004-12-14 09:29:25.000000000 +0000
++++ linsv-0.5.2/etc_new/n.sv	2006-10-26 14:22:25.000000000 +0000
+@@ -1 +1,8 @@
+-No news.
++
++                                     _\\|//
++                                    (' O-O ')
++===================================ooO-(_)-Ooo==================================
++
++                                     No news
++
++================================================================================
+diff -ur etc/password.sv etc_new/password.sv
+--- linsv-0.5.2/etc/password.sv	2004-12-14 09:29:25.000000000 +0000
++++ linsv-0.5.2/etc_new/password.sv	2006-10-26 14:22:25.000000000 +0000
+@@ -1 +1 @@
+-In2JukQs3Nd78nk4Das2ldDfvVD9bjkbK5Jd73jkUjhS8vF92nBbJ3sg8pa2nZ4qk3lBJgd5Pwk2Sh3
++1234567890
+diff -ur etc/ports.sv etc_new/ports.sv
+--- linsv-0.5.2/etc/ports.sv	2005-10-20 21:10:20.000000000 +0000
++++ linsv-0.5.2/etc_new/ports.sv	2006-10-26 14:36:56.000000000 +0000
+@@ -1,6 +1,5 @@
+-#
+-# if you change ports, you have to delete
+-# /usr/var/ax25/linsv/gtable.dat file !!!
+-#
+-ipuser
+-ipxfe
++# If you change ports, you have to delete /var/lib/ax25/linsv/gtable.dat file
++local
++ipusr
++uhf01
++vhf01
+diff -ur etc/t.sv etc_new/t.sv
+--- linsv-0.5.2/etc/t.sv	2004-12-14 09:29:25.000000000 +0000
++++ linsv-0.5.2/etc_new/t.sv	2006-10-26 14:37:13.000000000 +0000
+@@ -0,0 +1,2 @@
++Welcome to Test Node !
++
+Only in etc_new: v.sv
+diff -ur etc/w.sv etc_new/w.sv
+--- linsv-0.5.2/etc/w.sv	2005-10-20 21:10:32.000000000 +0000
++++ linsv-0.5.2/etc_new/w.sv	2006-10-26 14:22:25.000000000 +0000
+@@ -1 +1,2 @@
+-9A0XFE  FERSV
++UU4JZA     CRMIFC
++
+diff -ur etc/z.sv etc_new/z.sv
+--- linsv-0.5.2/etc/z.sv	2005-10-20 21:10:55.000000000 +0000
++++ linsv-0.5.2/etc_new/z.sv	2006-10-26 14:22:25.000000000 +0000
+@@ -1 +1 @@
+-2:9A0XFE
++2:UU4JZA

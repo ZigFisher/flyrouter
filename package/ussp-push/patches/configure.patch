@@ -1,0 +1,38 @@
+--- ussp-push-0.11/configure	2008-08-24 23:48:53.000000000 +0300
++++ ussp-push-0.11/configure.up	2009-09-28 17:37:45.000000000 +0300
+@@ -19980,7 +19980,7 @@
+   (exit $ac_status); }; then
+   pkg_cv_BLUETOOTH_CFLAGS=`$PKG_CONFIG --cflags "bluez" 2>/dev/null`
+ else
+-  pkg_failed=yes
++  pkg_failed=no
+ fi
+     fi
+ else
+@@ -19998,7 +19998,7 @@
+   (exit $ac_status); }; then
+   pkg_cv_BLUETOOTH_LIBS=`$PKG_CONFIG --libs "bluez" 2>/dev/null`
+ else
+-  pkg_failed=yes
++  pkg_failed=no
+ fi
+     fi
+ else
+@@ -20094,7 +20094,7 @@
+   (exit $ac_status); }; then
+   pkg_cv_OPENOBEX_CFLAGS=`$PKG_CONFIG --cflags "openobex" 2>/dev/null`
+ else
+-  pkg_failed=yes
++  pkg_failed=no
+ fi
+     fi
+ else
+@@ -20112,7 +20112,7 @@
+   (exit $ac_status); }; then
+   pkg_cv_OPENOBEX_LIBS=`$PKG_CONFIG --libs "openobex" 2>/dev/null`
+ else
+-  pkg_failed=yes
++  pkg_failed=no
+ fi
+     fi
+ else

@@ -1,0 +1,22 @@
+[reader]
+Label            = newcamd
+Protocol         = newcamd
+Device           = 192.168.1.1,10000
+Key              = 0102030405060708091011121314
+Account          = gs7101s,9562876
+Fallback         = 0
+Group            = 1
+ReconnectTimeout = 20
+CAID             = 0500
+IDENT            = 020710
+#Class            = 20,08
+#EMMCache         = 1,10,0
+
+#[reader]
+#Label          = cs357x
+#Protocol       = camd35
+#Device         = 192.168.1.98,20248
+#Account        = gs7101s,123
+#CAID           = 0500
+#Fallback       = 0
+#Group          = 1

@@ -1,0 +1,5 @@
+Package: libabz
+Priority: optional
+Section: libs
+Description: Miscellaneous useful routines
+Depends: libdebug

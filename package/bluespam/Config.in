@@ -1,0 +1,9 @@
+config BR2_PACKAGE_BLUESPAM
+	prompt "bluespam.......................... Bluespam.."
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_BLUEZ-LIBS
+	help
+	  Bluespam....
+	  
+	  http://www.josos.org/index/040-softwares/bluetooth/

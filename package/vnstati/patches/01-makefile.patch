@@ -1,0 +1,9 @@
+--- vnstati-beta3/src/Makefile	2008-02-13 14:43:03.000000000 +0200
++++ vnstati-beta3/src/Makefile_new	2008-07-09 21:29:03.000000000 +0300
+@@ -1,5 +1,5 @@
+ CC = gcc
+-CFLAGS = -O2
++CFLAGS = -O2 -I$(STAGING_DIR)/usr/include -L$(STAGING_DIR)/lib  -L$(STAGING_DIR)/usr/lib -ljpeg -lpng12 -lz
+ IOBJS = image.o dbaccess.o misc.o cfg.o
+ 
+ default: vnstati

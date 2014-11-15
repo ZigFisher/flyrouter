@@ -1,0 +1,1287 @@
+diff -urN nmeap-0.3z/Makefile nmeap-0.3z-new11/Makefile
+--- nmeap-0.3z/Makefile	2005-05-06 20:57:39.000000000 +0300
++++ nmeap-0.3z-new11/Makefile	2008-03-09 16:14:03.000000000 +0200
+@@ -1,5 +1,5 @@
+ # rules
+-export CC=gcc
++#export CC=gcc
+ export CDEFS = -DNDEBUG
+ 
+ # directories
+diff -urN nmeap-0.3z/src/Makefile nmeap-0.3z-new11/src/Makefile
+--- nmeap-0.3z/src/Makefile	2005-04-30 23:15:06.000000000 +0300
++++ nmeap-0.3z-new11/src/Makefile	2008-03-09 16:14:03.000000000 +0200
+@@ -1,5 +1,5 @@
+ # specify compiler flags
+-CFLAGS = -I $(INC) $(CDEFS) -g -O0 -Werror -Wall
++CFLAGS = -I$(INC) -I../inc $(CDEFS) -g -O0 -Wall
+ 
+ # set library name
+ LIBNAME  = libnmeap.a
+@@ -14,7 +14,7 @@
+ # build the library
+ $(LIB)/$(LIBNAME) : $(COBJ)
+ 	-$(RM) $(LIB)/$(LIBNAME)
+-	$(AR)  -q $(LIB)/$(LIBNAME) $(COBJ)
++	$(AR) -q $(LIB)/$(LIBNAME) $(COBJ)
+ 
+ # build all c files into .o files
+ $(COBJ): %.o: %.c
+diff -urN nmeap-0.3z/tst/Makefile nmeap-0.3z-new11/tst/Makefile
+--- nmeap-0.3z/tst/Makefile	2007-10-24 14:33:44.000000000 +0300
++++ nmeap-0.3z-new11/tst/Makefile	2008-03-09 16:14:03.000000000 +0200
+@@ -1,20 +1,28 @@
+-all : test1 test2 test3 test4 
++all : test1 test2 test2a test2b test3 test4 
+ 
+ test1 : $(LIB)/libnmeap.a $(TST)/test1.c 
+-	gcc -g -O0 -I $(INC) $(CDEFS) -Wall -o test1 $(TST)/test1.c $(LIB)/libnmeap.a
++	$(CC) -g -O0 -I $(INC) $(CPPFLAGS) $(CDEFS) -Wall -o test1 $(TST)/test1.c $(LIB)/libnmeap.a
+ 
+ test2 : $(LIB)/libnmeap.a $(TST)/test2.c 
+-	gcc -g -O0 -I $(INC) $(CDEFS) -Wall -o test2 $(TST)/test2.c $(LIB)/libnmeap.a
++	$(CC) -g -O0 -I $(INC) $(CPPFLAGS) $(CDEFS) -Wall -o test2 $(TST)/test2.c $(LIB)/libnmeap.a
++
++test2a : $(LIB)/libnmeap.a $(TST)/test2a.c 
++	$(CC) -g -O0 -I $(INC) $(CPPFLAGS) $(CDEFS) -Wall -o test2a $(TST)/test2a.c $(LIB)/libnmeap.a
++
++test2b : $(LIB)/libnmeap.a $(TST)/test2b.c 
++	$(CC) -g -O0 -I $(INC) $(CPPFLAGS) $(CDEFS) -Wall -o test2b $(TST)/test2b.c $(LIB)/libnmeap.a
+ 
+ test3 : $(LIB)/libnmeap.a $(TST)/test3.c 
+-	gcc -g -O0 -I $(INC) $(CDEFS) -Wall -o test3 $(TST)/test3.c $(LIB)/libnmeap.a
++	$(CC) -g -O0 -I $(INC) $(CPPFLAGS) $(CDEFS) -Wall -o test3 $(TST)/test3.c $(LIB)/libnmeap.a
+ 
+ test4 : $(LIB)/libnmeap.a $(TST)/test4.c 
+-	gcc -g -O0 -I $(INC) $(CDEFS) -Wall -o test4 $(TST)/test4.c $(LIB)/libnmeap.a
++	$(CC) -g -O0 -I$(INC) -I/usr/include $(CPPFLAGS) $(CDEFS) -Wall -o test4 $(TST)/test4.c $(LIB)/libnmeap.a
+ 
+ clean:
+ 	-$(RM) test1
+ 	-$(RM) test2
++	-$(RM) test2a
++	-$(RM) test2b
+ 	-$(RM) test3
+ 	-$(RM) test4
+ 
+diff -urN nmeap-0.3z/tst/test2a.c nmeap-0.3z-new11/tst/test2a.c
+--- nmeap-0.3z/tst/test2a.c	1970-01-01 03:00:00.000000000 +0300
++++ nmeap-0.3z-new11/tst/test2a.c	2008-03-09 16:14:03.000000000 +0200
+@@ -0,0 +1,233 @@
++/*
++Copyright (c) 2005, David M Howard (daveh at dmh2000.com)
++All rights reserved.
++
++This product is licensed for use and distribution under the BSD Open Source License.
++see the file COPYING for more details.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
++AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
++IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
++ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
++LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
++OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
++OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
++OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
++WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
++OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
++EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
++
++*/
++
++/*
++========================================================================================================
++EXAMPLE : SETUP FOR GGA AND RMC SENTENCES WITH CHARACTER BY CHARACTER IO
++=======================================================================================================
++*/   
++
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include "nmeap.h"
++
++nmeap_gga_t g_gga;
++
++char test_vector[] = {
++"$GPRMC,071736.000,A,4457.1897,N,03405.5329,E,0.25,62.40,240707,,*3Crn"
++"$GPRMC,071756.000,A,4457.1910,N,03405.5341,E,0.17,60.70,240707,,*3Arn"
++"$GPRMC,091224.000,A,4432.6073,N,03357.6252,E,0.11,139.03,240707,,*03rn"
++"$GPRMC,091228.000,A,4432.6072,N,03357.6254,E,0.11,39.52,240707,,*3Drn"
++"$GPRMC,101829.000,A,4430.9960,N,03359.0464,E,0.07,165.57,240707,,*0Ern"
++"$GPRMC,101830.000,A,4430.9959,N,03359.0464,E,0.05,157.15,240707,,*09rn"
++"$GPRMC,103400.000,A,4430.4086,N,03359.3027,E,0.96,344.61,240707,,*0Brn"
++"$GPRMC,103403.000,A,4430.4093,N,03359.3021,E,0.78,345.04,240707,,*08rn"
++"$GPRMC,105229.000,A,4428.6115,N,03403.2857,E,0.02,10.17,240707,,*38rn"
++"$GPRMC,105232.000,A,4428.6116,N,03403.2856,E,0.01,53.17,240707,,*34rn"
++"$GPRMC,105603.000,A,4428.0924,N,03404.0882,E,0.03,125.10,240707,,*04rn"
++"$GPRMC,105606.000,A,4428.0925,N,03404.0881,E,0.04,124.09,240707,,*0Drn"
++"$GPRMC,105926.000,A,4427.9874,N,03403.9961,E,0.06,308.52,240707,,*02rn"
++"$GPRMC,105927.000,A,4427.9875,N,03403.9961,E,0.07,314.40,240707,,*0Drn"
++"$GPRMC,110459.000,A,4427.8019,N,03404.0515,E,0.08,321.53,240707,,*04rn"
++"$GPRMC,110513.000,A,4427.8017,N,03404.0516,E,0.07,323.36,240707,,*08rn"
++"$GPRMC,111131.000,A,4428.2433,N,03404.9032,E,0.32,305.63,240707,,*02rn"
++"$GPRMC,111134.000,A,4428.2437,N,03404.9029,E,0.06,76.38,240707,,*37rn"
++"$GPRMC,111911.000,A,4428.0438,N,03405.4817,E,0.30,132.28,240707,,*09rn"
++"$GPRMC,111914.000,A,4428.0436,N,03405.4817,E,0.06,284.10,240707,,*02rn"
++"$GPRMC,112545.000,A,4428.4864,N,03405.7208,E,0.12,176.03,240707,,*08rn"
++"$GPRMC,112548.000,A,4428.4865,N,03405.7204,E,0.04,187.37,240707,,*06rn"
++"$GPRMC,113558.000,A,4429.4368,N,03405.7179,E,0.04,285.56,240707,,*0Ern"
++"$GPRMC,113601.000,A,4429.4366,N,03405.7180,E,0.12,173.11,240707,,*07rn"
++"$GPRMC,115112.000,A,4429.1539,N,03406.6134,E,0.19,116.88,240707,,*08rn"
++"$GPRMC,115114.000,A,4429.1541,N,03406.6133,E,0.04,314.35,240707,,*0Crn"
++"$GPRMC,134429.000,A,4425.2271,N,03352.7444,E,0.09,265.88,240707,,*01rn"
++"$GPRMC,141204.000,A,4424.2836,N,03348.7539,E,0.07,157.83,240707,,*05rn"
++"$GPRMC,141206.000,A,4424.2836,N,03348.7538,E,0.08,161.15,240707,,*03rn"
++};
++
++char *pvec = test_vector;
++
++/** simulate block IO */
++int readbuffer(char *buffer,int len)
++{
++    int i;
++    
++    if (*pvec == 0) {
++        // end of file
++        return -1;
++    }
++    
++    for(i=0;i<len;i++) {
++        /* quit when no more data */
++        if (*pvec == 0) {
++            break;
++        }
++        buffer[i] = *pvec++;
++    }
++    return i;
++}
++
++/** do something with the GGA data */
++static void print_gga(nmeap_gga_t *gga)
++{
++    printf("found GPGGA message %.6f %.6f %.0f %lu %d %d %f %fn",
++            gga->latitude  ,
++            gga->longitude, 
++            gga->altitude , 
++            gga->time     , 
++            gga->satellites,
++            gga->quality   ,
++            gga->hdop      ,
++            gga->geoid     
++            );
++}
++
++/** called when a gpgga message is received and parsed */
++static void gpgga_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_gga_t *gga = (nmeap_gga_t *)data;
++    
++    printf("-------------calloutn");
++    print_gga(gga);
++}
++
++
++/** do something with the RMC data */
++static void print_rmc(nmeap_rmc_t *rmc)
++{
++    printf("found GPRMC Message %lu %c %.6f %.6f %f %f %lu %fn",
++            rmc->time,
++            rmc->warn,
++            rmc->latitude,
++            rmc->longitude,
++            rmc->speed,
++            rmc->course,
++            rmc->date,
++            rmc->magvar
++            );
++}
++
++/** called when a gprmc message is received and parsed */
++static void gprmc_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_rmc_t *rmc = (nmeap_rmc_t *)data;
++    
++    printf("-------------calloutn");
++    print_rmc(rmc);
++}
++
++/* ---------------------------------------------------------------------------------------*/
++/* STEP 1 : allocate the data structures. be careful if you put them on the stack because */
++/*          they need to be live for the duration of the parser                           */
++/* ---------------------------------------------------------------------------------------*/
++static nmeap_context_t nmea;	   /* parser context */
++static nmeap_gga_t     gga;		   /* this is where the data from GGA messages will show up */
++static nmeap_rmc_t     rmc;		   /* this is where the data from RMC messages will show up */
++static int             user_data; /* user can pass in anything. typically it will be a pointer to some user data */
++
++int main(int argc,char *argv[])
++{
++    int  status;
++    int  rem;
++	int  offset;
++	int  len;
++	char buffer[32];
++    
++	/* ---------------------------------------*/
++	/*STEP 2 : initialize the nmea context    */                                                
++	/* ---------------------------------------*/
++    status = nmeap_init(&nmea,(void *)&user_data);
++    if (status != 0) {
++        printf("nmeap_init %dn",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 3 : add standard GPGGA parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPGGA",nmeap_gpgga,gpgga_callout,&gga);
++    if (status != 0) {
++        printf("nmeap_add %dn",status);
++        exit(1);
++    }
++
++	/* ---------------------------------------*/
++	/*STEP 4 : add standard GPRMC parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPRMC",nmeap_gprmc,gprmc_callout,&rmc);
++    if (status != 0) {
++        printf("nmeap_add %dn",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 5 : process input until done       */                                                
++	/* -------------------------------------- */
++    for(;;) {
++		/* ---------------------------------------*/
++		/*STEP 6 : get a buffer of input          */                                                
++		/* -------------------------------------- */
++        len = rem = readbuffer(buffer,sizeof(buffer));
++        if (len <= 0) {
++            break;
++        }
++        
++		/* ----------------------------------------------*/
++		/*STEP 7 : process input until buffer is used up */                                                
++		/* --------------------------------------------- */
++		offset = 0;
++        while(rem > 0) {
++			/* --------------------------------------- */
++			/*STEP 8 : pass it to the parser           */
++			/* status indicates whether a complete msg */
++			/* arrived for this byte                   */
++			/* NOTE : in addition to the return status */
++			/* the message callout will be fired when  */
++			/* a complete message is processed         */
++			/* --------------------------------------- */
++            status = nmeap_parseBuffer(&nmea,&buffer[offset],&rem);
++			offset += (len - rem); 
++            
++			/* ---------------------------------------*/
++			/*STEP 9 : process the return code        */                                                
++			/* -------------------------------------- */
++            switch(status) {
++            case NMEAP_GPGGA:
++                printf("-------------switchn");
++                print_gga(&gga);
++                printf("-------------n");
++                break;
++            case NMEAP_GPRMC:
++                printf("-------------switchn");
++                print_rmc(&rmc);
++                printf("-------------n");
++                break;
++            default:
++                break;
++            }
++        }
++    }
++    
++    return 0;
++}
++
+diff -urN nmeap-0.3z/tst/test2b.c nmeap-0.3z-new11/tst/test2b.c
+--- nmeap-0.3z/tst/test2b.c	1970-01-01 03:00:00.000000000 +0300
++++ nmeap-0.3z-new11/tst/test2b.c	2008-03-09 16:14:03.000000000 +0200
+@@ -0,0 +1,319 @@
++/*
++Copyright (c) 2005, David M Howard (daveh at dmh2000.com)
++All rights reserved.
++
++This product is licensed for use and distribution under the BSD Open Source License.
++see the file COPYING for more details.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
++AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
++IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
++ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
++LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
++OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
++OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
++OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
++WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
++OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
++EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
++
++*/
++
++/*
++========================================================================================================
++EXAMPLE : SETUP FOR GGA AND RMC SENTENCES WITH CHARACTER BY CHARACTER IO
++=======================================================================================================
++*/   
++
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include "nmeap.h"
++
++nmeap_gga_t g_gga;
++
++char test_vector[] = {
++"$GPRMC,074801.000,A,4424.0380,N,03357.1034,E,0.23,33.50,010807,,*3Arn"
++"$GPRMC,074829.000,A,4424.0376,N,03357.1034,E,0.92,189.51,010807,,*02rn"
++"$GPRMC,075411.000,A,4424.0052,N,03357.1453,E,0.09,5.51,010807,,*03rn"
++"$GPRMC,075421.000,A,4424.0050,N,03357.1452,E,0.06,194.28,010807,,*0Brn"
++"$GPRMC,075523.000,A,4423.9998,N,03357.1391,E,0.20,156.96,010807,,*0Crn"
++"$GPRMC,075539.000,A,4424.0016,N,03357.1391,E,0.10,16.71,010807,,*39rn"
++"$GPRMC,083740.000,A,4426.0877,N,03407.6977,E,0.06,26.76,010807,,*35rn"
++"$GPRMC,083958.000,A,4426.1194,N,03407.7390,E,0.06,63.35,010807,,*33rn"
++"$GPRMC,084005.000,A,4426.1198,N,03407.7387,E,0.14,140.59,010807,,*06rn"
++"$GPRMC,085202.000,A,4427.3333,N,03407.9190,E,1.84,236.00,010807,,*0Ern"
++"$GPRMC,085206.000,A,4427.3327,N,03407.9188,E,0.13,123.51,010807,,*0Arn"
++"$GPRMC,085225.000,A,4427.3425,N,03407.9387,E,0.30,355.32,010807,,*04rn"
++"$GPRMC,085228.000,A,4427.3441,N,03407.9379,E,0.34,353.01,010807,,*08rn"
++"$GPRMC,085236.000,A,4427.3467,N,03407.9367,E,0.26,357.99,010807,,*0Arn"
++"$GPRMC,085239.000,A,4427.3471,N,03407.9365,E,0.19,4.42,010807,,*0Frn"
++"$GPRMC,085644.000,A,4427.1077,N,03407.5705,E,0.09,21.53,010807,,*39rn"
++"$GPRMC,085657.000,A,4427.1078,N,03407.5702,E,0.06,41.37,010807,,*38rn"
++"$GPRMC,090856.000,A,4426.7777,N,03407.3435,E,0.17,16.78,010807,,*34rn"
++"$GPRMC,090909.000,A,4426.7780,N,03407.3429,E,0.04,57.66,010807,,*32rn"
++"$GPRMC,091557.000,A,4426.9116,N,03407.4559,E,0.55,153.81,010807,,*0Arn"
++"$GPRMC,091610.000,A,4426.9118,N,03407.4563,E,0.37,154.05,010807,,*02rn"
++"$GPRMC,092320.000,A,4426.8034,N,03407.3555,E,0.08,43.60,010807,,*33rn"
++"$GPRMC,092329.000,A,4426.8036,N,03407.3556,E,0.08,40.01,010807,,*3Frn"
++"$GPRMC,093926.000,A,4424.5429,N,03359.8476,E,0.07,27.87,010807,,*3Arn"
++"$GPRMC,093938.000,A,4424.5428,N,03359.8473,E,0.08,29.06,010807,,*39rn"
++"$GPRMC,094357.000,A,4424.5469,N,03359.8131,E,0.08,48.83,010807,,*31rn"
++"$GPRMC,094359.000,A,4424.5467,N,03359.8131,E,0.08,45.82,010807,,*3Drn"
++"$GPRMC,095234.000,A,4424.9676,N,03400.0036,E,0.07,18.27,010807,,*35rn"
++"$GPRMC,095246.000,A,4424.9676,N,03400.0034,E,0.07,13.68,010807,,*32rn"
++"$GPRMC,100233.000,A,4424.8662,N,03359.6120,E,0.16,279.21,020807,,*00rn"
++"$GPRMC,100247.000,A,4424.8663,N,03359.6114,E,0.04,2.60,020807,,*0Drn"
++"$GPRMC,101138.000,A,4424.6205,N,03356.9511,E,0.06,341.75,010807,,*0Drn"
++"$GPRMC,101146.000,A,4424.6204,N,03356.9512,E,0.06,344.56,010807,,*02rn"
++"$GPRMC,101244.000,A,4424.6091,N,03356.8042,E,0.06,23.69,010807,,*32rn"
++"$GPRMC,101253.000,A,4424.6091,N,03356.8045,E,0.04,56.25,010807,,*3Brn"
++"$GPRMC,102124.000,A,4424.5630,N,03356.0115,E,0.06,325.00,010807,,*0Brn"
++"$GPRMC,102136.000,A,4424.5629,N,03356.0024,E,0.40,285.50,010807,,*0Frn"
++"$GPRMC,102220.000,A,4424.5676,N,03355.9765,E,0.10,174.87,010807,,*0Brn"
++"$GPRMC,102229.000,A,4424.5673,N,03355.9766,E,0.13,176.40,010807,,*0Ern"
++"$GPRMC,102706.000,A,4424.5835,N,03355.9146,E,0.02,257.91,010807,,*02rn"
++"$GPRMC,102718.000,A,4424.5837,N,03355.9144,E,0.05,302.49,010807,,*0Ern"
++"$GPRMC,104121.000,A,4425.1562,N,03352.3723,E,0.06,175.43,010807,,*0Drn"
++"$GPRMC,104131.000,A,4425.1562,N,03352.3727,E,0.06,174.63,010807,,*0Brn"
++"$GPRMC,105641.000,A,4424.2888,N,03348.7610,E,0.07,293.57,010807,,*07rn"
++"$GPRMC,105651.000,A,4424.2890,N,03348.7613,E,0.08,304.58,010807,,*03rn"
++"$GPRMC,105821.000,A,4424.3512,N,03348.8767,E,0.06,294.83,010807,,*01rn"
++"$GPRMC,105832.000,A,4424.3511,N,03348.8764,E,0.07,300.21,010807,,*06rn"
++"$GPRMC,120929.000,A,4429.1791,N,03406.6335,E,0.73,174.57,010807,,*0Frn"
++"$GPRMC,120942.000,A,4429.1778,N,03406.6347,E,0.13,37.36,010807,,*37rn"
++"$GPRMC,121029.000,A,4429.1653,N,03406.6123,E,0.27,170.90,010807,,*03rn"
++"$GPRMC,121042.000,A,4429.1673,N,03406.6119,E,2.00,184.47,010807,,*03rn"
++"$GPRMC,123455.000,A,4428.2395,N,03404.9026,E,0.35,346.54,010807,,*06rn"
++"$GPRMC,123458.000,A,4428.2398,N,03404.9025,E,0.15,321.42,010807,,*01rn"
++"$GPRMC,125151.000,A,4427.9885,N,03403.9941,E,0.07,300.20,010807,,*00rn"
++"$GPRMC,125159.000,A,4427.9886,N,03403.9941,E,0.06,296.43,010807,,*01rn"
++"$GPRMC,125302.000,A,4428.0954,N,03404.0848,E,0.04,308.85,010807,,*0Drn"
++"$GPRMC,125312.000,A,4428.0952,N,03404.0846,E,0.06,302.75,010807,,*03rn"
++"$GPRMC,125914.000,A,4428.6220,N,03403.2719,E,0.01,258.82,010807,,*06rn"
++"$GPRMC,130405.000,A,4428.6534,N,03403.2142,E,0.03,268.24,010807,,*08rn"
++"$GPRMC,130417.000,A,4428.6538,N,03403.2135,E,1.90,308.94,010807,,*00rn"
++"$GPRMC,130559.000,A,4428.6804,N,03403.1654,E,0.03,162.04,010807,,*06rn"
++"$GPRMC,131802.000,A,4429.7033,N,03402.4049,E,0.07,171.70,010807,,*03rn"
++"$GPRMC,131812.000,A,4429.7032,N,03402.4051,E,0.06,162.72,010807,,*0Brn"
++"$GPRMC,132410.000,A,4429.8394,N,03401.0572,E,0.10,159.75,010807,,*0Drn"
++"$GPRMC,132421.000,A,4429.8392,N,03401.0574,E,0.14,157.42,010807,,*01rn"
++"$GPRMC,132628.000,A,4429.9927,N,03400.8696,E,0.14,335.06,010807,,*0Frn"
++"$GPRMC,132637.000,A,4429.9920,N,03400.8705,E,0.10,157.90,010807,,*00rn"
++"$GPRMC,133133.000,A,4429.4772,N,03359.5107,E,0.14,142.56,010807,,*0Ern"
++"$GPRMC,133137.000,A,4429.4775,N,03359.5104,E,0.03,184.04,010807,,*05rn"
++"$GPRMC,133143.000,A,4429.4791,N,03359.5088,E,0.06,163.87,010807,,*0Ern"
++"$GPRMC,133147.000,A,4429.4795,N,03359.5082,E,0.08,164.24,010807,,*04rn"
++"$GPRMC,134058.000,A,4430.4016,N,03359.2983,E,0.16,172.77,010807,,*09rn"
++"$GPRMC,134112.000,A,4430.4013,N,03359.2977,E,0.15,153.95,010807,,*04rn"
++"$GPRMC,135228.535,A,4430.8610,N,03359.6039,E,0.10,20.27,010807,,*3Brn"
++"$GPRMC,135231.535,A,4430.8612,N,03359.6037,E,0.12,34.38,010807,,*36rn"
++"$GPRMC,135851.000,A,4430.9927,N,03359.0491,E,0.20,144.70,010807,,*04rn"
++"$GPRMC,135901.000,A,4430.9931,N,03359.0493,E,0.13,141.93,010807,,*0Drn"
++"$GPRMC,140051.000,A,4431.0501,N,03359.0698,E,0.04,85.54,010807,,*39rn"
++"$GPRMC,140101.000,A,4431.0507,N,03359.0691,E,0.08,143.03,010807,,*07rn"
++"$GPRMC,150924.000,A,4432.6063,N,03357.6172,E,0.11,55.08,010807,,*3Crn"
++"$GPRMC,150936.000,A,4432.6066,N,03357.6171,E,0.10,48.38,010807,,*37rn"
++"$GPRMC,151233.000,A,4432.6985,N,03357.6437,E,0.10,35.99,010807,,*3Arn"
++"$GPRMC,151245.000,A,4432.6982,N,03357.6435,E,0.11,31.89,010807,,*3Arn"
++"$GPRMC,160020.000,A,4427.7347,N,03345.7867,E,0.07,65.82,010807,,*3Brn"
++"$GPRMC,160034.000,A,4427.7349,N,03345.7869,E,0.08,54.17,010807,,*3Frn"
++"$GPRMC,160959.000,A,4425.8946,N,03347.3054,E,0.21,81.55,010807,,*30rn"
++"$GPRMC,161006.000,A,4425.8948,N,03347.3051,E,0.06,64.45,010807,,*36rn"
++"$GPRMC,161257.000,A,4425.8881,N,03347.3495,E,0.08,78.67,010807,,*3Brn"
++"$GPRMC,161300.000,A,4425.8882,N,03347.3495,E,0.08,72.41,010807,,*35rn"
++"$GPRMC,163157.000,A,4425.8598,N,03347.3742,E,0.07,129.28,010807,,*07rn"
++"$GPRMC,163208.000,A,4425.8599,N,03347.3744,E,0.07,135.72,010807,,*0Brn"
++"$GPRMC,163701.000,A,4424.3747,N,03346.9037,E,0.07,145.09,010807,,*0Frn"
++"$GPRMC,163705.000,A,4424.3749,N,03346.9040,E,0.08,143.98,010807,,*04rn"
++"$GPRMC,163710.000,A,4424.3753,N,03346.9042,E,0.07,85.11,010807,,*3Crn"
++"$GPRMC,163713.000,A,4424.3755,N,03346.9044,E,0.08,85.83,010807,,*3Brn"
++"$GPRMC,164430.000,A,4424.3023,N,03347.3747,E,0.08,152.13,010807,,*05rn"
++"$GPRMC,164439.000,A,4424.3024,N,03347.3747,E,0.08,121.17,010807,,*0Brn"
++"$GPRMC,164846.000,A,4424.2658,N,03348.7400,E,0.08,114.28,010807,,*02rn"
++"$GPRMC,164856.000,A,4424.2657,N,03348.7398,E,0.11,120.99,010807,,*0Frn"
++"$GPRMC,170039.000,A,4425.2571,N,03351.5004,E,0.11,107.38,010807,,*0Frn"
++"$GPRMC,170049.000,A,4425.2570,N,03351.5003,E,0.10,107.22,010807,,*04rn"
++"$GPRMC,171309.000,A,4424.6470,N,03355.3705,E,0.09,102.43,010807,,*0Frn"
++"$GPRMC,171321.000,A,4424.6471,N,03355.3699,E,0.09,78.40,010807,,*3Frn"
++"$GPRMC,172347.000,A,4424.6464,N,03355.2407,E,0.09,85.94,010807,,*37rn"
++"$GPRMC,172351.000,A,4424.6465,N,03355.2410,E,0.93,69.80,010807,,*33rn"
++"$GPRMC,172359.000,A,4424.6502,N,03355.2424,E,1.44,130.58,010807,,*0Frn"
++"$GPRMC,172401.000,A,4424.6497,N,03355.2430,E,0.35,128.93,010807,,*04rn"
++"$GPRMC,172402.000,A,4424.6499,N,03355.2427,E,2.30,308.47,010807,,*01rn"
++"$GPRMC,172403.000,A,4424.6503,N,03355.2413,E,4.80,285.09,010807,,*06rn"
++"$GPRMC,172819.000,A,4424.6392,N,03355.4351,E,0.07,82.95,010807,,*33rn"
++"$GPRMC,172831.000,A,4424.6392,N,03355.4343,E,0.08,69.88,010807,,*3Crn"
++"$GPRMC,173110.000,A,4424.5553,N,03355.7951,E,0.08,88.43,010807,,*3Drn"
++"$GPRMC,173119.000,A,4424.5553,N,03355.7950,E,0.09,73.02,010807,,*35rn"
++"$GPRMC,173300.000,A,4424.5646,N,03355.9821,E,0.14,43.00,010807,,*3Crn"
++"$GPRMC,173311.000,A,4424.5645,N,03355.9817,E,0.07,126.79,010807,,*04rn"
++};
++
++char *pvec = test_vector;
++
++/** simulate block IO */
++int readbuffer(char *buffer,int len)
++{
++    int i;
++    
++    if (*pvec == 0) {
++        // end of file
++        return -1;
++    }
++    
++    for(i=0;i<len;i++) {
++        /* quit when no more data */
++        if (*pvec == 0) {
++            break;
++        }
++        buffer[i] = *pvec++;
++    }
++    return i;
++}
++
++/** do something with the GGA data */
++static void print_gga(nmeap_gga_t *gga)
++{
++    printf("found GPGGA message %.6f %.6f %.0f %lu %d %d %f %fn",
++            gga->latitude  ,
++            gga->longitude, 
++            gga->altitude , 
++            gga->time     , 
++            gga->satellites,
++            gga->quality   ,
++            gga->hdop      ,
++            gga->geoid     
++            );
++}
++
++/** called when a gpgga message is received and parsed */
++static void gpgga_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_gga_t *gga = (nmeap_gga_t *)data;
++    
++    printf("-------------calloutn");
++    print_gga(gga);
++}
++
++
++/** do something with the RMC data */
++static void print_rmc(nmeap_rmc_t *rmc)
++{
++    printf("found GPRMC Message %lu %c %.6f %.6f %f %f %lu %fn",
++            rmc->time,
++            rmc->warn,
++            rmc->latitude,
++            rmc->longitude,
++            rmc->speed,
++            rmc->course,
++            rmc->date,
++            rmc->magvar
++            );
++}
++
++/** called when a gprmc message is received and parsed */
++static void gprmc_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_rmc_t *rmc = (nmeap_rmc_t *)data;
++    
++    printf("-------------calloutn");
++    print_rmc(rmc);
++}
++
++/* ---------------------------------------------------------------------------------------*/
++/* STEP 1 : allocate the data structures. be careful if you put them on the stack because */
++/*          they need to be live for the duration of the parser                           */
++/* ---------------------------------------------------------------------------------------*/
++static nmeap_context_t nmea;	   /* parser context */
++static nmeap_gga_t     gga;		   /* this is where the data from GGA messages will show up */
++static nmeap_rmc_t     rmc;		   /* this is where the data from RMC messages will show up */
++static int             user_data; /* user can pass in anything. typically it will be a pointer to some user data */
++
++int main(int argc,char *argv[])
++{
++    int  status;
++    int  rem;
++	int  offset;
++	int  len;
++	char buffer[32];
++    
++	/* ---------------------------------------*/
++	/*STEP 2 : initialize the nmea context    */                                                
++	/* ---------------------------------------*/
++    status = nmeap_init(&nmea,(void *)&user_data);
++    if (status != 0) {
++        printf("nmeap_init %dn",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 3 : add standard GPGGA parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPGGA",nmeap_gpgga,gpgga_callout,&gga);
++    if (status != 0) {
++        printf("nmeap_add %dn",status);
++        exit(1);
++    }
++
++	/* ---------------------------------------*/
++	/*STEP 4 : add standard GPRMC parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPRMC",nmeap_gprmc,gprmc_callout,&rmc);
++    if (status != 0) {
++        printf("nmeap_add %dn",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 5 : process input until done       */                                                
++	/* -------------------------------------- */
++    for(;;) {
++		/* ---------------------------------------*/
++		/*STEP 6 : get a buffer of input          */                                                
++		/* -------------------------------------- */
++        len = rem = readbuffer(buffer,sizeof(buffer));
++        if (len <= 0) {
++            break;
++        }
++        
++		/* ----------------------------------------------*/
++		/*STEP 7 : process input until buffer is used up */                                                
++		/* --------------------------------------------- */
++		offset = 0;
++        while(rem > 0) {
++			/* --------------------------------------- */
++			/*STEP 8 : pass it to the parser           */
++			/* status indicates whether a complete msg */
++			/* arrived for this byte                   */
++			/* NOTE : in addition to the return status */
++			/* the message callout will be fired when  */
++			/* a complete message is processed         */
++			/* --------------------------------------- */
++            status = nmeap_parseBuffer(&nmea,&buffer[offset],&rem);
++			offset += (len - rem); 
++            
++			/* ---------------------------------------*/
++			/*STEP 9 : process the return code        */                                                
++			/* -------------------------------------- */
++            switch(status) {
++            case NMEAP_GPGGA:
++                printf("-------------switchn");
++                print_gga(&gga);
++                printf("-------------n");
++                break;
++            case NMEAP_GPRMC:
++                printf("-------------switchn");
++                print_rmc(&rmc);
++                printf("-------------n");
++                break;
++            default:
++                break;
++            }
++        }
++    }
++    
++    return 0;
++}
++
+diff -urN nmeap-0.3z/tst/test4.c nmeap-0.3z-new11/tst/test4.c
+--- nmeap-0.3z/tst/test4.c	2007-08-05 11:53:21.000000000 +0300
++++ nmeap-0.3z-new11/tst/test4.c	2008-03-09 16:31:40.000000000 +0200
+@@ -1,268 +1,389 @@
+-/*
+-Copyright (c) 2005, David M Howard (daveh at dmh2000.com)
+-All rights reserved.
+-
+-This product is licensed for use and distribution under the BSD Open Source License.
+-see the file COPYING for more details.
+-
+-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
+-AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
+-IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
+-ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
+-LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
+-OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
+-OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
+-OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
+-WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
+-OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
+-
+-*/
+-
+-/*
+-========================================================================================================
+-EXAMPLE : SETUP FOR GGA AND RMC SENTENCES WITH LINUX SERIAL IO
+-=======================================================================================================
+-*/   
+-
+-
+-#include <stdio.h>
+-#include <stdlib.h>
+-#include <string.h>
+-#include <unistd.h>
+-#include <sys/types.h>
+-#include <sys/stat.h>
+-#include <sys/ioctl.h>
+-#include <sys/io.h>
+-#include <fcntl.h>
+-#include <termios.h>
+-#include <string.h>
+-#include <errno.h>
+-
+-#include "nmeap.h"
+-
+-nmeap_gga_t g_gga;
+-
+-/** do something with the GGA data */
+-static void print_gga(nmeap_gga_t *gga)
+-{
+-    printf("found GPGGA message %.6f %.6f %.0f %lu %d %d %f %f\n",
+-            gga->latitude  ,
+-            gga->longitude, 
+-            gga->altitude , 
+-            gga->time     , 
+-            gga->satellites,
+-            gga->quality   ,
+-            gga->hdop      ,
+-            gga->geoid     
+-            );
+-}
+-
+-/** called when a gpgga message is received and parsed */
+-static void gpgga_callout(nmeap_context_t *context,void *data,void *user_data)
+-{
+-    nmeap_gga_t *gga = (nmeap_gga_t *)data;
+-    
+-    printf("-------------callout\n");
+-    print_gga(gga);
+-}
+-
+-
+-/** do something with the RMC data */
+-static void print_rmc(nmeap_rmc_t *rmc)
+-{
+-    printf("found GPRMC Message %lu %c %.6f %.6f %f %f %lu %f\n",
+-            rmc->time,
+-            rmc->warn,
+-            rmc->latitude,
+-            rmc->longitude,
+-            rmc->speed,
+-            rmc->course,
+-            rmc->date,
+-            rmc->magvar
+-            );
+-}
+-
+-/** called when a gprmc message is received and parsed */
+-static void gprmc_callout(nmeap_context_t *context,void *data,void *user_data)
+-{
+-    nmeap_rmc_t *rmc = (nmeap_rmc_t *)data;
+-    
+-    printf("-------------callout\n");
+-    print_rmc(rmc);
+-}
+-
+-
+-/*************************************************************************
+- * LINUX IO
+- */
+- 
+-/**
+- * open the specified serial port for read/write
+- * @return port file descriptor or -1
+- */
+-int openPort(const char *tty,int baud)
+-{
+-	int     status;
+-	int     fd;
+-	struct termios newtio;
+-    
+-    // open the tty
+-    fd = open(tty,O_RDWR | O_NOCTTY);
+-    if (fd < 0) {
+-        perror("open");
+-        return fd;
+-    }
+-
+-    // flush serial port
+-    status = tcflush(fd, TCIFLUSH);
+-    if (status < 0) {
+-        perror("tcflush");
+-        close(fd);
+-        return -1;
+-    }
+-    
+-    /* get current terminal state */
+-    tcgetattr(fd,&newtio);
+-
+-    // set to raw terminal type
+-    newtio.c_cflag = baud | CS8 | CLOCAL | CREAD;
+-    newtio.c_iflag = IGNBRK | IGNPAR;
+-    newtio.c_oflag = 0;    
+-    
+-    // control parameters
+-    newtio.c_cc[VMIN]     = 1;   // block for at least one charater 
+-    
+-    // set its new attrigutes
+-    status = tcsetattr(fd,TCSANOW,&newtio);
+-    if (status < 0) {
+-        perror("tcsetattr");
+-        close(fd);
+-        fd = -1;
+-        return fd;
+-    }
+-
+-	return fd;
+-}
+-
+-
+-/* ---------------------------------------------------------------------------------------*/
+-/* STEP 1 : allocate the data structures. be careful if you put them on the stack because */
+-/*          they need to be live for the duration of the parser                           */
+-/* ---------------------------------------------------------------------------------------*/
+-static nmeap_context_t nmea;	   /* parser context */
+-static nmeap_gga_t     gga;		   /* this is where the data from GGA messages will show up */
+-static nmeap_rmc_t     rmc;		   /* this is where the data from RMC messages will show up */
+-static int             user_data; /* user can pass in anything. typically it will be a pointer to some user data */
+-
+-int main(int argc,char *argv[])
+-{
+-    int  status;
+-    int  rem;
+-	int  offset;
+-	int  len;
+-	char buffer[32];
+-    int  fd;
+-    const char *port = "/dev/ttyS0";
+-    
+-    // default to ttyS0 or invoke with 'linux_nmeap <other serial device>' 
+-    if (argc == 2) {
+-        port = argv[1];
+-    }
+-    
+-    /* --------------------------------------- */
+-    /* open the serial port device             */
+-    /* using default 4800 baud for most GPS    */
+-    /* --------------------------------------- */
+-    fd = openPort(port,B4800);
+-    if (fd < 0) {
+-        /* open failed */
+-        printf("openPort %d\n",fd);
+-        return fd;
+-    }
+-    
+-	/* ---------------------------------------*/
+-	/*STEP 2 : initialize the nmea context    */                                                
+-	/* ---------------------------------------*/
+-    status = nmeap_init(&nmea,(void *)&user_data);
+-    if (status != 0) {
+-        printf("nmeap_init %d\n",status);
+-        exit(1);
+-    }
+-    
+-	/* ---------------------------------------*/
+-	/*STEP 3 : add standard GPGGA parser      */                                                
+-	/* -------------------------------------- */
+-    status = nmeap_addParser(&nmea,"GPGGA",nmeap_gpgga,gpgga_callout,&gga);
+-    if (status != 0) {
+-        printf("nmeap_add %d\n",status);
+-        exit(1);
+-    }
+-
+-	/* ---------------------------------------*/
+-	/*STEP 4 : add standard GPRMC parser      */                                                
+-	/* -------------------------------------- */
+-    status = nmeap_addParser(&nmea,"GPRMC",nmeap_gprmc,gprmc_callout,&rmc);
+-    if (status != 0) {
+-        printf("nmeap_add %d\n",status);
+-        exit(1);
+-    }
+-    
+-	/* ---------------------------------------*/
+-	/*STEP 5 : process input until done       */                                                
+-	/* -------------------------------------- */
+-    for(;;) {
+-		/* ---------------------------------------*/
+-		/*STEP 6 : get a buffer of input          */                                                
+-		/* -------------------------------------- */
+-        len = rem = read(fd,buffer,sizeof(buffer));
+-        if (len <= 0) {
+-            perror("read");
+-            break;
+-        }
+-        
+-        
+-		/* ----------------------------------------------*/
+-		/*STEP 7 : process input until buffer is used up */                                                
+-		/* --------------------------------------------- */
+-		offset = 0;
+-        while(rem > 0) {
+-			/* --------------------------------------- */
+-			/*STEP 8 : pass it to the parser           */
+-			/* status indicates whether a complete msg */
+-			/* arrived for this byte                   */
+-			/* NOTE : in addition to the return status */
+-			/* the message callout will be fired when  */
+-			/* a complete message is processed         */
+-			/* --------------------------------------- */
+-            status = nmeap_parseBuffer(&nmea,&buffer[offset],&rem);
+-			offset += (len - rem); 
+-            
+-			/* ---------------------------------------*/
+-			/*STEP 9 : process the return code        */
+-            /* DON"T NEED THIS IF USING CALLOUTS      */
+-            /* PICK ONE OR THE OTHER                  */
+-			/* -------------------------------------- */
+-            switch(status) {
+-            case NMEAP_GPGGA:
+-                printf("-------------switch\n");
+-                print_gga(&gga);
+-                printf("-------------\n");
+-                break;
+-            case NMEAP_GPRMC:
+-                printf("-------------switch\n");
+-                print_rmc(&rmc);
+-                printf("-------------\n");
+-                break;
+-            default:
+-                break;
+-            }
+-        }
+-    }
+-    
+-    /* close the serial port */
+-    close(fd);
+-    
+-    return 0;
+-}
+-
++/*
++Copyright (c) 2005, David M Howard (daveh at dmh2000.com)
++All rights reserved.
++
++This product is licensed for use and distribution under the BSD Open Source License.
++see the file COPYING for more details.
++
++THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" 
++AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE 
++IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE 
++ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE 
++LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, 
++OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT 
++OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; 
++OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, 
++WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE 
++OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
++EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
++
++*/
++
++/*
++========================================================================================================
++EXAMPLE : SETUP FOR GGA AND RMC SENTENCES WITH LINUX SERIAL IO
++=======================================================================================================
++*/   
++
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <string.h>
++#include <unistd.h>
++#include <sys/types.h>
++#include <sys/stat.h>
++#include <sys/ioctl.h>
++#include <sys/file.h>
++#include <sys/io.h>
++#include <fcntl.h>
++#include <termios.h>
++#include <string.h>
++#include <errno.h>
++
++#include "nmeap.h"
++
++#define FLOCK(f) {if(flock(fileno(f), LOCK_EX)) { perror("flock"); }; };
++#define FUNLOCK(f) flock(fileno(f), LOCK_UN);
++
++double        mylat;
++double        mylon;
++double        myalt;
++unsigned long mytim;
++double        myspd;
++double        mycur;
++unsigned long mydat;
++
++nmeap_gga_t g_gga;
++
++/** do something with the GGA data */
++static void print_gga(nmeap_gga_t *gga)
++{
++    printf("found GPGGA message %.6f %.6f %.0f %lu %d %d %f %f\n",
++            gga->latitude  ,
++            gga->longitude, 
++            gga->altitude , 
++            gga->time     , 
++            gga->satellites,
++            gga->quality   ,
++            gga->hdop      ,
++            gga->geoid     
++            );
++            myalt = gga->altitude;
++}
++
++/** called when a gpgga message is received and parsed */
++static void gpgga_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_gga_t *gga = (nmeap_gga_t *)data;
++    
++    printf("-------------callout\n");
++    print_gga(gga);
++}
++
++
++/** do something with the RMC data */
++static void print_rmc(nmeap_rmc_t *rmc)
++{
++    printf("found GPRMC Message %lu %c %.6f %.6f %f %f %lu %f\n",
++            rmc->time,
++            rmc->warn,
++            rmc->latitude,
++            rmc->longitude,
++            rmc->speed,
++            rmc->course,
++            rmc->date,
++            rmc->magvar
++            );
++            mytim = rmc->time;
++            mylat = rmc->latitude;
++            mylon = rmc->longitude;
++            myspd = rmc->speed;
++            mycur = rmc->course;
++            mydat = rmc->date;
++}
++
++/** called when a gprmc message is received and parsed */
++static void gprmc_callout(nmeap_context_t *context,void *data,void *user_data)
++{
++    nmeap_rmc_t *rmc = (nmeap_rmc_t *)data;
++    
++    printf("-------------callout\n");
++    print_rmc(rmc);
++}
++
++
++/*************************************************************************
++ * LINUX IO
++ */
++ 
++/**
++ * open the specified serial port for read/write
++ * @return port file descriptor or -1
++ */
++int openPort(const char *tty,int baud)
++{
++    int fd;
++    struct termios newtio;
++
++    fd = open(tty,O_RDWR);
++    if(fd < 0) {
++		fprintf(stderr,"*** open %s: %s\n",tty,strerror(errno));
++		exit(-1);
++    }
++
++    bzero(&newtio, sizeof(newtio));
++    cfsetospeed(&newtio, baud);
++
++    newtio.c_cflag |= CS8;
++    newtio.c_cflag |= CLOCAL;     // keine Auswirkung
++    newtio.c_cflag |= CREAD;      // reversible Blockerung bei Entfall
++      
++    newtio.c_cflag &= ~CRTSCTS;   /* no output hardware flow control */
++    newtio.c_cflag &= ~PARENB;    /* no parity */
++    newtio.c_cflag &= ~CSTOPB;    /* no stopbit */
++	    
++    newtio.c_iflag = IGNPAR;      /* ignore input parity */
++    newtio.c_lflag = 0;           /* turn all off (non-canonocal, non-echo) */
++    newtio.c_oflag = 0;           /* turn all off */
++
++    newtio.c_cc[VTIME] = 20;      /* timeout in 1/10 sec */
++    newtio.c_cc[VMIN] = 0;        /* minimum characters to read */
++    
++    tcflush(fd,TCIFLUSH);
++    tcsetattr(fd,TCSANOW,&newtio);
++	return fd;
++}
++
++
++/* ---------------------------------------------------------------------------------------*/
++/* STEP 1 : allocate the data structures. be careful if you put them on the stack because */
++/*          they need to be live for the duration of the parser                           */
++/* ---------------------------------------------------------------------------------------*/
++static nmeap_context_t nmea;	   /* parser context */
++static nmeap_gga_t     gga;		   /* this is where the data from GGA messages will show up */
++static nmeap_rmc_t     rmc;		   /* this is where the data from RMC messages will show up */
++static int             user_data; /* user can pass in anything. typically it will be a pointer to some user data */
++
++static char *config = NULL;
++static int config_size=0;
++
++void readconf(int argc, char* argv[])
++{
++	char default_filename[]="/etc/navigation/nmeap2kml.cfg";
++	char *filename = default_filename;
++	int i;
++	if ( argc >= 2 ) {
++		for ( i = 0; i < argc-1; i++)
++			if ( strcmp("-c", argv[i] ) == 0 )
++				filename = argv[i+1];
++	}
++
++	fprintf(stderr, "reading config from %s \n", filename);
++
++	FILE *f = fopen(filename, "r");
++	if ( f ) {
++		config = malloc(32*1024);
++		if ( !config ) {
++			perror("malloc");
++			exit(1);
++		}
++		config_size = fread(config, 1, 32*1024-1, f);
++		config[config_size]='\0';
++		fprintf(stderr, "readed %d bytes:\n%s\n", config_size, config); 
++		fclose(f);
++		for (i=0; i < config_size; i++)
++			if (config[i] == '\n')
++				config[i] = '\0';
++	} else {
++		perror("connot open config");
++		exit(1);
++	}
++}
++
++char* getparam(const char* name)
++{
++	char lname[256];
++	char *result = NULL;
++	char *pstr = config;
++	snprintf(lname, sizeof(lname), "%s=", name);
++	while( pstr < config+config_size ) {
++		if ( pstr[0] == '\0' ) {
++			pstr++;
++			continue;
++		}
++		if ( 0 == strncmp(lname, pstr, strlen(lname)) ) {
++			result = pstr+strlen(lname);
++			return result;
++		} else {
++			pstr+=strlen(pstr);
++		};
++	}
++	fprintf(stderr, "Cannot find variable '%s' at config file\n", name);
++	exit(1);
++	return NULL; // dumb
++}
++
++int main(int argc,char *argv[])
++{
++    int  status;
++    int  rem;
++	int  offset;
++	int  len;
++	char buffer[32];
++    int  fd;
++    const char *port = "/dev/ttyS1";
++	FILE *f;
++    
++    // default to ttyS1 or invoke with 'linux_nmeap <other serial device>' 
++    if (argc == 2) {
++        port = argv[1];
++    }
++    
++	readconf(argc, argv);
++
++
++    /* --------------------------------------- */
++    /* open the serial port device             */
++    /* using default 9600 baud for most GPS    */
++    /* --------------------------------------- */
++    fd = openPort(getparam("gps_port"), atoi(getparam("baudrate")));
++    if (fd < 0) {
++        /* open failed */
++        printf("openPort %d\n",fd);
++        return fd;
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 2 : initialize the nmea context    */                                                
++	/* ---------------------------------------*/
++    status = nmeap_init(&nmea,(void *)&user_data);
++    if (status != 0) {
++        printf("nmeap_init %d\n",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 3 : add standard GPGGA parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPGGA",nmeap_gpgga,gpgga_callout,&gga);
++    if (status != 0) {
++        printf("nmeap_add %d\n",status);
++        exit(1);
++    }
++
++	/* ---------------------------------------*/
++	/*STEP 4 : add standard GPRMC parser      */                                                
++	/* -------------------------------------- */
++    status = nmeap_addParser(&nmea,"GPRMC",nmeap_gprmc,gprmc_callout,&rmc);
++    if (status != 0) {
++        printf("nmeap_add %d\n",status);
++        exit(1);
++    }
++    
++	/* ---------------------------------------*/
++	/*STEP 5 : process input until done       */                                                
++	/* -------------------------------------- */
++    for(;;) {
++		/* ---------------------------------------*/
++		/*STEP 6 : get a buffer of input          */                                                
++		/* -------------------------------------- */
++        len = rem = read(fd,buffer,sizeof(buffer));
++        if (len <= 0) {
++            perror("read");
++            break;
++        }
++        
++        
++		/* ----------------------------------------------*/
++		/*STEP 7 : process input until buffer is used up */                                                
++		/* --------------------------------------------- */
++		offset = 0;
++        while(rem > 0) {
++			/* --------------------------------------- */
++			/*STEP 8 : pass it to the parser           */
++			/* status indicates whether a complete msg */
++			/* arrived for this byte                   */
++			/* NOTE : in addition to the return status */
++			/* the message callout will be fired when  */
++			/* a complete message is processed         */
++			/* --------------------------------------- */
++            status = nmeap_parseBuffer(&nmea,&buffer[offset],&rem);
++			offset += (len - rem); 
++            
++			/* ---------------------------------------*/
++			/*STEP 9 : process the return code        */
++            /* DON"T NEED THIS IF USING CALLOUTS      */
++            /* PICK ONE OR THE OTHER                  */
++			/* -------------------------------------- */
++            switch(status) {
++            case NMEAP_GPGGA:
++                printf("-------------switch\n");
++                print_gga(&gga);
++                printf("-------------\n");
++                break;
++            case NMEAP_GPRMC:
++                printf("-------------switch\n");
++                print_rmc(&rmc);
++                printf("-------------\n");
++                break;
++            default:
++                break;
++            }
++
++	if (!(f=fopen(getparam("kml_file"), "w"))) {
++		perror("fopen");
++		exit(1);
++	};
++	FLOCK(f);
++	fprintf(f, 
++"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"\
++"<kml xmlns=\"http://earth.google.com/kml/2.2\">\n"\
++"<Document>\n"\
++"<name>location.kml</name>\n"\
++"   <Style id=\"location\">\n"\
++"      <IconStyle>\n"\
++"         <color>%s</color>\n"\
++"         <scale>%s</scale>\n"\
++"         <Icon>\n"\
++"            <href>%s</href>\n"\
++"         </Icon>\n"\
++"      </IconStyle>\n"\
++"      <LabelStyle>\n"\
++"         <color>%s</color>\n"\
++"         <scale>%s</scale>\n"\
++"      </LabelStyle>\n"\
++"      <ListStyle>\n"\
++"      </ListStyle>\n"\
++"   </Style>\n"\
++"   <Placemark>\n"\
++"      <name>%s</name>\n"\
++"      <LookAt>\n"\
++"         <longitude>%.6f</longitude>\n"\
++"         <latitude>%.6f</latitude>\n"\
++"         <altitude>%.0f</altitude>\n"\
++"         <range>%s</range>\n"\
++"         <tilt>%s</tilt>\n"\
++"         <heading>%s</heading>\n"\
++"      </LookAt>\n"\
++"      <styleUrl>#location</styleUrl>\n"\
++"      <description>Date: %.6lu \n"\
++"                   Time: %.6lu \n"\
++"		    Speed: %.1f</description>\n"\
++"      <Point>\n"\
++"         <coordinates>%.6f,%.6f,%.0f</coordinates>\n"\
++"      </Point>\n"\
++"   </Placemark>\n"\
++"</Document>\n"\
++"</kml>\n" , getparam("icon_color"), getparam("icon_scale"), getparam("icon_normal"), getparam("label_color"), getparam("label_scale"), getparam("object_name"), mylon, mylat, myalt, getparam("look_range"), getparam("look_tilt"), getparam("look_heading"), mydat, mytim, myspd, mylon, mylat, myalt);
++	fflush(f);
++	FUNLOCK(f);
++	fclose(f);
++		}
++    }
++    
++    /* close the serial port */
++    close(fd);
++    
++    return 0;
++}
++

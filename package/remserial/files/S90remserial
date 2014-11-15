@@ -1,0 +1,29 @@
+#!/bin/sh 
+
+exit 0
+
+NAME=remserial
+PROG=/usr/sbin/$NAME
+
+case "$1" in
+start)
+	$PROG -d \
+	    -x 2 \
+	    -r 192.168.1.254 \
+	    -p 87 \
+	    -s "4800 raw" \
+	    /dev/ptyp9 \
+	    &
+	;;
+stop)
+	killall $NAME
+        ;;
+*)
+	echo "Usage: $0 {start|stop}" >&2
+        exit 1
+        ;;
+esac
+                                          
+exit $?
+                                          
+

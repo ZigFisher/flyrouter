@@ -1,0 +1,12 @@
+config BR2_PACKAGE_SIGRAND_MR16H
+	prompt "sg16lan ................. Sigrand MR16H SHDSL module driver"
+	tristate
+	default y if CONFIG_DEVEL
+	depends on BR2_LINUX_2_6_SIGRAND5120
+
+config BR2_PACKAGE_SIGRAND_MR16H_LINKMAP
+	prompt "sg16lan-linkmap ......... Sigrand MR16H dsl <--> eth mapping"
+	bool
+	default n
+	depends on BR2_LINUX_2_6_SIGRAND5120
+	depends on (BR2_PACKAGE_SIGRAND_MR16H && BR2_PACKAGE_SIGRAND_ADM5120SW_LINKCTRL)

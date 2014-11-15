@@ -1,0 +1,8 @@
+config BR2_PACKAGE_GMOV-SNMP
+	prompt "gmov-snmp......................... A lightweight SNMP daemon"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  A lightweight SNMP daemon.
+	  
+	  http://gmov-snmp.sourceforge.net/

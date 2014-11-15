@@ -1,0 +1,5 @@
+Package: dnrd
+Priority: optional
+Section: net
+Depends: libpthread
+Description: Domain Name Relay Daemon

@@ -1,0 +1,13 @@
+--- sgauth-2/Makefile	2008-03-27 21:23:48.000000000 +0200
++++ sgauth-2/Makefile_new	2008-03-27 21:25:25.000000000 +0200
+@@ -5,8 +5,9 @@
+ all:	sgauth
+ 
+ sgauth: main.o blowfish.o common.o web.o proto_unit.o
+-	$(CC) -o sgauth $(STAGING_DIR)/lib/libpthread.so $(STAGING_DIR)/lib/libstdc++.so main.o blowfish.o common.o proto_unit.o web.o
++#	$(CC) -o sgauth $(STAGING_DIR)/lib/libpthread.so $(STAGING_DIR)/lib/libstdc++.so main.o blowfish.o common.o proto_unit.o web.o
+ #	$(CC) -o sgauth /lib/libpthread.so.0 main.o blowfish.o common.o proto_unit.o web.o
++	$(CC) -o sgauth $(STAGING_DIR)/lib/libpthread.so $(STAGING_DIR)/lib/libuClibc++.so main.o blowfish.o common.o proto_unit.o web.o
+ 
+ main.o: main.cpp
+ 	$(CC) -c $(flags) -o main.o main.cpp

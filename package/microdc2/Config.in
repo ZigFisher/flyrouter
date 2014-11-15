@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MICRODC2
+	prompt "microdc2.......................... Is a command-line based Direct Connect client"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Is a command-line based Direct Connect client
+	  
+	  http://corsair626.no-ip.org/microdc/

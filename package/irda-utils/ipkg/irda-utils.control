@@ -1,0 +1,5 @@
+Package: irda-utils
+Priority: optional
+Section: net
+Description: IRDA utils
+#Depends: kmod-irda

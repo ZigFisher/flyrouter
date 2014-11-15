@@ -1,0 +1,12 @@
+config BR2_PACKAGE_SREDIRD
+	prompt "sredird........................... serial port internet server."
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  This program when run through inetd will use the RFC 2217
+	  extensions to TELNET to implement serial commands over the
+	  TCP connection and interface to a specified serial port.
+	  
+	  http://www.ibiblio.org/pub/Linux/system/serial/
+	  http://www.hamradio.crimea.ua/downloads/linux/source/
+

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+msg "Initializing sysctl..."
+echo "0 0 0 0 1 100" >/proc/sys/vm/bdflush
+echo "4 1 1 7" >/proc/sys/kernel/printk
+#echo "8 4 1 7" >/proc/sys/kernel/printk
+echo 1024 >/proc/sys/fs/file-max
+echo 1 >/proc/sys/net/ipv4/ip_forward
+echo 1 >/proc/sys/net/ipv4/conf/all/rp_filter
+echo 1 >/proc/sys/net/ipv4/conf/all/arp_ignore
+#echo 12000 > /proc/sys/net/ipv4/ip_conntrack_max
+#
+#echo 0:0 > /proc/sys/net/adm5120sw/speed
+#echo 0:0 > /proc/sys/net/adm5120sw/duplex
+#echo 0:0 > /proc/sys/net/adm5120sw/autonegotiation

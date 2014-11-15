@@ -1,0 +1,10 @@
+--- fuse-2.4.2/kernel/dev.c.org	2005-11-22 22:30:59.000000000 +0100
++++ fuse-2.4.2/kernel/dev.c	2007-01-09 16:32:20.000000000 +0100
+@@ -517,6 +517,7 @@
+ {
+ 	unsigned ncpy = min(*size, cs->len);
+ 	if (val) {
++		flush_cache_all();
+ 		if (cs->write)
+ 			memcpy(cs->buf, *val, ncpy);
+ 		else

@@ -1,0 +1,11 @@
+--- cln-0.1/config.h	2008-02-15 12:26:19.000000000 +0200
++++ cln-0.1/config_new.h	2008-02-15 12:23:25.000000000 +0200
+@@ -24,7 +24,7 @@
+ //#define SPORT 5002
+ #define TIMEOUT 30
+ 
+-#define CONFFILE ".conf"
++#define CONFFILE "/etc/cln.conf"
+ 
+ #define LOG_LEVEL 2
+ 

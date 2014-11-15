@@ -1,0 +1,4 @@
+*.o
+vlhttp
+*.swp
+tags

@@ -1,0 +1,5 @@
+Package: aprsdigi
+Section: hamradio
+Priority: optional
+Description: aprsdigi - APRS(tm) digipeater
+Depends: libax25, kissattach

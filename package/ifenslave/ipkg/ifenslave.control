@@ -1,0 +1,4 @@
+Package: ifenslave
+Priority: optional
+Section: net
+Description: Configure network interfaces for parallel routing

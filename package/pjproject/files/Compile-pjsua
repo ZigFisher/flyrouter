@@ -1,0 +1,21 @@
+#!/bin/sh
+#
+PATH=/home/builder/trunk/staging_dir_mipsel/usr/bin:/home/builder/trunk/staging_dir_mipsel/bin:/bin:/sbin:/usr/bin:/usr/sbin AR=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-ar AS=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-as LD=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-ld NM=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-nm CC=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-gcc GCC=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-gcc CXX=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-g++ RANLIB=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-ranlib
+VERSION=1.8.5
+
+#clear
+#wget -c http://www.pjsip.org/release/$VERSION/pjproject-$VERSION.tar.bz2
+#rm -rf pjproject-$VERSION
+#tar -xvjf pjproject-$VERSION.tar.bz2
+#cd pjproject-$VERSION
+#
+#./configure --target=mipsel-linux --host=mipsel-linux --build=i386-pc-linux-gnu \
+#--disable-ilbc-codec --disable-speex-aec --disable-speex-codec --disable-ssl \
+#--disable-l16-codec --disable-g722-codec --disable-g7221-codec --disable-ipp
+#
+#make dep
+#make
+#
+/home/builder/trunk/staging_dir_mipsel/bin/sstrip pjsip-apps/bin/pjsua-mipsel-unknown-linux-gnu
+scp pjsip-apps/bin/pjsua-mipsel-unknown-linux-gnu root@172.28.200.74:/tmp/pj
+scp ~/trunk/package/pjproject/files/disp ~/trunk/package/pjproject/files/pjsua.cfg root@172.28.200.74:/tmp

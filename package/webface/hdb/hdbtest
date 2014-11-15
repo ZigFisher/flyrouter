@@ -1,0 +1,225 @@
+#!/bin/sh
+
+# Test suite for hdb
+
+export HDB=${hdb:-/tmp/hdbtest}
+hdb=${hdb:-/tmp/hdb}
+
+t(){
+	local name=$1
+	if $@ ; then
+		echo $name ok
+	else
+		echo $name fail
+		exit 1
+	fi
+}
+
+rand(){
+	for i in `seq 0 20`; do $hdb set sys_name_$RANDOM=value_$i ; done
+}
+
+create(){
+	$hdb create $hdb
+	[ -r $hdb ] || return 1
+}
+
+_set(){
+	$hdb set name1=value1 : set name2=value2 : set name3=value3
+	eval `$hdb ls '*'`
+	[ $name1 = value1 ] || return 1
+	[ $name2 = value2 ] || return 1
+	[ $name3 = value3 ] || return 1
+	export exporttest="qwerty qwerty"
+	$hdb set exporttest=%ENV
+	unset exporttest
+	eval `$hdb -qq ls '*'`
+	[ "$exporttest" = "qwerty qwerty" ] || return 1
+	unset exporttest
+	$hdb rm exporttest
+	$hdb set exporttest="%ENV"
+	[ "`$hdb ls exporttest=*`" = "" ] || return 1
+}
+
+list(){
+	$hdb create $hdb
+	$hdb set sys_name1=value1 : set sys_name2=value2 : set sys_name3=value3
+	eval `$hdb ls sys_name*`
+	[ $sys_name1 = value1 ] || return 1
+	[ $sys_name3 = value3 ] || return 1
+	[ "`$hdb ls sys_*`" = "sys_name1=value1
+sys_name2=value2
+sys_name3=value3" ] || return 1
+	[ `$hdb ls sys_na*1` = 'sys_name1=value1' ] || return 1
+}
+
+kls(){
+	$hdb create $hdb
+	$hdb set keyname1=value1
+	[ `$hdb kls keyname1` = 'keyname1' ] || return 1
+	$hdb set name1=value1
+	$hdb set name2=value2
+	$hdb set name3=value3
+	[ "`$hdb kls name*`" = "name1
+name2
+name3" ] || return 1
+}
+
+get(){
+	$hdb create $hdb
+	$hdb set name=value
+	[ "`$hdb get name`" = value ] || return 1
+	$hdb set name1=value1 : set name2=value2
+	[ "`$hdb get name*`" = "value
+value1
+value2" ] || return 1
+}
+
+isset(){
+	local name="name${RANDOM}"
+	$hdb set $name=value
+	$hdb isset $name || return 1
+	$hdb isset nonexist && return 1
+	true
+}
+
+_rm(){
+	rand
+	$hdb set delme=value
+	$hdb rm delme || return 1
+	[ "`$hdb ls delme`" = "" ] || return 1
+	$hdb rm '*' || return 1
+	[ "`$hdb ls `" = "" ] || return 1
+}
+
+sls(){
+	$hdb create $hdb
+	$hdb set sys_name1=value1
+	[ `$hdb sls sys_` = 'name1=value1' ] || return 1
+}
+
+lrm(){
+	$hdb create $hdb
+	for i in `seq 0 10`; do $hdb set sys_name_$i=value_$i ; done
+	$hdb lrm sys_name_5
+	[ "`$hdb ls sys_name_5`" = 'sys_name_5=value_6' ] || return 1
+	[ "`$hdb ls sys_name_9`" = 'sys_name_9=value_10' ] || return 1
+	[ "`$hdb ls sys_name_10`" = '' ] || return 1
+}
+
+ladd(){
+	$hdb create $hdb
+	for i in `seq 0 10`; do $hdb set sys_name_$i=value_$i ; done
+	$hdb ladd sys_name_=value_11
+	[ "`$hdb ls sys_name_5`" = 'sys_name_5=value_5' ] || return 1
+	[ "`$hdb ls sys_name_11`" = 'sys_name_11=value_11' ] || return 1
+	eval "`$hdb -c ls sys_name_*`"
+	[ "$sys_name_11" = 'value_11' ] || return 1
+	[ "$hdb_lines_count" = '12' ] || return 1
+	export sys_name_=value_12
+	$hdb ladd sys_name_=%ENV
+	eval "`$hdb -c ls sys_name_*`"
+	[ "$sys_name_12" = 'value_12' ] || return 1
+	[ "$hdb_lines_count" = '13' ] || return 1
+}
+
+import(){
+	$hdb create $hdb
+	cat <<END | $hdb import
+hdb
+name1=value1
+name2=value2
+name3=value3
+hdb END
+END
+	[ "`$hdb ls name2`" = 'name2=value2' ] || return 1
+}
+
+_rename(){
+	$hdb create $hdb
+	$hdb set name1=value1 : set name2=value2 : set name3=value3
+	$hdb rename name1 name2
+	[ "`$hdb ls name2`" = "name2=value1" ] || return 1
+	[ "`$hdb ls name1`" = "" ] || return 1
+}
+	
+
+hdbdefault(){
+	tmp1=`tempfile`
+	tmp2=`tempfile`
+	[ -r files/etc/hdb.default ] || return 0
+	cp files/etc/hdb.default $hdb 
+	$hdb export >$tmp1
+	$hdb set sys_iface_eth0_mac=00:01:02:03:04:05
+	[ "`$hdb ls sys_iface_eth0_mac`" = "sys_iface_eth0_mac=00:01:02:03:04:05" ] || return 1
+	$hdb rm "sys_iface_eth0_mac*"
+	$hdb export >$tmp2
+
+	s1=`md5sum $tmp1 | cut -f1 -d" "`
+	s2=`md5sum $tmp2 | cut -f1 -d" "`
+
+	rm $tmp1
+	rm $tmp2
+
+	[ "$s1" = "$s2" ] || return 1
+	true
+}
+
+stress() {
+	tmp1=`tempfile`
+	tmp2=`tempfile`
+	for i in `seq 0 200`; do $hdb set sys_name1_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	for i in `seq 0 200`; do $hdb set sys_name2_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	$hdb rm "sys_name2_*"
+	for i in `seq 0 200`; do $hdb set sys_name3_${RANDOM}_${RANDOM}=value_${RANDOM} ; done
+	local str=$(for i in $(seq 0 $(($RANDOM%50))); do echo " : set sys_name4_${i}=value_${RANDOM} "; done)
+	$hdb $str
+	$hdb ls >$tmp1
+	str=""
+	for i in `seq 0 50`; do
+		for i in $(seq 0 $(($RANDOM%100))); do 
+			str="$str : set sys_name5_${i}_$RANDOM=value_${RANDOM} "; 
+		done
+		$hdb $str
+	done
+	for i in `seq 0 100`; do $hdb set `echo $RANDOM| md5sum | cut -f1 -d" "`=`echo $RANDOM| md5sum | cut -f1 -d" "`; done
+	for a in 0 1 2 3 4 5 6 7 8 9 a b c d e f; do $hdb rm "$a*"; done
+	$hdb rm "sys_name5_*"
+	$hdb ls >$tmp2
+
+	s1=`md5sum $tmp1 | cut -f1 -d" "`
+	s2=`md5sum $tmp2 | cut -f1 -d" "`
+
+	rm $tmp1
+	rm $tmp2
+
+	[ "$s1" = "$s2" ] || return 1
+	true
+}
+
+gcp() {
+	$hdb gcp
+
+
+}
+
+[ ! -x $hdb -a -x "`which hdb`" ] && hdb=`which hdb`
+[ -x $hdb ] || { echo "$hdb not found"; exit 1; }
+
+t create
+#t gcp
+
+#t _set 
+#t list 
+#t kls 
+#t get 
+#t isset
+#t _rm 
+#t sls 
+#t lrm
+#t ladd
+#t import
+#t _rename
+#t hdbdefault
+#t stress
+

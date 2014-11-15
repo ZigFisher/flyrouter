@@ -1,0 +1,24 @@
+diff -ur thelinkbox-0.45/spandsp/dtmf.c standsm.my/dtmf.c
+--- thelinkbox-0.45/spandsp/dtmf.c	2007-04-08 01:27:59.000000000 +0300
++++ thelinkbox-0.45/spandsm.my/dtmf.c	2009-12-23 16:19:03.000000000 +0200
+@@ -343,7 +343,7 @@
+                     /* Avoid reporting multiple no digit conditions on flaky hits */
+                     if (s->in_digit  ||  hit)
+                     {
+-                        i = (s->in_digit  &&  !hit)  ?  -99  :  rint(log10f(s->energy)*10.0f - 20.08f - 90.30F + DBM0_MAX_POWER);
++                        i = (s->in_digit  &&  !hit)  ?  -99  :  rint((s->energy)*10.0f - 20.08f - 90.30F + DBM0_MAX_POWER);
+                         s->realtime_callback(s->realtime_callback_data, hit, i);
+                     }
+                 }
+diff -ur spandsp/tone_detect.c standsm.my/tone_detect.c
+--- thelinkbox-0.45/spandsp/tone_detect.c	2007-04-08 01:27:59.000000000 +0300
++++ thelinkbox-0.45/spandsm.my/tone_detect.c	2009-12-23 16:19:28.000000000 +0200
+@@ -61,7 +61,7 @@
+ 
+ void make_goertzel_descriptor(goertzel_descriptor_t *t, float freq, int samples)
+ {
+-    t->fac = 2.0f*cosf(2.0f*M_PI*(freq/(float) SAMPLE_RATE));
++    t->fac = 2.0f*(2.0f*M_PI*(freq/(float) SAMPLE_RATE));
+     t->samples = samples;
+ }
+ /*- End of function --------------------------------------------------------*/

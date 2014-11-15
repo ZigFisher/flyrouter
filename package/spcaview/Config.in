@@ -1,0 +1,10 @@
+config BR2_PACKAGE_SPCAVIEW
+	prompt "spcaview.......................... This set of tools are provide to test WebCam under Linux"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBPTHREAD
+	help
+	  This set of tools are provide to test WebCam under Linux.
+	  
+	  http://mxhaard.free.fr/
+	  

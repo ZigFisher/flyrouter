@@ -1,0 +1,5 @@
+OPTIONS="-d /dev/ttyS1 -s 4304 -p 3001 --timeout_presence=5 --timeout_volatile=5"
+#DISABLE="1"
+
+# uncomment this to start process at startup. Try to start manually with run-owfs first!
+#ENABLESTARTUP="1"

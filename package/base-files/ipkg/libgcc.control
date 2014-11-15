@@ -1,0 +1,4 @@
+Package: libgcc
+Priority: optional
+Section: net
+Description: GCC support library

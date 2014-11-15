@@ -1,0 +1,6 @@
+#!/bin/sh
+
+tlb -d -f ./tlb.conf
+#
+#./tlbcmd 'connect -p 3066 -r -a 172.28.200.1'
+#./tlbcmd 'connect *UKRAINE*'

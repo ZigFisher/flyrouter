@@ -1,0 +1,5 @@
+Package: hcid
+Priority: optional
+Section: net
+Description: hcid - Bluetooth Host Controller Interface Daemon
+Depends: kmod-bluetooth, bluez-libs

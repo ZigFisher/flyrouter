@@ -1,0 +1,71 @@
+#!/bin/sh
+
+BIN=owserver
+DEFAULT=/etc/default/$BIN
+RUN_D=/var/run
+PID_F=$RUN_D/$BIN.pid
+[ -f $DEFAULT ] && . $DEFAULT
+
+if [ -z "$OPTIONS" ]; then
+        echo "OPTIONS is missing... Edit your $DEFAULT"
+	exit 0
+fi
+
+case $1 in
+ start)
+  [ "$DISABLE" = "1" ] && exit 0
+  if [ "$ENABLESTARTUP" != "1" -a "$2" != "force" ]; then
+      echo "You have to set ENABLESTARTUP=\"1\" in $DEFAULT"
+      exit 0
+  fi
+  ASUSROUTER="0"
+  if [ "$(nvram get boardtype)" = "bcm95365r" -a "$(nvram get boardnum)" = "45" ]; then
+      # Asus wl500gd hangs if accessing serport
+      ASUSROUTER="1"
+  fi
+  if [ "$(nvram get boardtype)" = "0x042f" -a "$(nvram get boardnum)" = "45" ]; then
+      # Asus WL-500g Premium hangs if accessing serport
+      ASUSROUTER="1"
+  fi
+  if [ "$(nvram get boardnum)" = "asusX" -a "$(nvram get boardtype)" = "bcm94710dev" ]; then
+      # Asus wl500g  (don't know if this has problem with serport)
+      ASUSROUTER="1"
+  fi
+  if [ "${ASUSROUTER}" = "1" ]; then
+    # make sure router doesn't open any serial ports!
+    # If you really have an UART installed, you might need to uncomment this
+    #HAVEUART="1"
+    echo $OPTIONS | awk '{ if(index($0, "/dev/tts/")>0) { exit(1); }}'
+    ERR=$?
+    if [ "$ERR" != "0" -a "${HAVEUART}" != "1" ]; then
+        echo "Asus routers should not read from serial port! (kernel hangs)"
+        echo "Edit your /etc/default/owserver"
+        exit 0
+    fi
+
+    echo $OPTIONS | awk '{ if(index($0, "-u")>0) { exit(1); }}'
+    ERR=$?
+    if [ "$ERR" != "0" ]; then
+	# If you want to use an USB-adapter, load modules before starting...
+	MODNAME=`grep usbcore /proc/modules`
+	if [ -z "$MODNAME" ]; then
+	    insmod usbcore.o
+	fi
+	MODNAME=`grep uhci /proc/modules`
+	if [ -z "$MODNAME" ]; then
+	    insmod uhci.o
+	fi
+     fi
+  fi
+  mkdir -p $RUN_D
+  $BIN -P $PID_F $OPTIONS
+  ;;
+ stop)
+  [ -f $PID_F ] && kill $(cat $PID_F)
+  ;;
+ *)
+  echo "usage: $0 (start|stop)"
+  exit 1
+esac
+
+exit $?

@@ -1,0 +1,3 @@
+# syncs time
+15	*/2	* * *	/etc/init.d/ntpclient >/dev/null 2>/dev/null
+

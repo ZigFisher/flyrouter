@@ -1,0 +1,104 @@
+diff -wuBr dbhub-0.451.orig/src/langvars.c dbhub-0.451/src/langvars.c
+--- dbhub-0.451.orig/src/langvars.c	2008-01-16 04:15:04.000000000 +0200
++++ dbhub-0.451/src/langvars.c	2009-03-10 09:25:43.000000000 +0200
+@@ -71,6 +71,7 @@
+ char lp_categlist[101] = "List of allowed categories";
+ char lp_categnotfound[101] = "was not found in categories. Choose one of these";
+ char lp_category_[51] = "category";
++char lp_changedhost[51] = "changed host";
+ char lp_charnumbers[101] = "Required number of characters for that command is";
+ char lp_chatting_[51] = "chatting";
+ char lp_cheefs_[51] = "cheefs";
+@@ -91,6 +92,7 @@
+ char lp_couldntaddentry[51] = "Couldn't add entry to";
+ char lp_couldntremoveentry[51] = "Couldn't remove entry from";
+ char lp_currentdate[51] = "Current date is";
++char lp_currenthost[51] = "current host";
+ char lp_cut_[51] = "cut";
+ char lp_datashared[51] = "Data shared";
+ char lp_days[51] = "days";
+@@ -135,6 +137,7 @@
+ char lp_hi_[51] = "Hi";
+ char lp_hidingpresence[101] = "Hiding your presence...";
+ char lp_hidingshare[101] = "Hiding your share...";
++char lp_host_[51] = "IP";
+ char lp_hours[51] = "hours";
+ char lp_hubaddr[51] = "Hub address";
+ char lp_hubdesc[51] = "Hub description";
+@@ -201,7 +204,7 @@
+ char lp_never_[51] = "never";
+ char lp_newcommand[101] = "New file-command added";
+ char lp_newregistered[101] = "New registered user";
+-char lp_nextwarningban[101] = "next warning will make you banned!";
++char lp_nextwarningban[101] = "next warning will make you gagged";
+ char lp_nick_[51] = "nickname";
+ char lp_nickban_[51] = "nickban";
+ char lp_nickbans[51] = "nickbans";
+@@ -222,8 +225,9 @@
+ char lp_notallowedtodelreg[101] = "You are not allowed to remove this user";
+ char lp_notallowedtosee[101] = "You are not allowed to see";
+ char lp_notenoughslots[101] = "not enough slots";
+-char lp_nowarnings[101] = "No warnings for user";
++char lp_nowarnings[101] = "No warnings for IP";
+ char lp_number_[51] = "number";
++char lp_oldhost[51] = "old host";
+ char lp_opped_[51] = "opped";
+ char lp_ops_[51] = "ops";
+ char lp_owners_[51] = "owners";
+@@ -246,6 +250,8 @@
+ char lp_prottype[51] = "Protection type";
+ char lp_proxy_[51] = "Passive proxy";
+ char lp_proxynotallowed[51] = "proxy connections not allowed";
++char lp_proxybotalreadyonline[51] = "Proxy Bot is already online";
++char lp_proxybotalreadyoffline[51] = "Proxy Bot is already offline";
+ char lp_psvnotallowed[51] = "passive mode not allowed";
+ char lp_psvwithmodea[101] = "nickname with psv, but mode M:A";
+ char lp_psvwithoutpsvinnick[101] = "passive mode requires 'psv' in nick";
+@@ -270,7 +276,7 @@
+ char lp_regular_[51] = "regular";
+ char lp_releases[51] = "releases";
+ char lp_reloadingscripts[51] = "Reloading scripts...";
+-char lp_removedallwarns[101] = "Removed all warnings for user";
++char lp_removedallwarns[101] = "Removed all warnings for IP";
+ char lp_removedentryfrom[51] = "Removed entry from";
+ char lp_reportedby[51] = "Reported by";
+ char lp_reportsend[51] = "Your report was send to the ops";
+@@ -487,7 +493,7 @@
+ char lp_us114[51] = "Remove release";
+ char lp_us115[51] = "Remove request";
+ char lp_us116[51] = "Remove URL";
+-char lp_us117[51] = "Remove warn";
++char lp_us117[51] = "Remove IP's warn";
+ char lp_us118[51] = "Add welcome";
+ char lp_us119[51] = "Get randomwelcomes";
+ char lp_us120[51] = "Remove welcome";
+@@ -549,7 +555,7 @@
+ char lp_he039[101] = "adds REG user to reglist";
+ char lp_he040[101] = "adds VIP user to reglist";
+ char lp_he041[101] = "adds KVIP user to reglist";
+-char lp_he042[101] = "sends warning to specified user";
++char lp_he042[101] = "issues a warning to specified user's IP address";
+ char lp_he043[101] = "bans permanently user's IP and nickname";
+ char lp_he044[101] = "bans permanently IP";
+ char lp_he045[101] = "bans permanently nickname";
+@@ -615,12 +621,12 @@
+ char lp_he108[101] = "removes an entry from releases list";
+ char lp_he109[101] = "removes an entry from req list";
+ char lp_he110[101] = "removes an entry from urls list";
+-char lp_he111[101] = "removes all warnings from specified user";
++char lp_he111[101] = "removes all warnings from specified IP";
+ char lp_he112[101] = "adds 'welcome' to randomwelomes";
+ char lp_he113[101] = "displays the randomwelomes list";
+ char lp_he114[101] = "removes 'welcome' from randomwelomes";
+ char lp_he116[101] = "terminates the program";
+-char lp_he117[101] = "shows the users with warnings";
++char lp_he117[101] = "shows IP's (and users) with warnings";
+ char lp_he118[101] = "creates new command-file";
+ char lp_he119[101] = "removes command-file";
+ char lp_he120[101] = "removes all IP bans";
+@@ -633,4 +639,4 @@
+ char lp_he127[101] = "changes the class of the registered user";
+ char lp_he128[101] = "changes the nickname of the registered user";
+ char lp_he129[101] = "resets share and users records";
+-
++char lp_he130[101] = "issues a warning to specified IP address";

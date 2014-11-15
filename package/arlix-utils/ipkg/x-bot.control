@@ -1,0 +1,5 @@
+Package: x-bot
+Section: hamradio
+Priority: optional
+Description: this is test
+Depends: 

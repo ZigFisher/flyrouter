@@ -1,0 +1,6 @@
+config BR2_PACKAGE_SIGRAND_DOC
+	prompt "Sigrand context help.............. HTML ang image files for help sysytem"
+	tristate
+	default n if CONFIG_DEVEL
+	help
+		Package contains Sigrand user manual, integrated in web interface

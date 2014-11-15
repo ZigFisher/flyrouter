@@ -1,0 +1,13 @@
+
+config BR2_PACKAGE_WEBFACE
+	prompt "webface........................... SigrandWebface"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_HASERL
+#	select BR2_PACKAGE_LIGHTTPD
+#	select BR2_PACKAGE_LIGHTTPD
+#	select BR2_PACKAGE_LIGHTTPD_MOD_AUTH
+#	select BR2_COMPILE_MINI_HTTPD
+	help
+	  webface for sigrand routers and modems BLA BLA BLA
+	  

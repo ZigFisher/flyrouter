@@ -1,0 +1,9 @@
+#!/bin/sh
+
+start() {
+	/usr/sbin/nrpe -n -c /etc/nrpe.cfg -d
+}
+
+stop() {
+        killall nrpe
+}

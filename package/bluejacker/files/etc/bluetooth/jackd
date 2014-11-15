@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. /etc/bluetooth/bluejacker.conf
+. /bin/midge_functions
+. /etc/bluetooth/btmisc.sh
+. /etc/bluetooth/jackmisc.sh
+
+[ -z "$1" ] && die "Usage: $0 dev"
+
+DEV=$1
+PIPE=$JACKD_PIPEDIR/jackd_${DEV}
+
+rm -f $PIPE
+mknod ${PIPE} p 
+
+cat $PIPE | while read cmd opt1 opt2 opt3 opt4 opt5; do
+	echo "cmd: $cmd     opt1: $opt1     opt2: $opt2     opt3: $opt3"  
+done
+

@@ -1,0 +1,108 @@
+#!/bin/sh
+
+FW="/usr/sbin/iptables"
+ADD="$FW -A"
+INS="$FW -I"
+DEL="$FW -D"
+FLUSH="$FW -F"
+LIST="$FW -L"
+REPLACE="$FW -R"
+NEW_CHAIN="$FW -N"
+DEL_CHAIN="$FW -X"
+SET_POLICY="$FW -P"
+
+prepare_addr(){
+	local pref="$1"
+	local laddr="$2"
+	if [ "x${laddr}x" = "xx" ]; then 
+		addr=""
+	else
+		addr="$pref `echo "$laddr" | sed 's/\(!\)\(.*\)/\1 \2/'`"
+	fi
+}
+
+chain(){
+	local table=$1
+	local chain=$2
+	local uchain=`echo $chain | tr a-z A-Z`
+	local _sport _dport _proto _nat
+	for key in `kdb kls sys_fw_${table}_${chain}_*`; do 
+		val=`kdb get $key`
+		unset enabled name proto _proto src _src dst _dst sport _sport dport _dport target natto _nat addr
+		eval "$val"
+
+		[ "$proto" != "all" ] && _proto="-p $proto"
+
+		prepare_addr -s $src
+		_src=$addr
+		prepare_addr -d $dst
+		_dst=$addr
+
+		if [ "$proto" = "tcp" -o "$proto" = "udp" ]; then
+			_sport="--sport $sport"
+			[ "$sport" = any ] && _sport=""
+			_dport="--dport $dport"
+			[ "$dport" = any ] && _dport=""
+		fi
+
+		[ "$target" = "DNAT" ] && _nat="--to-destination=$natto"
+		[ "$target" = "SNAT" ] && _nat="--to-source=$natto"
+
+		[ "x${enabled}x" != "xx" ] && $ADD $uchain -t $table $_src $_dst $_proto $_sport $_dport -j $target $_nat
+	done
+}
+
+start(){
+	eval `kdb -qq ls sys_fw_*`
+	echo -n "Starting fw: "
+	if [ "$sys_fw_enabled" = 1 ]; then
+		$SET_POLICY FORWARD $sys_fw_filter_policy_forward
+		$SET_POLICY INPUT	$sys_fw_filter_policy_input
+		$SET_POLICY OUTPUT	$sys_fw_filter_policy_output
+		chain filter forward
+		chain filter input
+		chain filter output
+
+		$SET_POLICY PREROUTING	$sys_fw_nat_policy_prerouting -t nat
+		$SET_POLICY POSTROUTING $sys_fw_nat_policy_postrouting -t nat
+		chain nat prerouting
+		chain nat postrouting
+	fi
+	echo " done."
+}
+
+stop(){
+	eval `kdb -qq ls sys_fw_*`
+	echo -n "Stoping fw: "
+
+	# filter
+	$FLUSH INPUT
+	$SET_POLICY INPUT ACCEPT
+	$FLUSH OUTPUT
+	$SET_POLICY OUTPUT ACCEPT
+	$FLUSH FORWARD
+	$SET_POLICY FORWARD ACCEPT
+
+	# nat
+	$FLUSH PREROUTING -t nat
+	$SET_POLICY PREROUTING ACCEPT -t nat
+	$FLUSH POSTROUTING -t nat
+	$SET_POLICY POSTROUTING ACCEPT -t nat
+	echo " done."
+}
+
+case "$1" in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	*)
+		stop
+		start
+		;;
+esac
+
+
+

@@ -1,0 +1,9 @@
+config BR2_PACKAGE_MPCS-TINY
+	prompt "mpcs-tiny......................... MPCS-TINY"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  MPCS-TINY - 
+	  
+	  http://streamboard.gmc.to
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/

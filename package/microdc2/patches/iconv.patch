@@ -1,0 +1,11 @@
+--- orig/src/charsets.h	2007-11-26 15:53:59.000000000 +0200
++++ new/src/charsets_new.h	2007-11-26 15:53:28.000000000 +0200
+@@ -21,7 +21,7 @@
+ #endif
+ 
+ #if !HAVE_ICONV
+-typedef int iconv_t;
++//typedef int iconv_t;
+ #endif
+ 
+ #define no_iconv ((const iconv_t) -1)

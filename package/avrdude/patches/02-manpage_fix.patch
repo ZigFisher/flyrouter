@@ -1,0 +1,34 @@
+--- avrdude-5.5.orig/debian/patches/02-manpage_fix.patch
++++ avrdude-5.5/debian/patches/02-manpage_fix.patch
+@@ -0,0 +1,31 @@
++Index: avrdude/avrdude.1
++===================================================================
++--- avrdude.orig/avrdude.1	2008-06-10 12:51:43.000000000 +0200
+++++ avrdude/avrdude.1	2008-07-19 03:14:10.000000000 +0200
++@@ -271,7 +271,7 @@
++ does not know about, you can add it to the config file (be sure and
++ submit a patch back to the author so that it can be incorporated for
++ the next version).  See the config file, located at
++-.Pa ${PREFIX}/etc/avrdude.conf ,
+++.Pa /etc/avrdude.conf ,
++ which contains a description of the format.
++ .It Fl D
++ Disable auto erase for flash.  When the
++@@ -749,7 +749,7 @@
++ .It Pa /dev/ppi0
++ default device to be used for communication with the programming
++ hardware
++-.It Pa ${PREFIX}/etc/avrdude.conf
+++.It Pa /etc/avrdude.conf
++ programmer and parts configuration file
++ .It Pa ${HOME}/.avrduderc
++ programmer and parts configuration file (per-user overrides)
++@@ -757,7 +757,7 @@
++ Initialization file for the
++ .Xr readline 3
++ library
++-.It Pa ${PREFIX}/share/doc/avrdude/avrdude.pdf
+++.It Pa /usr/share/doc/avrdude-doc/avrdude.pdf
++ Schematic of programming hardware
++ .El
++ .\" .Sh EXAMPLES

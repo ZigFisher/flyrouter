@@ -1,0 +1,13 @@
+config BR2_PACKAGE_AXGETPUT
+	prompt "axgetput.......................... This shell utility for up/downloading files via your ax25 unix login"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  This shell utility is for up/downloading files via your ax25 unix login
+	  session which is managed by axspawn.
+	  You need a //BIN compatible axspawn, which has the functionality of making
+	  the stream 8bit compatible (normally the EOL-conversion <LF> <-> <CR> prevents this).
+	                                                                                                                                                  
+	  http://x-berg.in-berlin.de/cgi-bin/viewcvs.cgi/ampr/axgetput/                                                                               
+	  http://www.hamradio.crimea.ua/downloads/linux/source/
+

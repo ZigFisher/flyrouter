@@ -1,0 +1,42 @@
+#!/bin/sh
+
+test -r /bin/midge_functions && . /bin/midge_functions
+test -r /bin/router_functions && . /bin/router_functions
+
+SERVER1="208.67.222.222"
+SERVER2="208.67.220.220"
+
+[ -d /etc/dnrd ] || exit 0 
+
+umask 077
+
+start() {
+ 	msgn "Starting dnrd: "
+	start-stop-daemon --start --quiet --pidfile /var/run/dnrd.pid --exec /usr/sbin/dnrd -- -l -m /etc/dnrd/master -c off -u dnrd -s $SERVER1 -s $SERVER2  && ok || fail
+}
+stop() {
+	msgn "Stopping dnrd: "
+	start-stop-daemon --stop --quiet --pidfile /var/run/dnrd.pid && ok || fail
+}
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

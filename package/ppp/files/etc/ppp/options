@@ -1,0 +1,13 @@
+noauth
+nocrtscts
+lock
+local
+nodeflate
+nobsdcomp
+novj
+novjccomp
+noaccomp
+nopcomp
+nomppe
+-detach
+unit 0

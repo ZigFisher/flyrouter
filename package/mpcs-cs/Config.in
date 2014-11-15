@@ -1,0 +1,10 @@
+config BR2_PACKAGE_MPCS-CS
+	prompt "mpcs-cs........................... MPCS-CS"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBPTHREAD
+	help
+	  MPCS-CS - card-server
+	  
+	  http://streamboard.gmc.to
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/

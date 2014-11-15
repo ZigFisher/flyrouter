@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. /etc/templates/lib
+
+subsys="$1" 
+[ -n "$subsys" ] || die "Usage: $0 <subsystem>"
+ 
+update_configs $subsys

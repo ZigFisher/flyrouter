@@ -1,0 +1,38 @@
+menu "tinysnmp.......................... A lightweight SNMPv1 implementation (agent, tools, modules)"
+
+config BR2_COMPILE_TINYSNMP
+	tristate
+	default n
+	depends BR2_PACKAGE_TINYSNMP-TOOLS || BR2_PACKAGE_TINYSNMP-AGENT || BR2_PACKAGE_TINYSNMP-MODULE-INTERFACES || BR2_PACKAGE_TINYSNMP-MODULE-RESOURCES
+
+config BR2_PACKAGE_TINYSNMP-TOOLS
+	prompt   "tinysnmp-tools.............................. TinySNMP Utilities"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_TINYSNMP
+	select BR2_PACKAGE_LIBABZ
+	select BR2_PACKAGE_LIBBER
+	select BR2_PACKAGE_LIBDEBUG
+
+config BR2_PACKAGE_TINYSNMP-AGENT
+	prompt   "tinysnmp-agent.............................. A lightweight SNMPv1 implementation"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_TINYSNMP
+	select BR2_PACKAGE_LIBABZ
+	select BR2_PACKAGE_LIBBER
+	select BR2_PACKAGE_LIBDEBUG
+	select BR2_PACKAGE_LIBEVENT
+
+config BR2_PACKAGE_TINYSNMP-MODULE-INTERFACES
+	prompt   "tinysnmp-module-interfaces.................. Interfaces MIB module for TinySNMP"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_TINYSNMP
+
+config BR2_PACKAGE_TINYSNMP-MODULE-RESOURCES
+	prompt   "tinysnmp-module-resources................... Frogfoot Networks Resources MIB plugin for TinySNMP"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_TINYSNMP
+endmenu

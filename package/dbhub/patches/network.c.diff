@@ -1,0 +1,53 @@
+diff -wuBr dbhub-0.451.orig/src/network.c dbhub-0.451/src/network.c
+--- dbhub-0.451.orig/src/network.c	2008-02-01 01:41:36.000000000 +0200
++++ dbhub-0.451/src/network.c	2009-02-27 22:35:09.000000000 +0200
+@@ -618,22 +618,17 @@
+ 
+    sock = human_sock_list;
+ 
+-  while(sock != NULL)
+-  {
+-     if((type & sock->user->type) != 0)
+-     {    
+-        if(place == 1)     
+-	{
++    while(sock != NULL) {
++        if((type & sock->user->type) != 0) {
++            if(place == 1) {
+ 	uprintf(sock->user, "<%s> ", botnick);
+ 	send_to_user(buf, sock->user);
+ 	}
+-	else if(place == 2)
+-    	{
++            else if(place == 2) {
+ 	uprintf(sock->user, "$To: %s From: %s $<%s> ", sock->user->nick, botnick, botnick);
+ 	send_to_user(buf, sock->user);
+ 	}
+-        else
+-        {
++            else {
+ 	uprintf(sock->user, "$To: %s From: %s $<%s> ", sock->user->nick, opchatnick, opchatnick);
+ 	send_to_user(buf, sock->user);
+ 	}
+@@ -713,7 +708,10 @@
+ 			 logprintf(LOG_NOTICE, "buf: %s\n", buf);
+ 		       else
+ 			 logprintf(LOG_NOTICE, "too large buf\n");
++               if (user->hide_share != 2)
+ 		       user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++               else
++                   user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		    }
+ 		  return;
+ 	       }
+@@ -721,7 +719,10 @@
+ 	       {
+ 		  if(user->rem == 0)
+ 		    logprintf(1, "Connection timeout from user %s [ IP: %s ], removing user\n", user->nick, user->hostname);
++		  if (user->hide_share != 2)
+ 		  user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++          else
++              user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		  return;
+ 	       }
+ 	     if(len != 0)

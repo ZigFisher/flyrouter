@@ -1,0 +1,332 @@
+diff -ur ax25-tools-0.0.8_original/Makefile.in ax25-tools-0.0.8/Makefile.in
+--- ax25-tools-0.0.8_original/Makefile.in	2001-05-16 12:16:11.000000000 +0000
++++ ax25-tools-0.0.8/Makefile.in	2006-04-01 09:41:37.000000000 +0000
+@@ -70,7 +70,8 @@
+ VERSION = @VERSION@
+ Z_LIB = @Z_LIB@
+ 
+-SUBDIRS = ax25 hdlcutil kiss netrom rose tcpip user_call yamdrv dmascc
++# SUBDIRS = ax25 hdlcutil kiss netrom rose tcpip user_call yamdrv dmascc
++SUBDIRS = ax25 kiss user_call
+ 
+ EXTRA_DIST = pathnames.h
+ 
+diff -ur ax25-tools-0.0.8_original/ax25/Makefile.in ax25-tools-0.0.8/ax25/Makefile.in
+--- ax25-tools-0.0.8_original/ax25/Makefile.in	2001-05-16 12:16:18.000000000 +0000
++++ ax25-tools-0.0.8/ax25/Makefile.in	2006-04-01 09:41:37.000000000 +0000
+@@ -73,9 +73,10 @@
+ etcfiles = ax25.profile ax25d.conf axspawn.conf rxecho.conf
+ varfiles = mheard.dat
+ 
+-sbin_PROGRAMS = ax25d axctl axparms axspawn beacon bpqparms mheardd rxecho
++#sbin_PROGRAMS = ax25d axctl axparms axspawn beacon bpqparms mheardd rxecho
++sbin_PROGRAMS = beacon rxecho
+ 
+-bin_PROGRAMS = mheard
++#bin_PROGRAMS = mheard
+ 
+ LDADD = $(AX25_LIB)
+ axspawn_LDADD = $(AX25_LIB) $(UTIL_LIB)
+diff -ur ax25-tools-0.0.8_original/ax25/beacon.c ax25-tools-0.0.8/ax25/beacon.c
+--- ax25-tools-0.0.8_original/ax25/beacon.c	2001-04-10 02:09:18.000000000 +0000
++++ ax25-tools-0.0.8/ax25/beacon.c	2006-04-01 09:41:37.000000000 +0000
+@@ -14,11 +14,8 @@
+ #else
+ #include <netax25/kernel_ax25.h>
+ #endif
+-#ifdef HAVE_NETROSE_ROSE_H
+-#include <netrose/rose.h>
+-#else 
+-#include <netax25/kernel_rose.h>
+-#endif
++
++#undef HAVE_NETROSE_ROSE_H
+ 
+ #include <netax25/axlib.h>
+ #include <netax25/axconfig.h>
+diff -ur ax25-tools-0.0.8_original/ax25/rxecho.c ax25-tools-0.0.8/ax25/rxecho.c
+--- ax25-tools-0.0.8_original/ax25/rxecho.c	2001-04-10 02:09:33.000000000 +0000
++++ ax25-tools-0.0.8/ax25/rxecho.c	2006-04-01 09:41:37.000000000 +0000
+@@ -70,11 +70,8 @@
+ #else
+ #include <netax25/kernel_ax25.h>
+ #endif
+-#ifdef HAVE_NETROSE_ROSE_H
+-#include <netrose/rose.h>
+-#else 
+-#include <netax25/kernel_rose.h>
+-#endif
++
++#undef HAVE_NETROSE_ROSE_H
+ 
+ #include <netax25/axlib.h>
+ #include <netax25/axconfig.h>
+diff -ur ax25-tools-0.0.8_original/configure ax25-tools-0.0.8/configure
+--- ax25-tools-0.0.8_original/configure	2001-05-16 12:15:57.000000000 +0000
++++ ax25-tools-0.0.8/configure	2006-04-01 09:41:37.000000000 +0000
+@@ -3009,57 +3009,6 @@
+ echo "$ac_t""$ac_cv_func_memcmp_clean" 1>&6
+ test $ac_cv_func_memcmp_clean = no && LIBOBJS="$LIBOBJS memcmp.${ac_objext}"
+ 
+-echo $ac_n "checking whether setpgrp takes no argument""... $ac_c" 1>&6
+-echo "configure:3014: checking whether setpgrp takes no argument" >&5
+-if eval "test \"`echo '$''{'ac_cv_func_setpgrp_void'+set}'`\" = set"; then
+-  echo $ac_n "(cached) $ac_c" 1>&6
+-else
+-  if test "$cross_compiling" = yes; then
+-  { echo "configure: error: cannot check setpgrp if cross compiling" 1>&2; exit 1; }
+-else
+-  cat > conftest.$ac_ext <<EOF
+-#line 3022 "configure"
+-#include "confdefs.h"
+-
+-#ifdef HAVE_UNISTD_H
+-#include <unistd.h>
+-#endif
+-
+-/*
+- * If this system has a BSD-style setpgrp, which takes arguments, exit
+- * successfully.
+- */
+-main()
+-{
+-    if (setpgrp(1,1) == -1)
+-	exit(0);
+-    else
+-	exit(1);
+-}
+-
+-EOF
+-if { (eval echo configure:3042: \"$ac_link\") 1>&5; (eval $ac_link) 2>&5; } && test -s conftest${ac_exeext} && (./conftest; exit) 2>/dev/null
+-then
+-  ac_cv_func_setpgrp_void=no
+-else
+-  echo "configure: failed program was:" >&5
+-  cat conftest.$ac_ext >&5
+-  rm -fr conftest*
+-  ac_cv_func_setpgrp_void=yes
+-fi
+-rm -fr conftest*
+-fi
+-
+-
+-fi
+-
+-echo "$ac_t""$ac_cv_func_setpgrp_void" 1>&6
+-if test $ac_cv_func_setpgrp_void = yes; then
+-  cat >> confdefs.h <<\EOF
+-#define SETPGRP_VOID 1
+-EOF
+-
+-fi
+ 
+ echo $ac_n "checking return type of signal handlers""... $ac_c" 1>&6
+ echo "configure:3066: checking return type of signal handlers" >&5
+diff -ur ax25-tools-0.0.8_original/kiss/Makefile.in ax25-tools-0.0.8/kiss/Makefile.in
+--- ax25-tools-0.0.8_original/kiss/Makefile.in	2001-05-16 12:16:35.000000000 +0000
++++ ax25-tools-0.0.8/kiss/Makefile.in	2006-04-01 09:41:37.000000000 +0000
+@@ -70,11 +70,13 @@
+ VERSION = @VERSION@
+ Z_LIB = @Z_LIB@
+ 
+-sbin_PROGRAMS = kissattach kissnetd kissparms mkiss net2kiss
++# sbin_PROGRAMS = kissattach kissnetd kissparms mkiss net2kiss
++sbin_PROGRAMS = kissattach kissparms
+ 
+ LDADD = $(AX25_LIB)
+ 
+-man_MANS = kissattach.8 spattach.8 kissnetd.8 kissparms.8 mkiss.8 net2kiss.8
++# man_MANS = kissattach.8 spattach.8 kissnetd.8 kissparms.8 mkiss.8 net2kiss.8
++man_MANS =
+ 
+ EXTRA_DIST = $(man_MANS)
+ 
+diff -ur ax25-tools-0.0.8_original/kiss/kissattach.c ax25-tools-0.0.8/kiss/kissattach.c
+--- ax25-tools-0.0.8_original/kiss/kissattach.c	2001-04-10 02:10:38.000000000 +0000
++++ ax25-tools-0.0.8/kiss/kissattach.c	2006-04-01 09:41:37.000000000 +0000
+@@ -12,6 +12,8 @@
+ 
+ #include <config.h>
+ 
++#undef HAVE_NETROSE_ROSE_H
++
+ #include <sys/types.h>
+ #include <sys/stat.h>
+ #include <sys/socket.h>
+@@ -23,11 +25,6 @@
+ #else
+ #include <netax25/kernel_ax25.h>
+ #endif
+-#ifdef HAVE_NETROSE_ROSE_H
+-#include <netrose/rose.h>
+-#else 
+-#include <netax25/kernel_rose.h>
+-#endif
+ 
+ #include <netax25/daemon.h>
+ #include <netax25/axlib.h>
+@@ -267,7 +264,10 @@
+ 	}
+ 
+ 	if (!readconfig(argv[optind + 1]))
++	{
++		fprintf(stderr, "readconfig error\n");
+ 		return 1;
++	}
+ 
+         if ((argc - optind) == 3) {
+ 	        if ((hp = gethostbyname(argv[optind + 2])) == NULL) {
+@@ -286,7 +286,10 @@
+ 	}
+ 
+ 	if (speed != 0 && !tty_speed(fd, speed))
++	{
++		fprintf(stderr, "invalid speed\n");
+ 		return 1;
++	}
+ 	
+ 	if (ioctl(fd, TIOCSETD, &disc) == -1) {
+ 		fprintf(stderr, "%s: Error setting line discipline: ", progname);
+@@ -304,7 +307,10 @@
+ 	}
+ 	
+ 	if (!setifcall(fd, callsign))
++	{
++		fprintf(stderr, "setifcall error\n");
+ 		return 1;
++	}
+ 
+ 	/* Now set the encapsulation */
+ 	if (ioctl(fd, SIOCSIFENCAP, &v) == -1) {
+@@ -314,7 +320,10 @@
+ 	}
+ 		
+ 	if (!startiface(dev, hp))
+-		return 1;		
++	{
++		fprintf(stderr, "startinterface error\n");
++		return 1;
++	}
+ 
+ 	printf("AX.25 port %s bound to device %s\n", argv[optind + 1], dev);
+ 
+@@ -334,8 +343,13 @@
+ 		return 1;
+ 	}
+ 
++#ifndef _MIPS_ARCH
+ 	if (!tty_lock(argv[optind]))
++	{
++		fprintf(stderr, "tty_lock error\n");
+ 		return 1;
++	}
++#endif // _MIPS_ARCH
+ 
+ 	while (1)
+ 		sleep(10000);
+diff -ur ax25-tools-0.0.8_original/kiss/kissparms.c ax25-tools-0.0.8/kiss/kissparms.c
+--- ax25-tools-0.0.8_original/kiss/kissparms.c	2001-04-10 02:10:40.000000000 +0000
++++ ax25-tools-0.0.8/kiss/kissparms.c	2006-04-01 09:41:37.000000000 +0000
+@@ -15,16 +15,13 @@
+ #include <linux/if_ether.h>
+ #endif
+ 
++#undef HAVE_NETROSE_ROSE_H
++
+ #ifdef HAVE_NETAX25_AX25_H
+ #include <netax25/ax25.h>
+ #else
+ #include <netax25/kernel_ax25.h>
+ #endif
+-#ifdef HAVE_NETROSE_ROSE_H
+-#include <netrose/rose.h>
+-#else 
+-#include <netax25/kernel_rose.h>
+-#endif
+ 
+ #include <netax25/axconfig.h>
+ 
+diff -ur ax25-tools-0.0.8_original/user_call/Makefile.in ax25-tools-0.0.8/user_call/Makefile.in
+--- ax25-tools-0.0.8_original/user_call/Makefile.in	2001-05-16 12:16:59.000000000 +0000
++++ ax25-tools-0.0.8/user_call/Makefile.in	2006-04-01 09:41:37.000000000 +0000
+@@ -70,9 +70,11 @@
+ VERSION = @VERSION@
+ Z_LIB = @Z_LIB@
+ 
+-sbin_PROGRAMS = ax25_call netrom_call rose_call tcp_call
++# sbin_PROGRAMS = ax25_call netrom_call rose_call tcp_call
++sbin_PROGRAMS = ax25_call
+ 
+-man_MANS = ax25_call.8 netrom_call.8 rose_call.8 tcp_call.8
++# man_MANS = ax25_call.8 netrom_call.8 rose_call.8 tcp_call.8
++man_MANS =
+ 
+ docdir = ${datadir}/doc/ax25-tools
+ doc_DATA = README.user_call
+diff -ur ax25-tools-0.0.8_original/user_call/ax25_call.c ax25-tools-0.0.8/user_call/ax25_call.c
+--- ax25-tools-0.0.8_original/user_call/ax25_call.c	2001-05-03 02:25:06.000000000 +0000
++++ ax25-tools-0.0.8/user_call/ax25_call.c	2006-04-01 09:41:37.000000000 +0000
+@@ -11,16 +11,13 @@
+ #include <sys/types.h>
+ #include <sys/socket.h>
+ 
++#undef HAVE_NETROSE_ROSE_H
++
+ #ifdef HAVE_NETAX25_AX25_H
+ #include <netax25/ax25.h>
+ #else
+ #include <netax25/kernel_ax25.h>
+ #endif
+-#ifdef HAVE_NETROSE_ROSE_H
+-#include <netrose/rose.h>
+-#else 
+-#include <netax25/kernel_rose.h>
+-#endif
+ 
+ #include <netax25/axlib.h>
+ #include <netax25/axconfig.h>
+diff -ur ax25-tools-0.0.8_original/user_call/user_io.c ax25-tools-0.0.8/user_call/user_io.c
+--- ax25-tools-0.0.8_original/user_call/user_io.c	2001-04-10 02:18:44.000000000 +0000
++++ ax25-tools-0.0.8/user_call/user_io.c	2006-04-05 05:59:02.000000000 +0000
+@@ -62,18 +62,37 @@
+ 
+ static int flush_output(int fd, const void *buf, size_t count)
+ {
+-	int cnt = count;
++        int cnt = count;
++	     int result = -1;
++	
++	     char *tmp_buf = (char *)malloc(count*2);
++	     int i1=0, i2=0;
++	
++	     while( i1 < count ){
++	         char c=((char*)buf)[i1++];
++	         tmp_buf[i2++] = c;
++	         if ( c == 0x0D )
++	             tmp_buf[i2++] = 0x0A;
++	     }
++	     cnt=i2;
++	
+ 
+ 	while (cnt > 0) {
+-		if (write(fd, buf, min(paclen_out, cnt)) < 0)
+-			return -1;
++                if (write(fd, tmp_buf, min(paclen_out, cnt)) < 0)
++                        goto end;
+ 		buf += paclen_out;
+ 		cnt -= paclen_out;
+ 	}
+ 
+-	return count;
++    result = count;
++end:
++    free(tmp_buf);
++       return result;
++
+ }
+ 
++
++
+ int user_write(int fd, const void *buf, size_t count)
+ {
+ #ifdef HAVE_ZLIB_H

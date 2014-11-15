@@ -1,0 +1,50 @@
+# This is an example PKGBUILD file. Use this as a start to creating your own,
+# and remove these comments. For more information, see 'man PKGBUILD'.
+# NOTE: Please fill out the license field for your package! If it is unknown,
+# then please put 'unknown'.
+
+# Contributor: mpcs
+pkgname=mpcs
+pkgver=0.9e
+pkgrel=2
+pkgdesc="MPCS cardshiring program with NTV+ and big groups"
+arch=('i686')
+url="http://streamboard.gmc.to"
+license=('custom')
+groups=
+#depends=()
+#makedepends=('wget' 'sed' 'grep')
+provides=()
+conflicts=()
+replaces=()
+backup=('etc/mpcs/mpcs.*' 'etc/mpcs/*.lst')
+options=()
+#install=('unbound.install')
+source=("mpcs-pre_0.9e_Community_edition.tar.bz2" 
+    "ntv_des.c.patch"
+    "ntv_module-newcamd.c.patch"
+    "groups64.patch")
+noextract=()
+#md5sums=('43586f18b4d917887c92a35ff460c923')
+
+build() {
+  cd "$srcdir/mpcs-pre_0.9e_Community_edition"
+    patch -p0 -i ../ntv_des.c.patch || return 1
+    patch -p0 -i ../ntv_module-newcamd.c.patch || return 1
+    patch -p0 -i ../groups64.patch || return 1
+    
+  make || return 1
+ 
+  install -D -m744 Distribution/mpcs-pre_0.9e_Community_edition-i386-pc-linux ${pkgdir}/usr/sbin/mpcs
+
+  cd ${startdir}
+  mkdir -p ${pkgdir}/etc/mpcs/
+  install -D -m744 rc.mpcs ${pkgdir}/etc/rc.d/mpcs
+  install -D -m644 confd.mpcs ${pkgdir}/etc/conf.d/mpcs
+  install -D -m744 _mpcs_*.sh ${pkgdir}/etc/mpcs/
+  install -D -m644 _*.lst ${pkgdir}/etc/mpcs/
+  install -D -m644 mpcs.* ${pkgdir}/etc/mpcs/
+  install -D -m644 readme.txt ${pkgdir}/etc/mpcs/
+
+}
+

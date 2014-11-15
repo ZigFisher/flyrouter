@@ -1,0 +1,1372 @@
+diff -ur orig/po/ru.po po/ru.po
+--- orig/po/ru.po	2007-03-18 14:57:50.000000000 +0300
++++ po/ru.po	2007-03-22 11:11:54.000000000 +0300
+@@ -6,7 +6,7 @@
+ msgstr ""
+ "Project-Id-Version: microdc 0.11.0\n"
+ "Report-Msgid-Bugs-To: vladch@k804.mainet.msk.su\n"
+-"POT-Creation-Date: 2007-03-11 10:43+0300\n"
++"POT-Creation-Date: 2007-03-20 00:49+0300\n"
+ "PO-Revision-Date: 2007-03-11 10:44+0300\n"
+ "Last-Translator: Andrew Zabolotny <zap@homelink.ru>\n"
+ "Language-Team: Russian <ru@li.org>\n"
+@@ -351,8 +351,8 @@
+ "Close a user connection. Use the `transfers' command to get a list of "
+ "connections.\n"
+ msgstr ""
+-"Сбросить соединение с пользователем. Используйте команду `transfers', "
+-"чтобы получить список соединений.\n"
++"Сбросить соединение с пользователем. Используйте команду `transfers', чтобы "
++"получить список соединений.\n"
+ 
+ #: src/command.c:197
+ msgid "cd [DIRECTORY]"
+@@ -363,8 +363,8 @@
+ "Change directory when browsing another user's files. If DIRECTORY is not "
+ "specified, change to the root directory (`/').\n"
+ msgstr ""
+-"Сменить каталог при просмотре списка файлов пользователя. Если КАТАЛОГ "
+-"не задан, переход в корневой каталог (`/').\n"
++"Сменить каталог при просмотре списка файлов пользователя. Если КАТАЛОГ не "
++"задан, переход в корневой каталог (`/').\n"
+ 
+ #: src/command.c:201
+ msgid "connect HOST[:PORT]"
+@@ -399,8 +399,8 @@
+ "List files and directories recursively. Assume current directory if FILE is "
+ "not specified. Must be browsing a user's files to use this command.\n"
+ msgstr ""
+-"Рекурсивный поиск файла/каталога по списку пользователя. Поиск начинается "
+-"в текущем каталоге если ФАЙЛ не задан. Данная команда работает только в режиме "
++"Рекурсивный поиск файла/каталога по списку пользователя. Поиск начинается в "
++"текущем каталоге если ФАЙЛ не задан. Данная команда работает только в режиме "
+ "просмотра файлов пользователя.\n"
+ 
+ #: src/command.c:214
+@@ -483,8 +483,7 @@
+ msgstr ""
+ "Послать приватное сообщение указанному пользователю. Имейте в виду, что "
+ "спецсимволы `;', `\"' `#' в  сообщении должны быть защищены от неверной "
+-"интерпретации, поэтому рекомендуется указывать сообщение в кавычках. "
+-"\n"
++"интерпретации, поэтому рекомендуется указывать сообщение в кавычках. \n"
+ "Пример:\n"
+ "  msg Вася \"Привет, как дела?\"\n"
+ 
+@@ -518,8 +517,8 @@
+ "double quote (`\"') and number sign (`#') in DATA need to be escaped or "
+ "quoted. Therefore it is recommended to put DATA in double quotes.\n"
+ msgstr ""
+-"Послать некоторые данные на узел. Имейте в виду, что символы `;', `\"' "
+-"и `#' должны быть защищены от неверной интерпретации, поэтому рекомендуется "
++"Послать некоторые данные на узел. Имейте в виду, что символы `;', `\"' и `#' "
++"должны быть защищены от неверной интерпретации, поэтому рекомендуется "
+ "указывать сообщение в кавычках.\n"
+ 
+ #: src/command.c:259
+@@ -531,8 +530,8 @@
+ "If INDEX is specified, display results for the search by that index. "
+ "Otherwise, display a list of searches and statistics over those searches.\n"
+ msgstr ""
+-"Если указан ИНДЕКС, выводит результат поиска с данным индексом. "
+-"Иначе выводит список поисковых запросов и статистику по ним.\n"
++"Если указан ИНДЕКС, выводит результат поиска с данным индексом. Иначе "
++"выводит список поисковых запросов и статистику по ним.\n"
+ 
+ #: src/command.c:263
+ msgid "say MESSAGE..."
+@@ -548,8 +547,8 @@
+ "Example:\n"
+ "  say \"hi everyone!\"\n"
+ msgstr ""
+-"Послать публичное сообщение всем пользователям на узле. Имейте в виду, "
+-"что символы `;', `\"' и `#' в СООБЩЕНИИ должны быть защищены от неверной "
++"Послать публичное сообщение всем пользователям на узле. Имейте в виду, что "
++"символы `;', `\"' и `#' в СООБЩЕНИИ должны быть защищены от неверной "
+ "интерпретации, поэтому рекомендуется указывать сообщение в кавычках.\n"
+ "\n"
+ "Пример:\n"
+@@ -642,8 +641,8 @@
+ "  alias ll \"ls -l\"\n"
+ msgstr ""
+ "Без аргументов выдаёт список псевдонимов. Если указать КОМАНДу, выводит "
+-"значение (список команд) для указанного псевдонима. Если указать КОМАНДу "
+-"и ЗНАЧЕНИЕ, задаёт новый псевдоним. Имейте в виду, что ЗНАЧЕНИЕ это один "
++"значение (список команд) для указанного псевдонима. Если указать КОМАНДу и "
++"ЗНАЧЕНИЕ, задаёт новый псевдоним. Имейте в виду, что ЗНАЧЕНИЕ это один "
+ "аргумент - используйте кавычки для сложных команд.\n"
+ "\n"
+ "Пример:\n"
+@@ -668,9 +667,10 @@
+ "set). microdc will continue in the background while the command is "
+ "executing.\n"
+ msgstr ""
+-"Выполнить команду оболочки. Если не указать аргументы, будет запущена текущая "
+-"оболочка (заданной переменной окружения SHELL либо /bin/sh). Программа будет "
+-"продолжать работу в фоновом режиме во время выполнения команды.\n"
++"Выполнить команду оболочки. Если не указать аргументы, будет запущена "
++"текущая оболочка (заданной переменной окружения SHELL либо /bin/sh). "
++"Программа будет продолжать работу в фоновом режиме во время выполнения "
++"команды.\n"
+ 
+ #: src/command.c:316
+ msgid "lookup HOST ..."
+@@ -865,8 +865,8 @@
+ 
+ #: src/command.c:1123 src/command.c:2090 src/command.c:2125
+ #: src/filelist-in.c:284 src/fs.c:87 src/fs.c:545 src/fs.c:660 src/fs.c:674
+-#: src/fs.c:688 src/main.c:1404 src/main.c:1422 src/user.c:625 src/util.c:109
+-#: src/variables.c:447 src/variables.c:468
++#: src/fs.c:688 src/main.c:1412 src/main.c:1430 src/user.c:625 src/util.c:109
++#: src/variables.c:464 src/variables.c:485
+ #, c-format
+ msgid "%s: Cannot get file status - %s\n"
+ msgstr "%s: Невозможно получить информацию о файле - %s\n"
+@@ -1062,12 +1062,12 @@
+ msgid "missing host argument\n"
+ msgstr "не задан узел\n"
+ 
+-#: src/command.c:2079 src/command.c:2114 src/variables.c:327
+-#: src/variables.c:342 src/variables.c:354 src/variables.c:364
+-#: src/variables.c:399 src/variables.c:428 src/variables.c:443
+-#: src/variables.c:464 src/variables.c:484 src/variables.c:569
+-#: src/variables.c:586 src/variables.c:610 src/variables.c:729
+-#: src/variables.c:748 src/variables.c:772 src/variables.c:799
++#: src/command.c:2079 src/command.c:2114 src/variables.c:344
++#: src/variables.c:359 src/variables.c:371 src/variables.c:381
++#: src/variables.c:416 src/variables.c:445 src/variables.c:460
++#: src/variables.c:481 src/variables.c:501 src/variables.c:586
++#: src/variables.c:603 src/variables.c:627 src/variables.c:746
++#: src/variables.c:765 src/variables.c:789 src/variables.c:816
+ msgid "too many arguments\n"
+ msgstr "слишком много аргументов\n"
+ 
+@@ -1075,8 +1075,8 @@
+ msgid "missing directory argument\n"
+ msgstr "не задан каталог\n"
+ 
+-#: src/command.c:2095 src/command.c:2130 src/variables.c:451
+-#: src/variables.c:472
++#: src/command.c:2095 src/command.c:2130 src/variables.c:468
++#: src/variables.c:489
+ #, c-format
+ msgid "%s: Not a directory\n"
+ msgstr "%s: Это не каталог\n"
+@@ -1116,19 +1116,19 @@
+ msgid "%s: Invalid data, cannot decode\n"
+ msgstr "%s: Неверные данные, не могу декодировать\n"
+ 
+-#: src/filelist-in.c:485 src/lookup.c:309 src/main.c:395 src/main.c:1195
++#: src/filelist-in.c:486 src/lookup.c:310 src/main.c:395 src/main.c:1201
+ #: src/user.c:1441
+ #, c-format
+ msgid "Cannot create pipe pair - %s\n"
+ msgstr ""
+ 
+-#: src/filelist-in.c:490 src/hub.c:339 src/lookup.c:314 src/main.c:411
++#: src/filelist-in.c:491 src/hub.c:339 src/lookup.c:315 src/main.c:411
+ #: src/main.c:1011 src/main.c:1052 src/user.c:1487
+ #, c-format
+ msgid "Cannot set non-blocking flag - %s\n"
+ msgstr ""
+ 
+-#: src/filelist-in.c:496 src/lookup.c:320 src/main.c:401
++#: src/filelist-in.c:497 src/lookup.c:321 src/main.c:401
+ #, c-format
+ msgid "Cannot create process - %s\n"
+ msgstr "Не могу создать процесс - %s\n"
+@@ -1158,7 +1158,7 @@
+ msgid "%s: Cannot close directory - %s\n"
+ msgstr "%s: Не могу закрыть каталог - %s\n"
+ 
+-#: src/fs.c:663 src/fs.c:677 src/fs.c:691 src/main.c:1409 src/main.c:1427
++#: src/fs.c:663 src/fs.c:677 src/fs.c:691 src/main.c:1417 src/main.c:1435
+ #, c-format
+ msgid "%s: Cannot remove file - %s\n"
+ msgstr "%s: Не могу удалить файл - %s\n"
+@@ -1242,11 +1242,11 @@
+ #: src/user.c:1178
+ #, c-format
+ msgid "Received %s message in wrong state.\n"
+-msgstr ""
++msgstr "Сообщение %s получено в ошибочном состоянии\n"
+ 
+ #: src/hub.c:452 src/user.c:890
+ msgid "Invalid $Lock message: Missing Pk value\n"
+-msgstr ""
++msgstr "Неверное сообщение $Lock: Отсутствует значение Pk\n"
+ 
+ #: src/hub.c:484
+ msgid "Hub requires password.\n"
+@@ -1289,35 +1289,35 @@
+ 
+ #: src/hub.c:572
+ msgid "Invalid $MyINFO message: Missing $ALL parameter, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует параметр $ALL, игнорируем\n"
+ 
+ #: src/hub.c:579
+ msgid "Invalid $MyINFO message: Missing nick parameter, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует параметр 'имя', игнорируем\n"
+ 
+ #: src/hub.c:604
+ msgid "Invalid $MyINFO message: Missing description parameter, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует параметр 'описание', игнорируем\n"
+ 
+ #: src/hub.c:613
+ msgid "Invalid $MyINFO message: Missing description separator, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует разделитель параметров, игнорируем\n"
+ 
+ #: src/hub.c:620
+ msgid "Invalid $MyINFO message: Missing connection speed, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует скорость соединения, игнорируем\n"
+ 
+ #: src/hub.c:636
+ msgid "Invalid $MyINFO message: Missing e-mail address, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует почтовый адрес, игнорируем\n"
+ 
+ #: src/hub.c:645
+ msgid "Invalid $MyINFO message: Missing share size, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Отсутствует объём файлов, игнорируем\n"
+ 
+ #: src/hub.c:650
+ msgid "Invalid $MyINFO message: Invalid share size, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $MyINFO: Неверный объём файлов, игнорируем\n"
+ 
+ #: src/hub.c:663
+ msgid "Hub is full.\n"
+@@ -1335,20 +1335,20 @@
+ 
+ #: src/hub.c:713
+ msgid "Invalid $To message: Missing text separator, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $To: Отстутствует разделитель текста, игнорируем\n"
+ 
+ #: src/hub.c:732 src/hub.c:739
+ #, c-format
+ msgid "Private: [%s] %s\n"
+-msgstr "Приватно: [%s] %s\n"
++msgstr "Лично: [%s] %s\n"
+ 
+ #: src/hub.c:751
+ msgid "Invalid $ConnectToMe message: Missing or invalid nick\n"
+-msgstr ""
++msgstr "Неверное сообщение $ConnectToMe: Отсутствует или неверное имя\n"
+ 
+ #: src/hub.c:755
+ msgid "Invalid $ConnectToMe message: Invalid address specification.\n"
+-msgstr ""
++msgstr "Неверное сообщение $ConnectToMe: Неверный адрес\n"
+ 
+ #: src/hub.c:759
+ #, c-format
+@@ -1357,16 +1357,16 @@
+ 
+ #: src/hub.c:769
+ msgid "Invalid $RevConnectToMe message: Missing nick parameter\n"
+-msgstr ""
++msgstr "Неверное сообщение $RevConnectToMe: Отсутствует имя\n"
+ 
+ #: src/hub.c:773
+ msgid "Invalid $RevConnectToMe message: Remote nick is our nick\n"
+-msgstr ""
++msgstr "Неверное сообщение $RevConnectToMe: Имя клиента совпадает с моим\n"
+ 
+ #: src/hub.c:779
+ #, c-format
+ msgid "Invalid $RevConnectToMe message: Unknown user %s, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $RevConnectToMe: Неизвестный пользователь %s, игнорируем\n"
+ 
+ #: src/hub.c:786 src/main.c:202 src/main.c:216
+ #, c-format
+@@ -1381,25 +1381,25 @@
+ #: src/hub.c:868
+ #, c-format
+ msgid "Invalid $Quit message: Unknown user %s.\n"
+-msgstr ""
++msgstr "Неверное сообщение $Quit: Неизвестный пользователь %s\n"
+ 
+ #: src/hub.c:882
+ msgid "Invalid $Search message: Missing source specification.\n"
+-msgstr ""
++msgstr "Неверное сообщение $Search: Отсутствует спецификация источника\n"
+ 
+ #: src/hub.c:896
+ #, c-format
+ msgid "Invalid $Search message: %s: Invalid search specification.\n"
+-msgstr ""
++msgstr "Неверное сообщение $Search %s: Неверная спецификация источника\n"
+ 
+ #: src/hub.c:905
+ #, c-format
+ msgid "Invalid $Search message: Unknown user %s.\n"
+-msgstr ""
++msgstr "Неверное сообщение $Search: Неизвестный пользователь %s.\n"
+ 
+ #: src/hub.c:939
+ msgid "Invalid $Search message: Invalid address specification.\n"
+-msgstr ""
++msgstr "Неверное сообщение $Search: Неверный адрес\n"
+ 
+ #: src/hub.c:998 src/user.c:1223
+ msgid "<--"
+@@ -1428,12 +1428,12 @@
+ #: src/hub.c:1091
+ #, c-format
+ msgid "ConnectToMe already sent to user %s. Waiting.\n"
+-msgstr ""
++msgstr "ConnectToMe уже отправлен пользователю %s. Ждём.\n"
+ 
+ #: src/hub.c:1100
+ #, c-format
+ msgid "RevConnectToMe already sent to user %s. Waiting.\n"
+-msgstr ""
++msgstr "RevConnectToMe уже отправлен пользователю %s. Ждём.\n"
+ 
+ #: src/hub.c:1105
+ #, c-format
+@@ -1495,7 +1495,7 @@
+ #: src/user.c:1553
+ #, c-format
+ msgid "Cannot close pipe - %s\n"
+-msgstr ""
++msgstr "Невозможно закрыть канал - %s\n"
+ 
+ #. TRANSLATORS: This represents the connection name used when
+ #. * the user name is not yet known. It must not contains '|',
+@@ -1558,7 +1558,8 @@
+ #, c-format
+ msgid "Received unknown message %d from user process, shutting down process.\n"
+ msgstr ""
+-"Получено неизвестное сообщение %d от процесса пользователя, завершаем процесс.\n"
++"Получено неизвестное сообщение %d от процесса пользователя, завершаем "
++"процесс.\n"
+ 
+ #: src/main.c:799 src/main.c:800 src/user.c:1347 src/user.c:1348
+ #, c-format
+@@ -1616,7 +1617,7 @@
+ 
+ #: src/main.c:951 src/main.c:975
+ msgid "user (search result)"
+-msgstr ""
++msgstr "пользователь (результат поиска)"
+ 
+ #: src/main.c:955
+ msgid "<=="
+@@ -1629,17 +1630,17 @@
+ #: src/main.c:1017 src/main.c:1060
+ #, c-format
+ msgid "Cannot enable address reusing - %s\n"
+-msgstr ""
++msgstr "Не включить повторное использование адресов - %s\n"
+ 
+ #: src/main.c:1025 src/main.c:1073
+ #, c-format
+ msgid "Cannot bind to address - %s\n"
+-msgstr ""
++msgstr "Нелья использовать адрес - %s\n"
+ 
+ #: src/main.c:1081
+ #, c-format
+ msgid "Cannot listen - %s\n"
+-msgstr ""
++msgstr "Не могу ожидать соединения - %s\n"
+ 
+ #: src/main.c:1093
+ #, c-format
+@@ -1649,7 +1650,7 @@
+ #: src/main.c:1132
+ #, c-format
+ msgid "Cannot accept user connection - %s\n"
+-msgstr ""
++msgstr "Не могу открыть соединение с пользователем - %s\n"
+ 
+ #: src/main.c:1136
+ #, c-format
+@@ -1671,31 +1672,36 @@
+ msgid "%s: Cannot set message domain: %s\n"
+ msgstr "%s: Ошибка установки домена сообщений: %s\n"
+ 
+-#: src/main.c:1179
++#: src/main.c:1184
+ #, c-format
+ msgid "Usage: %s [OPTION]...\n"
+ msgstr "Формат: %s [OPTION]...\n"
+ 
+-#: src/main.c:1180
++#: src/main.c:1185
+ msgid "Start microdc, a command-line based Direct Connect client.\n"
+ msgstr "Запустить microdc, командно-строчный клиент для протокола DC++.\n"
+ 
+-#: src/main.c:1181
++#: src/main.c:1186
++#, fuzzy, c-format
++msgid "  -c, --config=FILE use a custom config file\n"
++msgstr "  -n, --no-config  не читать файл конфигурации при старте\n"
++
++#: src/main.c:1187
+ #, c-format
+ msgid "  -n, --no-config  do not read config file on startup\n"
+ msgstr "  -n, --no-config  не читать файл конфигурации при старте\n"
+ 
+-#: src/main.c:1182
++#: src/main.c:1188
+ #, c-format
+ msgid "      --help       display this help and exit\n"
+ msgstr "      --help       вывести текст помощи и остановиться\n"
+ 
+-#: src/main.c:1183
++#: src/main.c:1189
+ #, c-format
+ msgid "      --version    output version information and exit\n"
+ msgstr "      --version    вывести информацию о версии и остановиться\n"
+ 
+-#: src/main.c:1184
++#: src/main.c:1190
+ #, c-format
+ msgid ""
+ "\n"
+@@ -1704,40 +1710,40 @@
+ "\n"
+ "Отчёты об ошибках отправляйте на адрес <%s>.\n"
+ 
+-#: src/main.c:1202 src/user.c:1446
++#: src/main.c:1208 src/user.c:1446
+ #, c-format
+ msgid "Cannot empty signal set - %s\n"
+-msgstr ""
++msgstr "Не могу очистить набор сигналов - %s\n"
+ 
+-#: src/main.c:1216 src/main.c:1221 src/user.c:1459 src/user.c:1466
++#: src/main.c:1222 src/main.c:1227 src/user.c:1459 src/user.c:1466
+ #, c-format
+ msgid "Cannot register signal handler - %s\n"
+-msgstr ""
++msgstr "Не могу зарегистрировать обработчик сигналов - %s\n"
+ 
+-#: src/main.c:1254
++#: src/main.c:1260
+ #, c-format
+ msgid "Cannot find directory for temporary files - %s\n"
+ msgstr "Не могу найти каталог для временных файлов - %s\n"
+ 
+-#: src/main.c:1305 src/user.c:1516
++#: src/main.c:1311 src/user.c:1516
+ #, c-format
+ msgid "Cannot select - %s\n"
+-msgstr ""
++msgstr "Ошибка функции select - %s\n"
+ 
+-#: src/main.c:1434
++#: src/main.c:1442
+ #, c-format
+ msgid "Cannot close search results socket - %s\n"
+-msgstr ""
++msgstr "Не могу закрыть сокет результатов поиска - %s\n"
+ 
+-#: src/main.c:1436
++#: src/main.c:1444
+ #, c-format
+ msgid "Cannot close user connections socket - %s\n"
+-msgstr ""
++msgstr "Не могу закрыть сокет пользовательского соединения - %s\n"
+ 
+-#: src/main.c:1438 src/main.c:1440 src/user.c:1547 src/user.c:1549
++#: src/main.c:1446 src/main.c:1448 src/user.c:1547 src/user.c:1549
+ #, c-format
+ msgid "Cannot close signal pipe - %s\n"
+-msgstr ""
++msgstr "Не могу закрыть сигнальный канал - %s\n"
+ 
+ #: src/screen.c:133
+ msgid "No longer logging to file.\n"
+@@ -1794,7 +1800,7 @@
+ #: src/search.c:731
+ #, c-format
+ msgid "Unterminated or invalid $SR, discarding: %s\n"
+-msgstr ""
++msgstr "Незавершённый либо неверный $SR, пропускаем: %s\n"
+ 
+ #: src/search.c:748
+ #, c-format
+@@ -1876,9 +1882,8 @@
+ msgstr "Неверное смещение в запросе tthl"
+ 
+ #: src/user.c:615
+-#, c-format
+-msgid "%s: File Not Available\n"
+-msgstr "%s: Файл недоступен\n"
++msgid "Non-existent file requested: Not Available\n"
++msgstr "Запрошен несуществующий файл: Недоступен\n"
+ 
+ #: src/user.c:617
+ msgid "no such shared file"
+@@ -1923,19 +1928,19 @@
+ 
+ #: src/user.c:944
+ msgid "Invalid $Direction message: Missing direction parameter\n"
+-msgstr ""
++msgstr "Неверное сообщение $Direction: Отсутствует параметр направления\n"
+ 
+ #: src/user.c:953
+ msgid "Invalid $Direction message: Invalid direction parameter\n"
+-msgstr ""
++msgstr "Неверное сообщение $Direction: Неверный параметр направления\n"
+ 
+ #: src/user.c:960
+ msgid "Invalid $Direction message: Missing challenge parameter\n"
+-msgstr ""
++msgstr "Неверное сообщение $Direction: Отсутствует параметр отклика\n"
+ 
+ #: src/user.c:965
+ msgid "Invalid $Direction message: Invalid challenge parameter\n"
+-msgstr ""
++msgstr "Неверное сообщение $Direction: Неверный параметр отклика\n"
+ 
+ #: src/user.c:986
+ msgid "User does not want to download, nor do we.\n"
+@@ -1943,15 +1948,15 @@
+ 
+ #: src/user.c:1003
+ msgid "Invalid $Key message: Incorrect key, ignoring\n"
+-msgstr ""
++msgstr "Неверное сообщение $Key: Неверный ключ, игнорируем\n"
+ 
+ #: src/user.c:1028
+ msgid "Invalid $Get message: Missing offset, assuming start\n"
+-msgstr ""
++msgstr "Неверное сообщение $Get: Отсутствует смещение, начинаем с начала\n"
+ 
+ #: src/user.c:1034
+ msgid "Invalid $Get message: Offset not integer\n"
+-msgstr ""
++msgstr "Неверное сообщение $Get: Смещение должно быть целым числом\n"
+ 
+ #: src/user.c:1046
+ msgid "remote did not want file"
+@@ -1959,11 +1964,11 @@
+ 
+ #: src/user.c:1068
+ msgid "remote is maxed out"
+-msgstr ""
++msgstr "закончились ресурсы на удалённом компьютере"
+ 
+ #: src/user.c:1077
+ msgid "protocol error: invalid $FileLength message"
+-msgstr ""
++msgstr "ошибка протокола: неверное сообщение $FileLength"
+ 
+ #: src/user.c:1086
+ msgid "file not available on remote"
+@@ -1982,12 +1987,12 @@
+ 
+ #: src/user.c:1114
+ msgid "Invalid $UGetBlock message\n"
+-msgstr ""
++msgstr "Неверное сообщение $UGetBlock\n"
+ 
+ #: src/user.c:1184
+ #, c-format
+ msgid "Ignoring $ADCGET flags: %s\n"
+-msgstr ""
++msgstr "Игнорируем флаги $ADCGET: %s\n"
+ 
+ #: src/user.c:1269
+ msgid "Connected to user.\n"
+@@ -2032,114 +2037,114 @@
+ msgid "1,on,yes,true"
+ msgstr "1,on,yes,true,да,вкл"
+ 
+-#: src/variables.c:366
++#: src/variables.c:383
+ msgid "Nick cannot be empty.\n"
+ msgstr "Имя не может быть пустым.\n"
+ 
+-#: src/variables.c:368
++#: src/variables.c:385
+ msgid "Nick is too long - max length is 35 characters.\n"
+ msgstr "Имя слишком длинное - максимальная длина - 35 символов.\n"
+ 
+-#: src/variables.c:370
++#: src/variables.c:387
+ msgid "Nick may not contain `$', `|' or space characters.\n"
+ msgstr "Имя не может содержать символы пробела, `$' или `|'.\n"
+ 
+-#: src/variables.c:383
++#: src/variables.c:400
+ msgid "Description may not contain `$' or `|' characters.\n"
+ msgstr "Описание не может содержать символы `$' или `|'.\n"
+ 
+-#: src/variables.c:386
++#: src/variables.c:403
+ msgid "Description is too long - max length is 35 characters.\n"
+ msgstr "Описание слишком длинно - максимальная длина 35 символов.\n"
+ 
+-#: src/variables.c:401
++#: src/variables.c:418
+ msgid "E-mail may not contain `$' or `|' characters.\n"
+ msgstr "E-mail не может содержать символы `$' или `|'.\n"
+ 
+-#: src/variables.c:403
++#: src/variables.c:420
+ msgid "E-mail is too long - max length is 35 characters.\n"
+ msgstr "E-mail слишком длинный - максимальная длина 35 символов.\n"
+ 
+-#: src/variables.c:416
++#: src/variables.c:433
+ msgid "Tag may not contain `$' or `|' characters.\n"
+ msgstr "Тег не может содержать символы  `$' или `|'.\n"
+ 
+-#: src/variables.c:430
++#: src/variables.c:447
+ msgid "Speed may not contain `$' or `|' characters.\n"
+ msgstr "Скорость не может содержать символы  `$' или `|'.\n"
+ 
+-#: src/variables.c:488
++#: src/variables.c:505
+ #, c-format
+ msgid "Invalid slot number `%s'\n"
+ msgstr "Неверный номер слота `%s'\n"
+ 
+-#: src/variables.c:573
++#: src/variables.c:590
+ msgid "Specify active as `0', `no', `off', `1', `yes', or `on'.\n"
+ msgstr "Значение может быть 0|no|off|нет|выкл либо 1|yes|on|да|вкл.\n"
+ 
+-#: src/variables.c:577 src/variables.c:741
++#: src/variables.c:594 src/variables.c:758
+ msgid "Active setting not changed.\n"
+ msgstr "Статус активности не изменился.\n"
+ 
+-#: src/variables.c:590
++#: src/variables.c:607
+ msgid "Specify value as `0', `no', `off', `1', `yes', or `on'.\n"
+ msgstr "Значение может быть 0|no|off|нет|выкл либо 1|yes|on|да|вкл.\n"
+ 
+-#: src/variables.c:615
++#: src/variables.c:632
+ msgid "Removing listening address.\n"
+ msgstr "Удаляем адрес для входящих соединений.\n"
+ 
+-#: src/variables.c:620
++#: src/variables.c:637
+ #, c-format
+ msgid "%s: Specify listen address as an IP address\n"
+ msgstr "%s: Укажите IP адрес для входящих соединений\n"
+ 
+-#: src/variables.c:635
++#: src/variables.c:652
+ #, c-format
+ msgid "Listening address set to %s.\n"
+ msgstr "Адрес для входящих соединений установлен в %s.\n"
+ 
+-#: src/variables.c:700
++#: src/variables.c:717
+ #, c-format
+ msgid "No flag by the name %s, display flags not changed.\n"
+ msgstr "Флаг по имени %s не существует, флаги отображения не изменились.\n"
+ 
+-#: src/variables.c:707
++#: src/variables.c:724
+ msgid "Cannot set and add or delete flags at the same time.\n"
+ msgstr "Не могу установить и добавлять либо удалять флаги одной командой.\n"
+ 
+-#: src/variables.c:736
++#: src/variables.c:753
+ #, c-format
+ msgid "Invalid value `%s' for port number.\n"
+ msgstr "Неверное значение `%s' для номера порта.\n"
+ 
+-#: src/variables.c:765
++#: src/variables.c:782
+ msgid "on"
+ msgstr "Вкл"
+ 
+-#: src/variables.c:765
++#: src/variables.c:782
+ msgid "off"
+ msgstr "Выкл"
+ 
+-#: src/variables.c:776
++#: src/variables.c:793
+ msgid "Removing current password.\n"
+ msgstr "Удаляем текущий пароль.\n"
+ 
+-#: src/variables.c:780
++#: src/variables.c:797
+ msgid "Password may not contain `|' characters.\n"
+ msgstr "Пароль не может содержать символов `|'.\n"
+ 
+-#: src/variables.c:806
++#: src/variables.c:823
+ #, c-format
+ msgid "Invalid value `%s' for interval.\n"
+ msgstr "Неверное значение `%s' для интервала.\n"
+ 
+-#: src/variables.c:910
++#: src/variables.c:927
+ #, c-format
+ msgid "No value is set for `%s'.\n"
+ msgstr "Значение для `%s' не задано.\n"
+ 
+-#: src/variables.c:912
++#: src/variables.c:929
+ #, c-format
+ msgid ""
+ "Current value for `%s':\n"
+diff -ur orig/src/filelist-in.c src/filelist-in.c
+--- orig/src/filelist-in.c	2006-11-28 15:49:09.000000000 +0300
++++ src/filelist-in.c	2007-03-20 00:06:00.000000000 +0300
+@@ -334,6 +334,7 @@
+     /* Inability to register these signals is not a fatal error. */
+     sigact.sa_flags = SA_RESTART;
+     sigact.sa_handler = SIG_IGN;
++    sigemptyset (&sigact.sa_mask);
+ #ifdef HAVE_STRUCT_SIGACTION_SA_RESTORER
+     sigact.sa_restorer = NULL;
+ #endif
+diff -ur orig/src/hash.c src/hash.c
+--- orig/src/hash.c	2006-11-16 14:21:43.000000000 +0300
++++ src/hash.c	2007-03-20 00:04:46.000000000 +0300
+@@ -58,6 +58,7 @@
+     /* Inability to register these signals is not a fatal error. */
+     sigact.sa_flags = SA_RESTART;
+     sigact.sa_handler = SIG_IGN;
++    sigemptyset (&sigact.sa_mask);
+ #ifdef HAVE_STRUCT_SIGACTION_SA_RESTORER
+     sigact.sa_restorer = NULL;
+ #endif
+diff -ur orig/src/local_flist.c src/local_flist.c
+--- orig/src/local_flist.c	2006-12-09 12:01:22.000000000 +0300
++++ src/local_flist.c	2007-03-29 23:00:38.000000000 +0400
+@@ -66,6 +66,7 @@
+ pid_t update_child;
+ int   incoming_update_type = -1;
+ char* update_status = NULL;
++time_t filelist_mtime = 0;
+ 
+ static const char* filelist_name = "filelist";
+ static const char* new_filelist_name = "new-filelist";
+@@ -78,6 +79,8 @@
+ #define ENOTFILELIST    (1 << 16)
+ #define EWRONGVERSION   (ENOTFILELIST + 1)
+ 
++bool report_error(MsgQ* status_mq, const char* fmt, ...);
++
+ int compare_pointers(void* p1, void* p2)
+ {
+     return p1 != p2;
+@@ -119,20 +122,61 @@
+     return is_already_shared_inode(root, st.st_dev, st.st_ino);
+ }
+ 
+-DCFileList* read_local_file_list(const char* path)
++void lock_file (const char* path)
++{
++    int fd, timeout = 20;
++    char fn [300];
++    snprintf (fn, sizeof (fn), "%s.lock", path);
++    while ((fd = open (fn, O_RDONLY | O_CREAT | O_EXCL, 0600) < 0)) {
++        if (errno != EEXIST) {
++            /* It seems there's no way to report an error from here to parent? */
++            /*report_error(result_mq, _("%s: Failed to create filelist lock, filelist will be not multiprocess-safe\n"), fn);*/
++            break;
++        }
++        /* Wait some time for the lock to be released */
++        sleep (1);
++        if (!--timeout) {
++            /*report_error(result_mq, _("%s: Filelist semaphore locked, but owner seems dead, breaking lock\n"), fn);*/
++            break;
++        }
++    }
++    if (fd >= 0)
++        close (fd);
++}
++
++void unlock_file (const char* path)
++{
++    char fn [300];
++    snprintf (fn, sizeof (fn), "%s.lock", path);
++    unlink (fn);
++}
++
++/* if old_root is not NULL, rereads the file list only if file changed */
++DCFileList* read_local_file_list(const char* path, DCFileList *old_root)
+ {
+     struct stat st;
+     DCFileList *root = NULL;
+ 
++    /* First of all, check if filelist is not locked by other process */
++    lock_file (path);
++
+     if (stat(path, &st) < 0) {
+         if (errno != ENOENT) {
+             TRACE(("cannot stat %s: %d, %s\n", path, errno, errstr));
++            unlock_file (path);
+             return NULL;
+         }
+     } else if (!S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)) {
++        unlock_file (path);
+         return NULL;
+     }
+ 
++    if (old_root && filelist_mtime == st.st_mtime) {
++        unlock_file (path);
++        return old_root;
++    }
++    filelist_mtime = st.st_mtime;
++
+     int fd = open(path, O_RDONLY);
+     if (fd >= 0) {
+         void* mapped = mmap(0, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
+@@ -158,12 +202,22 @@
+         root = new_file_node("", DC_TYPE_DIR, NULL);
+     }
+ 
++    unlock_file (path);
++
++    if (old_root)
++        filelist_free (old_root);
++
+     return root;
+ }
+ 
+ bool write_local_file_list(const char* path, DCFileList* root)
+ {
+     bool result = false;
++    struct stat st;
++
++    /* Check if filelist is not locked by other process */
++    lock_file (path);
++
+     int fd = open(path, O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+     if (fd >= 0) {
+         unsigned char* data = NULL;
+@@ -194,8 +248,14 @@
+         result = (size == data_size);
+ 
+ cleanup:
++        /* Update filelist mtime */
++        if (stat(path, &st) == 0)
++            filelist_mtime = st.st_mtime;
++
+         close(fd);
+     }
++
++    unlock_file (path);
+     return result;
+ }
+ 
+@@ -487,6 +547,7 @@
+     /* Inability to register these signals is not a fatal error. */
+     sigact.sa_flags = SA_RESTART;
+     sigact.sa_handler = SIG_IGN;
++    sigemptyset (&sigact.sa_mask);
+ #ifdef HAVE_STRUCT_SIGACTION_SA_RESTORER
+     sigact.sa_restorer = NULL;
+ #endif
+@@ -503,7 +564,7 @@
+         goto cleanup;
+     }
+ 
+-    if (NULL == (root = read_local_file_list(flist_filename))) {
++    if (NULL == (root = read_local_file_list(flist_filename, NULL))) {
+         if (errno == ENOTFILELIST) {
+             report_error(result_mq, "Cannot load FileList - %s: Invalid file format\n", flist_filename);
+         } else if (errno == EWRONGVERSION) {
+@@ -527,7 +588,7 @@
+     max_fd = MAX(hash_result_mq->fd, max_fd);
+ 
+     while (true) {
+-        tv.tv_sec   = filelist_refresh_timeout;
++        tv.tv_sec   = FILELIST_SLAVE_MODE ? 60 : filelist_refresh_timeout;
+         tv.tv_usec  = 0;
+ 
+         fd_set r_ready = readable, w_ready = writable;
+@@ -577,13 +638,19 @@
+                         fflush(stderr);
+                         */
+                     }
++
++                    if (FILELIST_SLAVE_MODE && update_hash) {
++                        /* Unexpected hash update received while in slave filelist mode */
++                        update_hash = false;
++                    }
++
+                     time_t now = time(NULL);
+                     if (update_hash && ((hashing == NULL && hash_files->cur == 0) || (now - hash_start) > filelist_hash_refresh_timeout)) {
+                         hash_start = now;
+                         if (write_local_file_list(new_flist_filename, root)) {
+                             rename(new_flist_filename, flist_filename);
+                         } else {
+-                            unlink(new_filelist_name);
++                            unlink(new_flist_filename);
+                         }
+ 
+                         if (!send_filelist(result_mq, root)) {
+@@ -607,11 +674,7 @@
+                         msgq_get(request_mq, MSGQ_INT, &update_type, MSGQ_END);
+                     } else {
+                         if (update_type == FILELIST_UPDATE_REFRESH_INTERVAL) {
+-                            time_t interval = 0;
+-                            msgq_get(request_mq, MSGQ_INT, &interval, MSGQ_END);
+-                            if (interval != 0) {
+-                                filelist_refresh_timeout = interval;
+-                            }
++                            msgq_get(request_mq, MSGQ_INT, &filelist_refresh_timeout, MSGQ_END);
+                         } else {
+                             char *name;
+                             int len = 0;
+@@ -626,13 +689,15 @@
+                             case FILELIST_UPDATE_ADD_DIR_NAME:
+                                 if (is_already_shared(root, name)) {
+                                     // report error here
+-                                    report_error(result_mq, "%s directory is already shared as subfolder of existing shared tree\n", name);
+-                                } else {
++                                    report_error(result_mq, _("%s directory is already shared as subfolder of existing shared tree\n"), name);
++                                } else if (FILELIST_SLAVE_MODE)
++                                    report_error(result_mq, _("Cannot add directory %s to share list while in slave filelist mode\n"), name);
++                                else {
+                                     char* bname = xstrdup(base_name(name));
+ 
+                                     if (hmap_contains_key(root->dir.children, bname)) {
+                                         /* we already have the shared directory with the same name */
+-                                        report_error(result_mq, "%s directory cannot be shared as %s because there is already shared directory with the same name\n", name, bname);
++                                        report_error(result_mq, _("%s directory cannot be shared as %s because there is already shared directory with the same name\n"), name, bname);
+                                     } else {
+                                         DCFileList* node = new_file_node(bname, DC_TYPE_DIR, root);
+                                         node->dir.real_path = xstrdup(name);
+@@ -642,28 +707,30 @@
+                                 }
+                                 break;
+                             case FILELIST_UPDATE_DEL_DIR_NAME:
+-                                //selected = 0;
+                                 {
+                                     char* bname = xstrdup(base_name(name));
+ 
+                                     DCFileList* node = hmap_get(root->dir.children, bname);
+-                                    if (node != NULL && node->type == DC_TYPE_DIR) {
+-                                        if (strcmp(node->dir.real_path, name) == 0) {
++                                    if (node != NULL && node->type == DC_TYPE_DIR &&
++                                        strcmp(node->dir.real_path, name) == 0) {
++                                        if (FILELIST_SLAVE_MODE)
++                                            report_error(result_mq, _("Cannot remove directory %s from share list while in slave filelist mode\n"), name);
++                                        else {
+                                             node = hmap_remove(root->dir.children, bname);
+                                             filelist_free(node);
+                                             if (write_local_file_list(new_flist_filename, root)) {
+                                                 rename(new_flist_filename, flist_filename);
+                                             } else {
+-                                                unlink(new_filelist_name);
++                                                unlink(new_flist_filename);
+                                             }
+ 
+                                             if (!send_filelist(result_mq, root)) {
+                                                 goto cleanup;
+                                             }
+-                                        } else {
+-                                            report_error(result_mq, "%s directory is not shared\n");
+                                         }
+                                     }
++                                    else
++                                        report_error(result_mq, _("%s directory is not shared\n"), name);
+                                     free(bname);
+                                 }
+                                 break;
+@@ -703,18 +770,27 @@
+                 }
+             }
+         }
+-        if (selected == 0) {
++
++        if (FILELIST_SLAVE_MODE && selected >= 0) {
++            // Check if filelist has been changed since we last read it
++            DCFileList *new_root = read_local_file_list(flist_filename, root);
++            if (new_root != root) {
++                root = new_root;
++                send_filelist(result_mq, root);
++            }
++        }
++        else if (selected == 0) {
+             // just look through shared directories for new or deleted files
+             if (hashing == NULL && !initial)
+-                report_status(result_mq, "Refreshing FileList");
++                report_status(result_mq, _("Refreshing FileList"));
+ 
+             if (lookup_filelist_changes(root, hash_files)) {
+                 if (write_local_file_list(new_flist_filename, root)) {
+                     rename(new_flist_filename, flist_filename);
+                 } else {
+-                    unlink(new_filelist_name);
++                    unlink(new_flist_filename);
+                 }
+-
++    
+                 if (!send_filelist(result_mq, root)) {
+                     break;
+                 }
+diff -ur orig/src/lookup.c src/lookup.c
+--- orig/src/lookup.c	2006-11-16 11:18:14.000000000 +0300
++++ src/lookup.c	2007-03-20 00:09:05.000000000 +0300
+@@ -170,6 +170,7 @@
+     /* Inability to register these signals is not a fatal error. */
+     sigact.sa_flags = SA_RESTART;
+     sigact.sa_handler = SIG_IGN;
++    sigemptyset (&sigact.sa_mask);
+ #ifdef HAVE_STRUCT_SIGACTION_SA_RESTORER
+     sigact.sa_restorer = NULL;
+ #endif
+diff -ur orig/src/main.c src/main.c
+--- orig/src/main.c	2006-12-24 21:23:51.000000000 +0300
++++ src/main.c	2007-03-31 17:26:33.000000000 +0400
+@@ -55,6 +55,15 @@
+ #include "common/msgq.h"
+ #include "microdc.h"
+ 
++/* Define the macro below for orphan handle checking (useful for debugging) */
++#define CHECK_ORPHAN_HANDLES
++
++#ifdef CHECK_ORPHAN_HANDLES
++#define IF_ORPHAN_HANDLES(x) x
++#else
++#define IF_ORPHAN_HANDLES(x)
++#endif
++
+ enum {
+     VERSION_OPT = 256,
+     HELP_OPT
+@@ -489,7 +498,8 @@
+ 
+     FD_CLR(uc->get_mq->fd, &read_fds);
+     FD_CLR(uc->put_mq->fd, &write_fds);
+-    if (close(uc->get_mq->fd) != 0 || close(uc->put_mq->fd) != 0)
++    // using (close || close) here could cause one of close() to be skipped
++    if ((close(uc->get_mq->fd) | close(uc->put_mq->fd)) != 0)
+ 	warn(_("Cannot close pipe - %s\n"), errstr);
+     msgq_free(uc->get_mq);
+     uc->get_mq = NULL;
+@@ -1109,9 +1119,11 @@
+     }
+     /* Start of disable_search. */
+     if (search_socket >= 0) {
+-	    if (close(search_socket) < 0)
++	if (close(search_socket) < 0)
+             warn(_("Cannot close socket - %s\n"), errstr);
+-	    search_socket = -1;
++	FD_CLR(search_socket, &read_fds);
++	FD_CLR(search_socket, &write_fds);
++	search_socket = -1;
+     }
+     /* End of disable_search. */
+     enable_search();
+@@ -1170,6 +1182,11 @@
+ 	        custom_config = true;
+ 	        free(config_file);
+ 	        config_file = xstrdup(optarg);
++            /* Check if file exists: if not consider it is a file name in package dir */
++            if (strchr (config_file, '/') == NULL && access (config_file, R_OK) != 0) {
++                free(config_file);
++                get_package_file(optarg, &config_file);
++            }
+ 	        break;
+ 	    case 'n': /* --no-config */
+ 	        free(config_file);
+@@ -1178,6 +1195,7 @@
+ 	    case HELP_OPT: /* --help */
+ 	        printf(_("Usage: %s [OPTION]...\n"), quotearg(argv[0]));
+ 	        puts(_("Start microdc, a command-line based Direct Connect client.\n"));
++	        printf(_("  -c, --config=FILE use a custom config file\n"));
+ 	        printf(_("  -n, --no-config  do not read config file on startup\n"));
+ 	        printf(_("      --help       display this help and exit\n"));
+ 	        printf(_("      --version    output version information and exit\n"));
+@@ -1306,34 +1324,60 @@
+ 	        break;
+ 	    }
+ 
+-    	if (running && FD_ISSET(signal_pipe[0], &res_read_fds))
+-	        read_signal_input();
+-    	if (running && FD_ISSET(STDIN_FILENO, &res_read_fds))
++    	if (running && FD_ISSET(signal_pipe[0], &res_read_fds)) {
++            FD_CLR(signal_pipe[0], &res_read_fds);
++            read_signal_input();
++	    }
++    	if (running && FD_ISSET(STDIN_FILENO, &res_read_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(STDIN_FILENO, &res_read_fds));
+     	    screen_read_input();
+-    	if (running && listen_socket >= 0 && FD_ISSET(listen_socket, &res_read_fds))
++	    }
++    	if (running && listen_socket >= 0 && FD_ISSET(listen_socket, &res_read_fds)) {
++	        IF_ORPHAN_HANDLES (FD_CLR(listen_socket, &res_read_fds));
+ 	        handle_listen_connection();
+-	    if (running && hub_socket >= 0 && FD_ISSET(hub_socket, &res_read_fds))
++	    }
++	    if (running && hub_socket >= 0 && FD_ISSET(hub_socket, &res_read_fds)) {
++	        IF_ORPHAN_HANDLES (FD_CLR(hub_socket, &res_read_fds));
+ 	        hub_input_available();
+-	    if (running && hub_socket >= 0 && FD_ISSET(hub_socket, &res_write_fds))
++	    }
++	    if (running && hub_socket >= 0 && FD_ISSET(hub_socket, &res_write_fds)) {
++	        IF_ORPHAN_HANDLES (FD_CLR(hub_socket, &res_write_fds));
+ 	        hub_now_writable();
++	    }
+         if (running)
+             check_hub_activity();
+-	    if (running && search_socket >= 0 && FD_ISSET(search_socket, &res_read_fds))
++	    if (running && search_socket >= 0 && FD_ISSET(search_socket, &res_read_fds)) {
++    	    IF_ORPHAN_HANDLES (FD_CLR(search_socket, &res_read_fds));
+     	    search_input_available();
+-	    if (running && search_socket >= 0 && FD_ISSET(search_socket, &res_write_fds))
++	    }
++	    if (running && search_socket >= 0 && FD_ISSET(search_socket, &res_write_fds)) {
++	        IF_ORPHAN_HANDLES (FD_CLR(search_socket, &res_write_fds));
+ 	        search_now_writable();
+-        if (running && FD_ISSET(lookup_request_mq->fd, &res_write_fds))
++	    }
++        if (running && FD_ISSET(lookup_request_mq->fd, &res_write_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(lookup_request_mq->fd, &res_write_fds));
+             lookup_request_fd_writable();
+-        if (running && FD_ISSET(lookup_result_mq->fd, &res_read_fds))
++	    }
++        if (running && FD_ISSET(lookup_result_mq->fd, &res_read_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(lookup_result_mq->fd, &res_read_fds));
+             lookup_result_fd_readable();
+-        if (running && FD_ISSET(parse_request_mq->fd, &res_write_fds))
++	    }
++        if (running && FD_ISSET(parse_request_mq->fd, &res_write_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(parse_request_mq->fd, &res_write_fds));
+             parse_request_fd_writable();
+-        if (running && FD_ISSET(parse_result_mq->fd, &res_read_fds))
++	    }
++        if (running && FD_ISSET(parse_result_mq->fd, &res_read_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(parse_result_mq->fd, &res_read_fds));
+             parse_result_fd_readable();
+-        if (running && FD_ISSET(update_request_mq->fd, &res_write_fds))
++	    }
++        if (running && FD_ISSET(update_request_mq->fd, &res_write_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(update_request_mq->fd, &res_write_fds));
+             update_request_fd_writable();
+-        if (running && FD_ISSET(update_result_mq->fd, &res_read_fds))
++	    }
++        if (running && FD_ISSET(update_result_mq->fd, &res_read_fds)) {
++            IF_ORPHAN_HANDLES (FD_CLR(update_result_mq->fd, &res_read_fds));
+             update_result_fd_readable();
++	    }
+ 
+ 	    if (running) {
+ 	        HMapIterator it;
+@@ -1341,13 +1385,36 @@
+ 	        hmap_iterator(user_conns, &it);
+ 	        while (running && it.has_next(&it)) {
+ 	    	    DCUserConn *uc = it.next(&it);
+-	    	    if (uc->put_mq != NULL && FD_ISSET(uc->put_mq->fd, &res_write_fds))
++	    	    if (uc->put_mq != NULL && FD_ISSET(uc->put_mq->fd, &res_write_fds)) {
++	    	        IF_ORPHAN_HANDLES (FD_CLR(uc->put_mq->fd, &res_write_fds));
+ 	    	        user_request_fd_writable(uc);
+-                    if (uc->get_mq != NULL && FD_ISSET(uc->get_mq->fd, &res_read_fds))
+-                        user_result_fd_readable(uc);
++	            }
++	            if (uc->get_mq != NULL && FD_ISSET(uc->get_mq->fd, &res_read_fds)) {
++	                IF_ORPHAN_HANDLES (FD_CLR(uc->get_mq->fd, &res_read_fds));
++	                user_result_fd_readable(uc);
++	            }
+ 	        }
+ 	    }
+-    }
++
++#ifdef CHECK_ORPHAN_HANDLES
++        /* Check for orphan file handles */
++        {
++            int i;
++            for (i = 0; i < FD_SETSIZE; i++) {
++                if (FD_ISSET (i, &res_read_fds)) {
++                    warn(_("Orphan READ file handle %d, closing\n"), i);
++                    close (i);
++                    FD_CLR (i, &read_fds);
++                }
++                if (FD_ISSET (i, &res_write_fds)) {
++                    warn(_("Orphan WRITE file handle %d, closing\n"), i);
++                    close (i);
++                    FD_CLR (i, &write_fds);
++                }
++            }
++        }
++#endif
++	}
+ 
+ cleanup:
+ 
+@@ -1365,6 +1432,9 @@
+ 
+     byteq_free(search_recvq);
+ 
++    /* Do this before freeing user_conn_unknown_free otherwise we crash */
++    hmap_foreach_value(user_conns, user_conn_cancel);
++
+     ptrv_foreach(user_conn_unknown_free, free);
+     ptrv_free(user_conn_unknown_free);
+ 
+@@ -1374,7 +1444,6 @@
+     ptrv_foreach(our_searches, (PtrVForeachCallback) free_search_request);
+     ptrv_free(our_searches);
+ 
+-    hmap_foreach_value(user_conns, user_conn_cancel);
+     /* XXX: follow up and wait for user connections to die? */
+     hmap_free(user_conns);
+ 
+diff -ur orig/src/microdc.1 src/microdc.1
+--- orig/src/microdc.1	2006-10-22 12:35:50.000000000 +0400
++++ src/microdc.1	2007-03-17 11:16:33.000000000 +0300
+@@ -34,6 +34,8 @@
+ .TP
+ \fB\-c, \-\-config\fR=\fIFILE\fR
+ Read configuration script from FILE rather than ~/.microdc/config.
++If FILE doees not exist and its name doesn't contain any slashes,
++program will look for given file in ~/.microdc/.
+ .TP
+ \fB\-n, \-\-no\-config\fR
+ Do not read config file on startup.
+@@ -43,6 +45,69 @@
+ .TP
+ \fB\-\-version\fR
+ Output version information and exit.
++.SH SETTINGS
++Most important options can be changed only by using the microdc \fBset\fR command.
++.TP
++\fBactive\fR=\fIon|1|off|0\fR
++Enable if listening for remote connections. Uses the setting \fBlistenport\fR
++for incoming connection port number.
++.TP
++\fBauto_reconnect\fR=\fIon|1|off|0\fR
++Enable automatic reconnect to the last connected hub
++.TP
++\fBdescription\fR=\fISTRING\fR
++This is the description which is visible to other users of the hub.
++.TP
++\fBdisplay\fR=\fIconnections{,debug,download,joinpart,publicchat,searchresults,upload}\fR
++Types of messages to display on screen.
++.TP
++\fBdownloaddir\fR=\fISTRING\fR
++Directory which files are downloaded to.
++.TP
++\fBemail\fR=\fISTRING\fR
++The e-mail visible to other users of the hub.
++.TP
++\fBfilelist_refresh_interval\fR=\fINUMBER\fR
++Local filelist refresh interval (in seconds). If set to zero, program runs in a
++special \fIslave\fR mode: it never updates the file list, just checks every minute
++if the filelist changes, and if so - reads it. This is pretty useful if you connect
++to several hubs and use same filelist.
++.TP
++\fBfilesystem_charset\fR=\fICHARSET\fR
++Character set used for chat on the hub.
++.TP
++\fBlistenaddr\fR=\fIHOST\fR
++Address to send to clients.
++.TP
++\fBlistenport\fR=\fINUMBER\fR
++Port to listen on for connections.
++.TP
++\fBlistingdir\fR=\fISTRING\fR
++Directory where file listings are kept. If you set this, this makes startup faster.
++.TP
++\fBlog\fR=\fIconnections{,debug,download,joinpart,publicchat,searchresults,upload}\fR
++Types of messages to log (if logfile set).
++.TP
++\fBlog_charset\fR=\fICHARSET\fR
++Log charset (if it differs from local charset).
++.TP
++\fBlogfile\fR=\fIFILE\fR
++File to log screen messages to (will be appeneded).
++.TP
++\fBnick\fR=\fISTRING\fR
++This is the desired (but not necessarily the current) nick name.
++.TP
++\fBpassword\fR=\fISTRING\fR
++The optional password to pass to the hub on connect.
++.TP
++\fBslots\fR=\fINUMBER\fR
++Number of open upload slots.
++.TP
++\fBspeed\fR=\fISTRING\fR
++The speed visible to other users of the hub.
++.TP
++\fBtag\fR=\fISTRING\fR
++The user agent tag the hub uses to detect features
+ .SH FILES
+ The following files are used by microdc (~ represents the current user's home directory):
+ .TP
+diff -ur orig/src/microdc.h src/microdc.h
+--- orig/src/microdc.h	2006-12-24 21:27:15.000000000 +0300
++++ src/microdc.h	2007-03-17 13:36:26.000000000 +0300
+@@ -596,6 +596,7 @@
+ extern pid_t update_child;
+ extern char* update_status;
+ extern time_t filelist_refresh_timeout;
++#define FILELIST_SLAVE_MODE (filelist_refresh_timeout <= 0)
+ bool local_file_list_update_init(void);
+ bool local_file_list_init(void);
+ void local_file_list_update_finish(void);
+diff -ur orig/src/user.c src/user.c
+--- orig/src/user.c	2006-11-30 13:00:40.000000000 +0300
++++ src/user.c	2007-03-22 11:10:49.000000000 +0300
+@@ -604,7 +604,7 @@
+             ucl->share_file/*UL*/ = share_file;
+         } else {
+             free(share_file);
+-            ucl->share_file = xstrdup(base_name(local_file));
++            ucl->share_file = xstrdup(local_file ? base_name(local_file) : "");
+         }
+         ucl->local_file/*UL*/ = local_file;
+     } else {
+@@ -612,7 +612,7 @@
+     }
+ 
+     if (ucl->local_file/*UL*/ == NULL) {
+-        flag_putf(DC_DF_CONNECTIONS, _("%s: File Not Available\n"), quotearg(ucl->local_file/*UL*/));
++        flag_putf(DC_DF_CONNECTIONS, _("Non-existent file requested: Not Available\n"));
+         user_putf(ucl, "$Error File Not Available|");
+         end_upload(ucl, false, _("no such shared file"));
+         return -4;
+diff -ur orig/src/variables.c src/variables.c
+--- orig/src/variables.c	2006-12-24 21:42:07.000000000 +0300
++++ src/variables.c	2007-03-17 13:39:15.000000000 +0300
+@@ -313,10 +313,27 @@
+ static void
+ charset_completion_generator(DCCompletionInfo *ci)
+ {
+-    /* FIXME: NYI */
+-    /*run the command  'iconv --list' to get a list of completion alternatives
+-    fork();
+-    exec('iconv', 'iconv', '--list');*/
++    size_t wlen;
++    char line [100];
++    FILE *f = popen ("iconv --list", "r");
++    if (!f)
++        return;
++
++    wlen = strlen(ci->word);
++
++    // iconv detects when stdout is not a tty, and prints the list
++    // in a special format: CHARSET//
++    while (fgets (line, sizeof (line), f)) {
++        char *slash = strchr (line, '/');
++        if (!slash)
++            continue;
++        *slash = 0;
++
++        if (slash - line >= wlen && memcmp(ci->word, line, wlen) == 0)
++            ptrv_append(ci->results, new_completion_entry(xstrndup(line, slash - line), NULL));
++    }
++    pclose (f);
++    ptrv_sort(ci->results, completion_entry_display_compare);
+ }
+ 
+ 

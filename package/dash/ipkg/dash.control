@@ -1,0 +1,4 @@
+Package: dash
+Priority: optional
+Section: admin
+Description: "dash" is a POSIX compliant shell that is much smaller than "bash". 

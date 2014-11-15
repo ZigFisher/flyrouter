@@ -1,0 +1,19 @@
+--- ppp-2.4.4/pppd/main.c.orig	2011-08-09 10:03:51.000000000 +0300
++++ ppp-2.4.4/pppd/main.c	2011-08-09 10:07:42.000000000 +0300
+@@ -1500,6 +1500,8 @@
+ 	if (errfd == 0 || errfd == 1)
+ 		errfd = dup(errfd);
+ 
++	closelog();
++
+ 	/* dup the in, out, err fds to 0, 1, 2 */
+ 	if (infd != 0)
+ 		dup2(infd, 0);
+@@ -1508,7 +1510,6 @@
+ 	if (errfd != 2)
+ 		dup2(errfd, 2);
+ 
+-	closelog();
+ 	if (log_to_fd > 2)
+ 		close(log_to_fd);
+ 	if (the_channel->close)

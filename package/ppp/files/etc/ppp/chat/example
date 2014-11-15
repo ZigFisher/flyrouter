@@ -1,0 +1,48 @@
+ECHO	ON
+ABORT	'BUSY'
+ABORT	'NO ANSWER'
+ABORT	'NO CARRIER'
+ABORT	'NO DIALTONE'
+ABORT	VOICE 
+ABORT	'NO DIAL TONE' 
+ABORT	DELAYED
+ABORT	'\nRING\r\n\r\nRING\r'
+ABORT	'\nRINGING\r\n\r\nRINGING\r'
+SAY	"GPRS modem init: press <crtl>-C to disconnect"
+
+TIMEOUT	15
+''	'AT'
+''	'AT'
+
+SAY	"\n + Reseting Modem"
+OK	'AT&FZ'
+OK	'AT'
+ABORT	'ERROR'
+
+SAY	"\n + Initialing Modem"
+OK	'AT+CGDCONT=1,"IP","internet"'
+
+SAY	"\n + Attaching to GPRS"
+OK	'AT+CGATT=1'
+
+SAY	"\n + To check signal of Modem"
+OK	'AT+CSQ'
+
+SAY	"\n + Dialing up now"
+OK	'ATD*99***1#'
+	
+SAY	"\n + requesting data connection"
+CONNECT	''
+SAY	"\n + Connected"
+
+
+##############################################
+
+SAY	"\n + Initialing Modem"
+OK	'ATE0V1&F&D2&C1&C2S0=0'
+OK	'ATE0V1'
+OK	'ATS7=60'
+
+SAY	"\n + Dialing up now"
+OK	'ATD#777'
+	

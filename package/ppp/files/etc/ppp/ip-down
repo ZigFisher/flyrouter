@@ -1,0 +1,16 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Down PPP/PPPTP/PPPOE link script
+# Version 0.4 20090622
+
+export USER='root'
+
+NEWNAME="$PEERNAME"
+[ -z "$PEERNAME" ] && NEWNAME="$LINKNAME"
+
+[ -x /etc/init.d/ipsec ] && /etc/init.d/ipsec stop
+
+[ -x /usr/sbin/dnrd ] && /usr/sbin/dnrd -l -u dnrd -c off -s 208.67.222.222 -s 208.67.220.220
+
+[ -x /usr/bin/vnstat ] && [ -w /var/lib/vnstat/$NEWNAME ] && /usr/bin/vnstat -u -r --disable -i $NEWNAME

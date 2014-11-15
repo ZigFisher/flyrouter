@@ -1,0 +1,324 @@
+.\" This code was written and is copyrighted 1996,1997,1998 by
+.\"
+.\"       Elmar Bartel
+.\"       Institut fuer Informatik
+.\"       Technische Universitaet Muenchen
+.\"       bartel@informatik.tu-muenchen.de
+.\"
+.\" Permission to use, copy, modify and distribute this software
+.\" and its documentation for any purpose, except making money, is
+.\" herby granted, provided that the above copyright notice and
+.\" this permission appears in all places, where this code is
+.\" referenced or used literally.
+.\"/
+.TH nttcp 1 "5 Oct 1998"
+.SH NAME
+nttcp \- new test TCP program
+.SH SYNOPSIS
+.B nttcp 
+[
+.B local options
+]
+.B partner-host [ partner-host ] ...
+[
+.B remote options
+]
+
+.SH DESCRIPTION
+The 
+.B nttcp
+program measures the transferrate (and other numbers)
+on a TCP, UDP or UDP multicast connection.
+To use
+.B nttcp 
+you have to provide the executable on the local machine and on a partner
+machine. On the partner machine simply start
+.B nttcp
+with the option 
+.BR "\-i" .
+Started this way,
+.B nttcp 
+is waiting for connections from other
+.BR nttcp s.
+On the local host simply call
+.B nttcp
+with the name of the partner host. It will contact the
+.B nttcp
+started on the partner machine and initiate the transfer. On default the
+program transfers 2048 buffers of 4KByte length (a total of 8 MByte)
+to the partner host. On both sides the performance will be
+measured and the findings (both, remote and local) are reported on the
+local side. You may change nearly every parameter of the transmission
+via commandline options, even what and how results are printed.
+
+.SH OPTIONS
+.TP
+.B "\-r "
+defines the receive transfer direction; data is sent from the partner 
+host to the local host.
+.TP
+.B "\-t "
+defines the transmit transfer direction; data is sent from the local 
+host to the partner host. This is the default direction.
+.TP
+.B "\-T "
+Print a title line.
+.TP
+.B "\-u "
+Use the UDP protocol instead of TCP (which is the default).
+.TP
+.B "\-g "
+Gap time in microseconds between packets. This delay
+is implemented via the timeout parameter of select(2) and a loop
+with gettimeofday(2). The accuracy of this value is misleading.
+Most machines will not be able to delay exactly the given amount.
+The code will try its best to achieve the desired delay. For TCP
+connections this option does only implement a delay between the write(2)
+system calls. It does not really delay between the real output on
+the physical device.
+.TP
+.B "\-v "
+Give more and verbose output; only useful for debugging purposes.
+.TP
+.B "\-D "
+Set the TCP_NODELAY option on the transmitting socket.
+With this option set, the socket does not buffer any write requests.
+.TP
+.BI "\-f " "format string"
+Specify your own output format. See
+.BR OUTPUT .
+.TP
+.BI "\-n " "number of buffers"
+The given number of buffers will be written to the transmitting socket.
+It defaults to 2048.
+.TP
+.BI "\-l " "length of buffer"
+The given length defines the size of one buffer written to the
+transmitting socket. Defaults to 4096.
+.TP
+.BI "\-x " "fixed length of data"
+The given length defines the amount of data that will be transfered.
+Subsequent specified
+.BR "\-l " or
+.BR "\-n " options
+will adapt the corresponding other value so that the 
+number of buffers and the length of buffer multiplies to the
+given fixed length.
+.TP
+.BI "\-w " "number of kilo bytes"
+Defines the buffer size of the transmitting and receiving socket.
+This is system dependant; usally it is 16K.
+.TP
+.B "\-c "
+If this option is present, the receiving side will compare the
+bytes received with the pattern used by the sending side. At
+most the first 100 differences will be reported. If the 
+transmission is via TCP, a uniq pattern for the whole
+transmission is generated. For UDP the same pattern for each
+paket is used. You can force a stream pattern with the
+.B "\-s "
+switch; but if one paket is lost, all subsequent packets contain
+patterns not expected and will be reported as different. Since every
+byte is numbered, this can be used to detect the first packet lost
+during the transmission.
+.br
+.BR "BUT be aware" :
+if there is a difference, this option may lead to packet-losses on UDP
+transmissions or to degration in performance, since the
+preparation of the output is simple-minded and uses a lot of
+CPU time.
+.TP
+.B "\-s "
+Forces the generation of a stream pattern if UPD packet data is
+compared. See
+.B "\-c "
+switch.
+.TP
+.BI "\-S " "seed string"
+give any string to initialize the pattern generator. By default
+this seed has the value 
+.RI  ' "This is a simple init string" '.
+This enforces the
+.B "\-c"
+option.
+.TP
+.BI "\-p" "port number"
+On default the partner host will listen on port 5037. This can
+be overwritten with this option.
+.TP
+.B "\-i"
+If you have no root access on the partner host, or do not want
+hacking with
+.BR inetd ,
+this option directs
+.B nttcp
+to behave as a daemon, waiting for connections and spawning off
+child processes by itself as inetd would do it otherwise.
+.TP
+.BI "\-R" "number of getpid() calls"
+This option does not transmit any data, but calls the given number of
+times getpid(2) and calculates the number of calls per second. This is
+a measure for the speed of the machine and the system call interface.
+.TP
+.BI "-m" "multicast IP:port"
+This option is used to force sending to the specified multicast address
+and port. This option enforces the
+.BR "\-u " and "\-t " switch. Also see MULTICAST later in this document.
+
+.SH OUTPUT
+The output of the program consists of two lines of numbers; or
+more lines if used in transmitting to more than one machine
+(multicasting).
+The first line for the measures of the local host the other line
+for the measure of the partner host. This is also indicated with
+the first characters beeing a 'l' respective 'r'. If the
+.B "\-T"
+flag was given, also a Title line is given. The default format
+of the outout looks like this:
+.br
+.sp
+.nf
+     Bytes  Real s   CPU s Real-MBit/s  CPU-MBit/s   Calls  Real-C/s   CPU-C/s
+l  8388608    7.51    0.25      8.7307    259.8676    2048    272.83   8120.86
+r  8388608    7.55    0.95      8.6804     68.9853    3831    507.42   4032.63
+.fi
+.br
+.sp
+The timing and rate values marked with 'CPU' use the sum of system and
+user time only. Real timing and rate values are computed using the time
+from the begin to the end of the transmission.
+.br
+It is possible to specify another form of the output. This is done
+similiar to the format strings of printf(3s). The conversion characters
+of printf(3s) are replaced with the following tags. Each tag is
+preceded by '%' as in printf(3s). Between the '%' character and the tag 
+there are width and precision specifications allowed as with printf(3s).
+Two types of values are printed integers and floats. For these types
+the conversion letters 'd' respective 'f' of printf(3s) are used.
+.br
+.TP 5
+.BR "l   " "prints the buffer length in bytes. Integer value."
+.TP 5
+.BR "n   " "prints the buffer count. Integer value."
+.TP 5
+.BR "c   " "prints the number of calls. Integer value."
+.TP 5
+.BR "rt  " "prints the real time in s. Float value."
+.TP 5
+.BR "rbr " "prints the real bit rate in MBit/s. Float value."
+.TP 5
+.BR "rcr " "prints the real call rate in calls/s. Float value."
+.TP 5
+.BR "ct  " "prints the cpu time in s. Float value."
+.TP 5
+.BR "cbr " "prints the cpu bit rate in MBit/s. Float value."
+.TP 5
+.BR "ccr " "prints the cpu call rate in calls/s. Float value."
+.PP
+The default format is produced with the following format string:
+.RS 4
+"%9b%8.2rt%8.2ct%12.4rbr%12.4cbr%8c%10.2rcr%10.2ccr"
+.RE
+
+.SH INSTALLATION
+To make most convenient use of this program, it can be installed on
+the partner machine, so that inetd(8) can start it. To accomplish
+this, two files have to be edited:
+.B "/etc/inetd.conf"
+and
+.BR "/etc/services" "."
+.P
+The respective lines may look like this:
+.TP 3
+.B "inetd.conf:"
+.nf
+ttcp stream tcp nowait nobody /usr/local/etc/nttcp nttcp
+.fi
+.TP 3
+.B "services:"
+.nf
+ttcp 5037/tcp # to measure tcp transfer rates
+.fi
+.PP
+After these changes have been made, the inetd(8) process has to be
+notified via a HUP signal (or killed and restarted on older versions
+of unix).
+.PP
+
+.SH MULTICASTING
+Beginning with version 1.4 there is support generating multicast 
+traffic. You even needn't set any option, but simply specify more
+than one partner host. This mode is restricted to sending packets
+from the local host to the partner hosts. And of course works only
+on machines that have a multicast enabled IP stack. Tested is this
+feature on Solaris2.6, HPUX-10 and HPUX-11 and Irix 6.2.  Also
+FreeBSD-2.2.6 compiled with option MROUTING works. But be aware
+what this means to your networking environment. Most ethernet
+switches for example handle multicast traffic as broadcast.
+This way you will flood your complete network with these packets.
+
+
+.SH ENVIRONMENT
+The are two environment variables NTTCP_LOC_OPT and NTTCP_REM_OPT
+that can be used to preset the local options and remote options
+respectivly. They take the same format as the commandline does.
+Commandline options override those settings from the environment.
+
+.SH SECURITY
+Under security considerations, the inetd-mode of operation is
+.B NOT
+suggested.
+Hosts configured to start
+.B nttcp
+this way, are very open to denial-of-service attacks. If you are
+concerned about this issue, you should consider either the use of
+tcpwrapper or simply not install 
+.B nttcp
+this way.
+.br
+Also be sure to run 
+.B nttcp
+as non-root when started via inetd(8). I have taken some care
+to avoid buffer-overrun prone coding. But the source is too big
+now to be sure in all corners of the code.
+.PP
+You may also consider not to provide general access to this programm.
+It may easily be used to flood your network with lots of traffic.
+This may be used to launch or support denial-of-service attacks.
+
+.SH WARNING
+There are a lot of pitfalls in explaining unexpected measures.
+Be sure to get a thorough understanding of your network and
+the devices used and installed. Also it is extremly helpful
+to have a deep understanding of the things that happen in your
+machine and operating system. A short example shows what is
+meant here: If you see packet losses on UDP transfers, it
+may be, that the packets are lost on the sending host! For
+today machines it is easy to produce packets much faster
+than a 10MBit ethernet can swallow it, so they may be dropped
+on the UDP stack of the operating system. This depends on
+the implementation of your IP stack.
+So, to be sure, use a second machine, and snoop or tcpdump
+the traffic in question, to be sure what happens on the
+medium.
+
+.SH BUGS
+Any program without bugs?
+
+.SH SEE ALSO
+inetd(8).
+
+.SH HISTORY
+This program was written to ease the measurement of TCP transfer
+rates in a network of unix workstations. It is based on the 
+ttcp.c program, which was (I suppose) posted to comp.sources.misc.
+This man-page describes version 1.4.
+
+.SH AUTHOR
+Elmar Bartel
+.br
+Fakultaet fuer Informatik,
+.br
+Technische Universitaet Muenchen.
+.PP
+bartel@informatik.tu-muenchen.de

@@ -1,0 +1,36 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Traffic manager script
+# Version 0.2 20070808
+
+# Run command for change this param
+# export BACKBONE_DEV=ispX ; /etc/network/fw
+BACKBONE_DEV=${BACKBONE_DEV:-"eth0"}
+
+# Example 1: 
+# rate - shape both interface (WAN/LAN) if orate or irate is not defined
+group1_nets="192.168.1.0/24"
+group1_mark=100
+group1_rate=250/256
+group1_dev=eth1
+
+# National Lottery
+#lottery_nets="212.1.76.13"
+#lottery_mark=101
+#lottery_dev=null
+
+# Example 2: 
+# orate - shape on WAN interface
+# irate - shape on LAN interface 
+#clients2_nets="192.168.2.10 192.168.2.12 192.168.2.144/30"
+#clients2_irate=4000/4096
+#clients2_orate=2000/2048
+#clients2_mark=101
+#clients2_prio=2
+#clients2_dev=eth2
+
+# Example 3:
+# Redirected group (see udhcpd and fw settings)
+#redirected_nets="192.168.1.172 192.168.1.248/30"
+#redirected_dev=eth1

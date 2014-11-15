@@ -1,0 +1,5 @@
+Package: remote
+Section: hamradio
+Priority: optional
+Description: this is test
+Depends: 

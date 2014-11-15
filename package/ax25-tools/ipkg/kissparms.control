@@ -1,0 +1,5 @@
+Package: kissparms
+Section: hamradio
+Priority: optional
+Description: kissparms - configure KISS TNCs
+Depends: libax25, kissattach

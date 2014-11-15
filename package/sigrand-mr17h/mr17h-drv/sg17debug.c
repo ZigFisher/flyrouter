@@ -1,0 +1,11 @@
+int debug_xmit=40;
+int debug_recv=40;
+int debug_irq=40;
+int debug_sci=40;
+int debug_init=40;
+int debug_sdfe4=40;
+int debug_cur=50;
+int debug_netcard=40;
+int debug_link=40;
+int debug_error=0;
+int debug_eoc=40;

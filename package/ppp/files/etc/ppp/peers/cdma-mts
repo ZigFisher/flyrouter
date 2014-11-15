@@ -1,0 +1,27 @@
+debug
+noipdefault 
+usepeerdns
+defaultroute
+hide-password 
+noauth
+#persist
+refuse-eap
+refuse-chap
+refuse-mschap
+refuse-mschap-v2
+#refuse-pap
+unit 200
+maxfail 3
+ipcp-accept-local
+ipcp-accept-remote
+lcp-echo-interval 30
+lcp-echo-failure 5
+mtu 1400
+#/dev/ttyS1
+/dev/usb/tts/0
+115200
+nocrtscts
+name "mobile"
+linkname cdma1
+connect "/usr/sbin/chat -v -f /etc/ppp/chat/cdma-mts.chat"
+disconnect "/usr/sbin/chat -v -f /etc/ppp/chat/disconnect.chat"

@@ -1,0 +1,1551 @@
+diff -wuBr dbhub-0.451.orig/src/commands.c dbhub-0.451/src/commands.c
+--- dbhub-0.451.orig/src/commands.c	2008-01-25 23:01:12.000000000 +0200
++++ dbhub-0.451/src/commands.c	2009-08-19 20:47:27.000000000 +0300
+@@ -78,6 +78,8 @@
+ #include "lang.h"
+ #endif
+ 
++time_t proxybotjointime;
++
+ /* This command has the following format:
+ *$SR fromnick filename\5filesize openslots/totalslots\5hubname (hubip:hubport)\5tonick| */
+ void sr(char *buf, struct user_t *user)
+@@ -157,7 +159,10 @@
+ 			uprintf(user, "$To: %s From: %s $<%s> You are being kicked because: %s -> %s|", user->nick, botnick, botnick, lp_unfinishedfiles, filename);	
+ 			snprintf(longmessage, 1000, "<%s> is kicking %s (IP: %s) because: %s -> %s|", botnick, user->nick, user->hostname, lp_unfinishedfiles, filename);
+ 			send_to_humans(longmessage, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);	
++            if (user->hide_share != 2)
+ 			user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++            else
++                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 			return;
+ 		}
+ 	}
+@@ -334,7 +339,10 @@
+ 		if(sscanf(buf, "<%50[^>]> %300[^|]|", nick, chatstring) < 1)
+ 		{
+ 			logprintf(0, "Received bad chat command from %s at %s\n", user->nick, user->hostname);
++                    if (user->hide_share != 2)
+ 			user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                    else
++                        user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 			return;
+ 		}
+ 		if(chatstring[0] == '\0')
+@@ -745,7 +753,7 @@
+ 		snprintf(acttime, 50, "%s", asctime (timeinfo));
+ 		trim_string(acttime);
+ 		sscanf(acttime, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-		sdate[5] = '\0';
++                    sdate[8] = '\0';
+ 		if(strcmp(smont, "Jan") == 0)
+ 		snprintf(smont, 4, "01");
+ 		if(strcmp(smont, "Feb") == 0)
+@@ -776,7 +784,7 @@
+ 		snprintf(acttime, 50, "%s-%s-%s", syear, smont, sday); 
+ 		create_dailylog(acttime);
+ 		snprintf(path, MAX_FDP_LEN, "%s/%s/%s", config_dir, LOG_DIR, acttime);		
+-		snprintf(bigstring, 1000, "[%s] * %s %s\n", sdate, user->nick, chatstring+4); 
++                    snprintf(bigstring, 1000, "[%s | %s ] * %s %s\n", sdate, user->hostname, user->nick, chatstring+4); 
+ 		add_line_to_file(bigstring, path);
+ 		}
+ 		largestring[strlen(largestring) - 1] = '\0';
+@@ -1305,7 +1313,7 @@
+ 		snprintf(acttime, 50, "%s", asctime (timeinfo));
+ 		trim_string(acttime);
+ 		sscanf(acttime, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-		sdate[5] = '\0';
++                                sdate[8] = '\0';
+ 		if(strcmp(smont, "Jan") == 0)
+ 		snprintf(smont, 4, "01");
+ 		if(strcmp(smont, "Feb") == 0)
+@@ -1336,7 +1344,7 @@
+ 		snprintf(acttime, 50, "%s-%s-%s", syear, smont, sday); 
+ 		create_dailylog(acttime);
+ 		snprintf(path, MAX_FDP_LEN, "%s/%s/%s", config_dir, LOG_DIR, acttime);
+-		snprintf(bigstring, 4096, "[%s] <%s> %s\n", sdate, nick, msgl); 
++                                snprintf(bigstring, 4096, "[%s | %s ] <%s> %s\n", sdate, user->hostname, nick, msgl); 
+ 		add_line_to_file(bigstring, path);
+ 		}
+ 		
+@@ -1798,10 +1806,17 @@
+ 	return;
+ 	}
+ 	
++    if(proxybotonline && (user->type & (OP | CHEEF | ADMIN | OWNER)) != 0 && strcmp(tonick, proxybotnick) == 0)
++        {             
++            snprintf(setmessage, 601, "%s|", message);
++            if(is_command(setmessage, user, 2) == 1)
++                return;
++        }
++	
+ 	/* And forward the message to specified user.  */
+ 	if((to_user = get_human_user(tonick)) != NULL)
+ 	{
+-	  /* gagged users, only can send pvt msgs to op and/or admin users */
++
+ 
+ 	  	
+ 		if((user->autoawaytime > 0) && (user->away_flag == 2) && (strstr(buf, "are being kicked") == NULL))
+@@ -1818,7 +1833,10 @@
+ 		user->away_flag=1;
+ 		if(send_user_info(user, user->version) == 0)
+ 		{
++                            if (user->hide_share != 2)
+ 		user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
++                            else
++                                user->rem = REMOVE_USER | REMOVE_FROM_LIST;
+ 		return;
+ 		}
+ 		if(no_chat_for_chatgagged == 0)
+@@ -1951,38 +1969,12 @@
+ 	  else
+ 	  {
+ 	    /* default behavior... */
+-	    if((user->type != SCRIPT) && (user->gagc != 0))
+-	    {
+-	    if((to_user->type & (OP | CHEEF | ADMIN | OWNER)) != 0)
+-	    {
+-	    	accepted_pm++;
+-		send_to_user(buf, to_user);
+-	    }
+-			else
+-			{
+-			blocked_pm++;
+-				buf = NULL;
+-    			if((user->type == REGULAR) && ((mute_unregistered == 1) || (mute_unregistered == 3)))
+-            		{
+-			uprintf(user, "$To: %s From: %s $<%s> %s. %s|", user->nick, to_user->nick, botnick, lp_haveregistertochat, lp_canonlypmtoops);
+-			uprintf(user, "<%s> %s. %s|", botnick, lp_haveregistertochat, lp_canonlypmtoops);
+-			}
+-			else
+-		        {
+-			uprintf(user, "$To: %s From: %s $<%s> %s. %s|", user->nick, to_user->nick, botnick, lp_notallowedtochat, lp_canonlypmtoops);
+-			uprintf(user, "<%s> %s. %s|", botnick, lp_notallowedtochat, lp_canonlypmtoops);
+-			}    
+-
+ 				
+-			}
+-	  }
+-	else 
+-	{
+ 		now = time(NULL);
+ 		user->last_pm_write = now;  
+ 		accepted_pm++;
+ 		send_to_user(buf, to_user);
+-	}
++
+ 		}
+ 	}
+ }
+@@ -2009,7 +2001,7 @@
+ 	char ban_command[151];
+ 	char temp_size[50];
+ 	char to_nick[51];
+-	char temp_nick[51];
++	char temp_nick[MAX_NICK_LEN+1];
+ 	char path[MAX_FDP_LEN+1];
+ 	struct user_t *to_user;
+ 	char share_buf[21];
+@@ -2491,6 +2483,8 @@
+ 	
+ 	uprintf(user, "$MyINFO $ALL %s [BOT] Hub-Security <DB V:%s,M:A,H:0/0/1,S:0>$ $$hub-security$0$|", botnick, VERSION);
+ 	uprintf(user, "$MyINFO $ALL %s [BOT] Op Chat <DB V:%s,M:A,H:0/0/1,S:0>$ $$opchat$0$|", opchatnick, VERSION);
++                    if (proxybotonline)
++                        uprintf(user, "$MyINFO $ALL %s %s|", proxybotnick, proxybotinfo);	
+ 	if(clockbot == 1)
+ 	uprintf(user, "$MyINFO $ALL %s [BOT] Server Time <DB V:%s,M:A,H:0/0/1,S:0>$ $$clock$0$|", clocknick, VERSION);
+ 	send_myinfo(user);
+@@ -2551,11 +2545,9 @@
+ 
+ 
+ human_user = human_sock_list; 
+-while(human_user != NULL) 
+-{ 
++                    while(human_user != NULL) { 
+ next_human = human_user->next; 
+-if(((human_user->user->type & (ADMIN | OWNER)) != 0) && (user->hide_share != 2))
+-{
++                        if(((human_user->user->type & (ADMIN | OWNER)) != 0) && (user->hide_share != 2)) {
+ if(show_joinsparts == 1)
+ uprintf(human_user->user, "<%s> %s: %s (IP: %s), %s|", botnick, lp_joins, user->nick, user->hostname, usertype);
+ if(show_joinsparts == 2)
+@@ -2563,7 +2555,7 @@
+ }
+ human_user = next_human; 
+ }
+-if(show_joinsparts == 3)
++                    if(show_joinsparts == 3 && user->hide_share != 2)
+ {
+ snprintf(kbstring, 500, "<%s> %s: %s (IP: %s). %s|", botnick, lp_joins, user->nick, user->hostname, usertype);
+ send_to_humans(kbstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, user);
+@@ -2665,10 +2657,11 @@
+ {
+ if(ret - max_warnings > 1)
+ {
+-user->gags = 1;
+-user->gagd = 1;
++/*                                     user->gags = 1; */
++/*                                     user->gagd = 1; */
+ user->gagc = 1;
+-uprintf(user, "<%s> %s %s, %s, %s %s: %s. %s|", botnick, lp_youweregagged, lp_chatting_, lp_downloading_, lp_searching_, lp_because, lp_toomanywarnings, lp_canonlypmtoops);
++/*                                     uprintf(user, "<%s> %s %s, %s, %s %s: %s. %s|", botnick, lp_youweregagged, lp_chatting_, lp_downloading_, lp_searching_, lp_because, lp_toomanywarnings, lp_canonlypmtoops); */
++                                    uprintf(user, "<%s> %s %s %s: %s.|", botnick, lp_youweregagged, lp_chatting_, lp_because, lp_toomanywarnings);
+ }
+ else
+ uprintf(user, "<%s> %s: [ %d/%d %s ]|", botnick, lp_yourwarnings, ret, max_warnings, lp_allowed_);
+@@ -2688,12 +2681,12 @@
+ snprintf(kbstring, 500, "<%s> %s %s %s|", botnick, lp_class8, user->nick, welcomeadmin);
+ send_to_humans(kbstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+ }
+-else if((user->type == CHEEF) && (strlen(welcomecheef) > 0))
++                    else if((user->type == CHEEF) && (strlen(welcomecheef) > 0) && (user->hide_share != 2))
+ {
+ snprintf(kbstring, 500, "<%s> %s %s %s|", botnick, lp_class7, user->nick, welcomecheef);
+ send_to_humans(kbstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+ }
+-else if((user->type == OP) && (strlen(welcomeop) > 0))
++                    else if((user->type == OP) && (strlen(welcomeop) > 0) && (user->hide_share != 2))
+ {
+ snprintf(kbstring, 500, "<%s> %s %s %s|", botnick, lp_class6, user->nick, welcomeop);
+ send_to_humans(kbstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+@@ -2786,10 +2779,9 @@
+ #endif
+ 
+ 	/* Add user to user list */
+-	if((user->type & (NON_LOGGED | REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER)) != 0)
+-	{	
+-		if((ret = add_user_to_list(user)) == 0)
+-		{
++	if((user->type & (NON_LOGGED | REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER)) != 0) {
++        if (user->hide_share != 2) {	
++            if((ret = add_user_to_list(user)) == 0) {
+ 			increase_user_list();
+ 			if(add_user_to_list(user) == -1)
+ 				return 0;
+@@ -2797,6 +2789,16 @@
+ 		else if(ret == -1)
+ 			return 0;
+ 	}   
++
++        if (new_user)  {
++            /* inform the OPs if user has changed her IP address from last login */
++            char old_host[MAX_HOST_LEN+1];
++            if (show_notifications && old_nick_new_host (user, old_host)) {
++                snprintf(kbstring, 500, "%s %s (%s: %s -> %s: %s)|", user->nick, lp_changedhost, lp_oldhost, old_host, lp_currenthost, user->hostname);		
++                send_to_ops(kbstring, OP | CHEEF | ADMIN | OWNER, show_notifications);
++            }
++        }
++    }
+ 	return 1;
+ }
+ 
+@@ -3334,8 +3336,8 @@
+ 
+ 	/* Check if it's already taken.  */
+ 	if((((user_list_nick = check_if_on_user_list(temp_nick)) != NULL)
+-		|| (get_human_user(temp_nick) != NULL)) 
+-		&& (check_if_registered(temp_nick) == 0))
++		|| (get_human_user(temp_nick) != NULL))) 
++        /* && (check_if_registered(temp_nick) == 0)) */
+ 	{
+ 	
+ 		if(user->type != SCRIPT)
+@@ -3402,7 +3404,8 @@
+ 		
+ 		if(user->isbanned != 0)
+ 		{
+-		if(check_if_registered(temp_nick)==0)
++                    /* IP ban is enforced for anyone below OP */
++                    if(check_if_registered(temp_nick) < 5)
+ 			{
+                         if((btime_to_unban != 0) && (difftime(btime_to_unban, now) < 0))
+ 			{
+@@ -3645,7 +3648,7 @@
+ 		if(show_notifications > 0)
+ 		{
+ 		snprintf(bigstring, 1000, "%s [ IP: %s ] %s|", user->nick, user->hostname, lp_nopass);		
+-		send_to_ops(bigstring, ADMIN | OWNER, show_notifications);
++		send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_notifications);
+ 		}
+ 		return 0;
+ 	}
+@@ -3705,7 +3708,8 @@
+ 		user->hide_share = 2;
+ 		remove_user_from_list(user->nick);
+ 		snprintf(quit_string, 100, "$Quit %s|", user->nick);
+-		send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                send_to_user(quit_string, user);
++/*                 send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL); */
+ 		}
+ 
+ 		logprintf(1, "OWNER %s logged in from %s\n", user->nick, user->hostname);
+@@ -3758,10 +3762,9 @@
+ 		user->hide_share = 2;
+ 		remove_user_from_list(user->nick);
+ 		snprintf(quit_string, 100, "$Quit %s|", user->nick);
+-		send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                send_to_user(quit_string, user);
++/*                 send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL); */
+ 		}
+-
+-
+ 		logprintf(1, "ADMIN %s logged in from %s\n", user->nick, user->hostname);
+ 
+ 	totalvisitors++;
+@@ -3804,6 +3807,15 @@
+ 		het = check_if_hidden(user->nick);
+ 		if((hide_opshare == 1) || (het == 1))
+ 		user->hide_share = 1;
++		if(het == 2)
++            {
++                user->hide_share = 2;
++                remove_user_from_list(user->nick);
++                snprintf(quit_string, 100, "$Quit %s|", user->nick);
++                send_to_user(quit_string, user);
++/*                 send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL); */
++            }
++
+ 		
+ 		logprintf(1, "CHEEF %s logged in from %s\n", user->nick, user->hostname);
+ 
+@@ -3848,6 +3860,14 @@
+ 		het = check_if_hidden(user->nick);
+ 		if((hide_opshare == 1) || (het == 1))
+ 		user->hide_share = 1;
++		if(het == 2)
++            {
++                user->hide_share = 2;
++                remove_user_from_list(user->nick);
++                snprintf(quit_string, 100, "$Quit %s|", user->nick);
++                send_to_user(quit_string, user);
++/*                 send_to_humans(quit_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL); */
++            }
+ 		
+ 		logprintf(1, "OP %s logged in from %s\n", user->nick, user->hostname);
+ 
+@@ -4081,7 +4101,7 @@
+ get_users_hostname(nick, host); 
+ logprintf(1, "User %s at %s was kicked by %s\n", nick, host, user->nick); 
+  
+-if((strncmp(botnick, nick, strlen(nick)) == 0) | (strncmp(opchatnick, nick, strlen(nick)) == 0))
++if((strncmp(botnick, nick, strlen(nick)) == 0) || (strncmp(opchatnick, nick, strlen(nick)) == 0))
+ return;
+ 
+ if((to_user = get_human_user(nick)) == NULL)
+@@ -4472,7 +4492,9 @@
+ return;
+ }
+ }
+-else if((get_human_user(botinuse) != NULL) || (strncmp(botinuse, opchatnick, strlen(opchatnick)) == 0))	
++            else if((get_human_user(botinuse) != NULL) || 
++                    (strncmp(botinuse, opchatnick, strlen(opchatnick)) == 0) ||
++                    (strncmp(botinuse, proxybotnick, strlen(proxybotnick)) == 0))	
+ {
+ if((user->type & (ADMIN | OWNER)) != 0)
+ {
+@@ -5157,7 +5179,9 @@
+ return;
+ }
+ }
+-else if((get_human_user(botinuse) != NULL) || (strncmp(botinuse, botnick, strlen(botnick)) == 0))	
++            else if((get_human_user(botinuse) != NULL) || 
++                    (strncmp(botinuse, botnick, strlen(botnick)) == 0) ||
++                    (strncmp(botinuse, proxybotnick, strlen(proxybotnick)) == 0))	
+ {
+ if((user->type & (ADMIN | OWNER)) != 0)
+ {
+@@ -5215,6 +5239,68 @@
+ if((user->type & (ADMIN | OWNER)) != 0)		
+ uprintf(user, "<%s> [ prottime ] %s %u|", botnick, lp_setto, prottime);
+ }
++    else if(strncmp(buf, "proxybot ", 9) == 0)
++        {
++            buf += 9;
++            proxybot = atoi(buf);
++
++            if((user->type & (ADMIN | OWNER)) != 0)	
++                uprintf(user, "<%s> [ proxybot ] %s %d|", botnick, lp_setto, proxybot);
++
++            if(proxybot == 0 && proxybotonline) {
++                snprintf(new_string, 200, "$Quit %s|", proxybotnick);
++                send_to_humans(new_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                proxybotonline = 0;
++                total_users--;
++#ifdef HAVE_PERL
++                command_to_scripts("$Script stat_info %d %llu|", total_users, total_share);                         
++#endif
++                snprintf(new_string, 200, "<%s> %s %s %s|", botnick, lp_class6, proxybotnick, partmsg);
++                send_to_humans(new_string, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                snprintf(new_string, 100, "Proxy bot %s %s|", proxybotnick, partmsg);
++                if(show_actions > 0)
++                    send_to_ops(new_string, OP | CHEEF | ADMIN | OWNER, show_actions);				
++                op_list = get_op_list();
++                send_to_humans(op_list, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                free(op_list); 	
++            }
++        }
++    else if(strncmp(buf, "proxybotnick ", 13) == 0)
++        {
++            if (proxybotonline) {
++                if((user->type & (ADMIN | OWNER)) != 0) {
++                    uprintf(user, "<%s> [ proxybotnick ] %s|", botnick, lp_isonlinenow);
++                    return;
++                }
++            }
++
++            buf += 13;
++            sscanf(buf, "%50[^|]|", botinuse);
++            if((strncasecmp(buf, "|", 1) == 0) || (strncasecmp(buf, " ", 1) == 0) || (strstr(buf, " ") != NULL)) 
++                {
++                    if((user->type & (ADMIN | OWNER)) != 0)
++                        {
++                            uprintf(user, "<%s> [ proxybotnick ] %s|", botnick, lp_cannotbeblank);
++                            return;
++                        }
++                }
++            else if((get_human_user(botinuse) != NULL) || 
++                    (strncmp(botinuse, botnick, strlen(botnick)) == 0) ||
++                    (strncmp(botinuse, opchatnick, strlen(opchatnick)) == 0))	
++                {
++                    if((user->type & (ADMIN | OWNER)) != 0)
++                        {
++                            uprintf(user, "<%s> [ proxybotnick ] - %s: [ %s ]|", botnick, lp_nickinuse, botinuse);
++                            return;
++                        }
++                }
++            else {
++                strncpy(proxybotnick, buf, (cut_string(buf, '|') > 50) ? 50 : cut_string(buf, '|'));
++                proxybotnick[cut_string(buf, '|')] = '\0';
++                if((user->type & (ADMIN | OWNER)) != 0)	
++                    uprintf(user, "<%s> [ proxybotnick ] %s \"%s\"|", botnick, lp_setto, proxybotnick);
++            }
++        }
+ else if(strncmp(buf, "punishment ", 11) == 0)
+ {
+ buf += 11;
+@@ -6058,6 +6144,7 @@
+ 	int blpb = 0;
+ 	char line[4095];
+ 	char pass[51];
++    char hostname[MAX_HOST_LEN+1];
+ 	char nick[MAX_NICK_LEN+1];
+ 	char sdayn[6];
+ 	char sday[4];
+@@ -6240,14 +6327,14 @@
+ 		}
+ 		else if(type == WARN)
+ 		{
+-		if(sscanf(line, "%s %lu", nick, &ban_time) == 2)
++            if(sscanf(line, "%s %s %lu", hostname, nick, &ban_time) == 3)
+ 		{
+ 		timeinfo = localtime ( &ban_time );
+ 		snprintf(timestr, 50, "%s", asctime (timeinfo));
+ 		trim_string(timestr);
+ 		sscanf(timestr, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+ 		snprintf(newtimestr, 50, "%s %s %s, %s", sday, smont, syear, sdate);
+-		uprintf(user, "[   %s   ]      %s       %s: [ %s ]", nick, line + strlen(nick) + 12, lp_expires_, newtimestr);		
++                    uprintf(user, "%s   %s   %s   %s: [ %s ]", hostname, nick, line + strlen(hostname) + strlen(nick) + 12, lp_expires_, newtimestr);		
+ 		}
+ 		}
+ 		else
+@@ -6362,14 +6449,14 @@
+ 		
+ 		else if(type == WARN)
+ 		{
+-		if(sscanf(line, "%s %lu", nick, &ban_time) == 2)
++                    if(sscanf(line, "%s %s %lu", hostname, nick, &ban_time) == 3)
+ 		{
+ 		timeinfo = localtime ( &ban_time );
+ 		snprintf(timestr, 50, "%s", asctime (timeinfo));
+ 		trim_string(timestr);
+ 		sscanf(timestr, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+ 		snprintf(newtimestr, 50, "%s %s %s, %s", sday, smont, syear, sdate);
+-		uprintf(user, "\r\n[   %s   ]      %s       %s: [ %s ]", nick, line + strlen(nick) + 12, lp_expires_, newtimestr);		
++                            uprintf(user, "\r\n%s   %s   %s   %s: [ %s ]", hostname, nick, line + strlen(hostname) + strlen(nick) + 12, lp_expires_, newtimestr);		
+ 		}
+ 		}
+ 		
+@@ -6651,6 +6738,7 @@
+ 		uprintf(user, "\t!changeregnick '%s' '%s'\t\t\t- %s\r\n", lp_nick_, lp_nick_, lp_he128);
+ 		}
+ 		uprintf(user, "\t!warn '%s' '%s'\t\t\t\t- %s\r\n", lp_user_, lp_reason, lp_he042);
++            uprintf(user, "\t!warnip '%s' '%s'\t\t\t\t- %s\r\n", lp_host_, lp_reason, lp_he130);            
+                 uprintf(user, "\t!getwarn \t\t\t\t\t- %s\r\n", lp_he117);
+ 		uprintf(user, "\t!remwarn '%s'\t\t\t\t- %s\r\n", lp_user_, lp_he111);
+                 uprintf(user, "\t!ban '%s'\t\t\t\t- %s\r\n", lp_user_, lp_he043);
+@@ -6697,7 +6785,7 @@
+                 }
+ 		uprintf(user, "\t!hide\t\t\t\t\t- %s\r\n", lp_he080);
+                 uprintf(user, "\t!unhide\t\t\t\t\t- %s\r\n", lp_he081);
+-                if((user->type & (ADMIN | OWNER)) != 0)
++            if((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0)
+                 {
+ 		uprintf(user, "\t!hideme\t\t\t\t\t- %s\r\n", lp_he082);
+                 uprintf(user, "\t!unhideme\t\t\t\t- %s\r\n", lp_he083);
+@@ -7640,6 +7728,14 @@
+ return 1;
+ }
+ 
++
++
++/*
++ *  Check and process commands sent by human users.
++ *  type is 1 - command was sent as pm to botnick
++ *  type is 2 - command was sent as pm to proxybotnick (only used for certain
++ *              commands by OP's)
++ */
+ int is_command(char *temp, struct user_t *user, int type)
+ {
+ 	char onestring = '\0';
+@@ -7657,9 +7753,14 @@
+ 	char sdayn[6];
+ 	char smont[6];
+ 	char syear[6];
+-	char tempnick[51];
++	char tempnick[MAX_NICK_LEN+1];
++    char temphost[121];
++    char *curbotnick; /* used to choose between the bots (currently, either
++                         botnick or proxybotnick */
++    char *curusernick; /* used to choose between a human user (OP) and the
++                          proxybot in commands like ban, gag, kick, etc. */
+ 	char temppass[51];
+-	char tempstring[151];
++	char tempstring[201];
+ 	char ujt1[51];
+ 	char ujt2[51];	
+ 	char ujt3[51];
+@@ -7692,6 +7793,23 @@
+ 	if((check_if_registered(user->nick) < min_command_class) && (check_if_registered(user->nick) < 7))
+ 	return 0;
+ 	
++    /* the following disguise is optional for certain commands (ban, kick, warn) */
++    switch (type) {
++    case 0:
++    case 1:
++        curbotnick = botnick;
++        curusernick = user->nick;
++        break;
++    case 2:
++        /* disguise the commanding user (OP) as proxybot */
++        curbotnick = proxybotnick;
++        curusernick = proxybotnick;
++        break;
++    default:
++        /* FIXME: should not happen */
++        break;
++    }
++
+ 		if(((user->type & (OWNER)) != 0) && (strncasecmp(temp+1, "addadmin ", 9) == 0))
+ 		{
+  	    	    if(type == 1)
+@@ -8172,11 +8290,12 @@
+ 		}
+ 		else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "ban ", 4) == 0))
+ 		{	    	     
++
+ 		    if((sscanf(temp+5, "%s %1000[^|]|", tempnick, largestring) != 2))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !ban <%s> <%s>|", botnick, lp_badsyntax, lp_nick_, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !ban <%s> <%s>|", curbotnick, lp_badsyntax, lp_nick_, lp_reason);
+ 		    return 1;
+ 		    }
+ 			if(((tempuser = get_human_user(tempnick)) != NULL))
+@@ -8184,15 +8303,15 @@
+ 			    if((tempuser->type & (REGULAR | PROTECTED | REG | VIP | KVIP)) != 0)	
+ 			    {
+ 			    snprintf(tempstring, 150, "%s|", tempuser->hostname);
+-				if(type == 1)
+-				uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, BAN, user)) == -1)
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_couldntaddentry, tempuser->hostname);
++                                uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_couldntaddentry, tempuser->hostname);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_entryalreadyonlist, tempuser->hostname);
++                                uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_entryalreadyonlist, tempuser->hostname);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_addedentryto, tempuser->hostname);
++                                    uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_addedentryto, tempuser->hostname);
+ 			    if(strchr(largestring, '\n') == NULL)
+ 			    {
+ 			    snprintf(bigstring, 1000, "0 %s [ %s ]", tempuser->hostname, largestring);
+@@ -8202,15 +8321,15 @@
+ 			    }
+ 			}
+ 			snprintf(tempstring, 150, "%s|", tempuser->nick);
+-			    if(type == 1)
+-			    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, NICKBAN, user)) == -1)
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++                                uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++                                uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_addedentryto, tempnick);
++                                    uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_addedentryto, tempnick);
+ 			    if(strchr(largestring, '\n') == NULL)
+ 			    {
+ 			    snprintf(bigstring, 1000, "0 %s [ %s ]", tempuser->nick, largestring);			
+@@ -8219,32 +8338,32 @@
+     			    add_line_to_file(bigstring, path);
+ 			    }
+ 			}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s|", tempuser->nick, user->nick, user->nick, lp_youwerebanned, lp_because, largestring);
+-			snprintf(bigstring, 1000, "<%s> %s %s (IP: %s) %s: %s|", user->nick, lp_isbanning, tempuser->nick, tempuser->hostname, lp_because , largestring);
++                            uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s|", tempuser->nick, curusernick, curusernick, lp_youwerebanned, lp_because, largestring);
++                            snprintf(bigstring, 1000, "<%s> %s %s (IP: %s) %s: %s|", curusernick, lp_isbanning, tempuser->nick, tempuser->hostname, lp_because , largestring);
+                     	send_to_humans(bigstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+-    			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick);             
++                            snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick);             
+ 	    		last_perm(lastbuf);			
+ 			    if(punishment != 0)
+ 			    uprintf(tempuser, "$ForceMove %s|", redirect_host_kickban);                                             
+ 	    		tempuser->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		
+ 			    if(show_actions > 0)
+ 			    {
+-					snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_wasbannedby, user->nick, lp_because, largestring);
++                                    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_wasbannedby, curusernick, lp_because, largestring);
+ 					send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
+ 			    }
+ 			}
+ 			else
+ 			{
+-			    if(type == 1)
+-			    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> %s: %s", botnick, lp_nopermission, temp);			
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                            uprintf(user, "<%s> %s: %s", curbotnick, lp_nopermission, temp);			
+ 			}
+ 			}
+ 			else
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> '%s' %s|", botnick, tempnick, lp_isoffline);			
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> '%s' %s|", curbotnick, tempnick, lp_isoffline);			
+ 			}
+ 		return 1;
+ 		}	
+@@ -8252,32 +8371,32 @@
+ 		{	    	     
+ 		    if((sscanf(temp+7, "%s %1000[^|]|", tempnick, largestring) != 2))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !banip <IP> <%s>|", botnick, lp_badsyntax, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !banip <IP> <%s>|", curbotnick, lp_badsyntax, lp_reason);
+ 		    return 1;
+ 		    }
+ 		    snprintf(tempstring, 150, "%s|", tempnick);
+-			    if(type == 1)
+-			    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++            if(type)
++			    uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, BAN, user)) == -1)
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++				uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++				uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_addedentryto, tempnick);
++                    uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_addedentryto, tempnick);
+ 			    if(strchr(largestring, '\n') == NULL)
+ 			    {
+ 			    snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, BANRS_FILE);
+ 			    snprintf(bigstring, 1000, "0 %s [ %s ]", tempnick, largestring);
+ 			    add_line_to_file(bigstring, path);
+ 		    	    }
+-    			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ]", tempnick, largestring, lp_bannedby, user->nick);             
++                    snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ]", tempnick, largestring, lp_bannedby, curusernick);             
+ 	    		last_perm(lastbuf);			
+ 			    if(show_actions > 0)
+ 			    {
+-					snprintf(bigstring, 1000, "[ IP: %s ] %s [ %s ] %s: [ %s ]|", tempnick, lp_wasbannedby, user->nick, lp_because, largestring);
++                            snprintf(bigstring, 1000, "[ IP: %s ] %s [ %s ] %s: [ %s ]|", tempnick, lp_wasbannedby, curusernick, lp_because, largestring);
+ 					send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							    
+ 			    }
+ 			}
+@@ -8298,32 +8417,32 @@
+ 		{	    	     
+ 		    if((sscanf(temp+9, "%s %500[^|]|", tempnick, largestring) != 2))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		uprintf(user, "<%s> %s: !bannick <%s> <%s>|", botnick, lp_badsyntax, lp_nickname, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !bannick <%s> <%s>|", curbotnick, lp_badsyntax, lp_nickname, lp_reason);
+ 		return 1;
+ 		    }
+ 			snprintf(tempstring, 150, "%s|", tempnick);
+-			    if(type == 1)
+-			    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++            if(type)
++			    uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, NICKBAN, user)) == -1)
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++				uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++				uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{				
+-			uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_addedentryto, tempnick);
++                    uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_addedentryto, tempnick);
+ 			    if(strchr(largestring, '\n') == NULL)
+ 			    {
+ 			    snprintf(bigstring, 1000, "0 %s [ %s ]", tempnick, largestring);
+ 			    snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, NICKBANRS_FILE);
+ 			    add_line_to_file(bigstring, path);
+ 			    }
+-    			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick);             
++                    snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick);             
+ 	    		last_perm(lastbuf);			
+ 			    if(show_actions > 0)
+ 			    {
+-					snprintf(bigstring, 1000, "[ %s : %s ] %s [ %s ] %s: [ %s ]|", lp_nickname, tempnick, lp_wasbannedby, user->nick, lp_because, largestring);
++                            snprintf(bigstring, 1000, "[ %s : %s ] %s [ %s ] %s: [ %s ]|", lp_nickname, tempnick, lp_wasbannedby, curusernick, lp_because, largestring);
+ 					send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
+ 			    }
+ 			}
+@@ -8806,7 +8925,7 @@
+ 		}
+ 		else if(strncasecmp(temp+1, "help", 4) == 0)
+ 		{
+-		    if(type == 1)
++		    if(type == 1 && !help_on_priv)
+ 		    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+ 		send_commands(user);
+ 		    if((user->type == REGULAR) && (show_helpcommand_usage > 0))
+@@ -8862,8 +8981,9 @@
+ 		    }
+ 		return 1;
+ 		}
+-                else if(((user->type & (ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "hideme|", 7) == 0))
++    else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "hideme|", 7) == 0))
+ 		{
++
+ 		user->hide_share=2;
+ 		    if((check_if_on_user_list(user->nick)) != NULL)
+ 		    {
+@@ -8870,6 +8990,24 @@
+ 		    remove_user_from_list(user->nick);
+ 		    snprintf(tempstring, 150, "$Quit %s|", user->nick);
+ 		    send_to_humans(tempstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                    if (show_welcomes) {
++                        char curclass[51];
++                        char tmpstring[301];
++                        if (user->type & OP)
++                            strcpy (curclass, lp_class6);
++                        else if (user->type & CHEEF)
++                            strcpy (curclass, lp_class7);
++                        else if (user->type & (ADMIN | OWNER))
++                            strcpy (curclass, lp_class8);
++                        snprintf(tmpstring, 300, "<%s> %s %s %s|", botnick, curclass, user->nick, partmsg);
++                        send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                    }
++                    if(check_if_registered(user->nick) >= seen_class) {
++                        char seenbuf[101];
++                        snprintf(seenbuf, 100, "%s %s", user->nick, user->hostname);
++                        add_seen_user(seenbuf);
++                    } 
++                    
+ 			if(type == 1)
+ 			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+ 		    uprintf(user, "<%s> %s|", botnick, lp_hidingpresence);
+@@ -8969,9 +9107,19 @@
+ 				ushidden++;
+ 			    }
+ 			    else if(human_user->user->type == CHEEF)
++                        {
++                            if(human_user->user->hide_share != 2)
+ 			    uscheefs++;
++                            else
++                                ushidden++;
++                        }
+ 			    else if(human_user->user->type == OP)
++                        {
++                            if(human_user->user->hide_share != 2)
+ 			    usops++;
++                            else
++                                ushidden++;
++                        }
+ 			    else if(human_user->user->type == KVIP)
+ 			    uskvips++;
+ 	    		    else if(human_user->user->type == VIP)
+@@ -8984,6 +9132,8 @@
+ 			    uscomms++;
+ 			human_user = next_human;
+ 			}
++            if (proxybotonline)
++                usops++;
+ 		uprintf(user, "%s: %d (", lp_connectedusers, total_users - ushidden);
+ 		if(usowners > 0)
+ 		uprintf(user, "%d %s, ", usowners, lp_owners_);
+@@ -9080,9 +9230,9 @@
+ 		{	    	     
+ 		    if((sscanf(temp+6, "%50s %500[^|]|", tempnick, largestring) < 2))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !kick <%s> <%s>|", botnick, lp_badsyntax, lp_user_, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !kick <%s> <%s>|", curbotnick, lp_badsyntax, lp_user_, lp_reason);
+ 		    return 1;
+ 		    }
+ 			if(((tempuser = get_human_user(tempnick)) != NULL))
+@@ -9109,33 +9259,33 @@
+ 					    if(check_if_banned(tempuser, NICKBANRS) == 0)
+ 					    add_line_to_file(bigstring, path);
+ 					}
+-				snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %d %s ]", tempuser->nick, tempuser->hostname, largestring, lp_kickedby, user->nick, lp_ban_, kick_bantime, lp_minutes);
++                                    snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %d %s ]", tempuser->nick, tempuser->hostname, largestring, lp_kickedby, curusernick, lp_ban_, kick_bantime, lp_minutes);
+ 				last_temp(lastbuf);
+ 				}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s|", tempuser->nick, tempuser->nick, user->nick, lp_youwerekicked, lp_because, largestring);
+-			snprintf(bigstring, 1000, "<%s> is kicking %s (IP: %s) because: %s|", user->nick, tempuser->nick, tempuser->hostname, largestring);
++                            uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s|", tempuser->nick, curusernick, curusernick, lp_youwerekicked, lp_because, largestring);
++                            snprintf(bigstring, 1000, "<%s> is kicking %s (IP: %s) because: %s|", curusernick, tempuser->nick, tempuser->hostname, largestring);
+                     	send_to_humans(bigstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+ 			    if(punishment != 0)
+ 			    uprintf(tempuser, "$ForceMove %s|", redirect_host_kickban);                                             
+ 	    		    tempuser->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		
+-				if(show_actions == 1)
++                            if(show_actions)
+ 				{
+-					    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_waskickedby, user->nick, lp_because, largestring);
++                                    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_waskickedby, curusernick, lp_because, largestring);
+ 					    send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
+ 				}
+ 			    }
+ 			    else
+ 			    {
+-				if(type == 1)
+-				uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-				uprintf(user, "<%s> %s: %s", botnick, lp_nopermission, temp);			
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                            uprintf(user, "<%s> %s: %s", curbotnick, lp_nopermission, temp);			
+ 			    }
+ 			}
+ 			else
+ 			{
+-			    if(type == 1)
+-			    uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> '%s' %s|", botnick, tempnick, lp_isoffline);			
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> '%s' %s|", curbotnick, tempnick, lp_isoffline);			
+ 			}
+ 		return 1;
+ 		}	
+@@ -9171,9 +9321,17 @@
+ 		jt10 = (time_t)0; jt9 = (time_t)0; jt8 = (time_t)0; jt7 = (time_t)0; jt6 = (time_t)0;
+ 		jt5 = (time_t)0; jt4 = (time_t)0; jt3 = (time_t)0; jt2 = (time_t)0; jt1 = (time_t)0;
+ 		human_user = human_sock_list;
++            if (proxybotonline) {
++                jt1 = proxybotjointime;
++                snprintf(ujt1, 50, "%s", proxybotnick);
++            }
+ 		    while(human_user != NULL)
+ 		    {
+ 			next_human = human_user->next;
++                    if (human_user->user->hide_share == 2) {
++                        human_user = next_human;
++                        continue;
++                    }
+ 			    if((human_user->user->jointime <= jt1) || (jt1 == 0))
+ 			    {
+ 			    jt10 = jt9; jt9 = jt8; jt8 =jt7; jt7 = jt6;jt6 = jt5;
+@@ -9497,7 +9655,7 @@
+ 		snprintf(tempnick, 50, "%s", asctime (timeinfo));
+ 		trim_string(tempnick);
+ 		sscanf(tempnick, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-		sdate[5] = '\0';
++                    sdate[8] = '\0';
+ 		if(strcmp(smont, "Jan") == 0)
+ 		snprintf(smont, 3, "01");
+ 		if(strcmp(smont, "Feb") == 0)
+@@ -9630,7 +9788,10 @@
+ 			uprintf(user, "<%s> %s|", botnick, lp_nonewlines);
+ 			return 1;
+ 			}
+-		    if(get_human_user(tempnick) != NULL)
++                    if((tempuser = get_human_user(tempnick)) != NULL && tempuser->hide_share != 2 || 
++                       (proxybotonline && !strncasecmp(tempnick, proxybotnick, strlen(proxybotnick)) &&
++                        (strlen(tempnick) == strlen(proxybotnick))))
++
+ 		    {	
+ 		    uprintf(user, "<%s> %s %s|", botnick, tempnick, lp_isonlinenow);
+ 		    return 1;
+@@ -10025,26 +10186,26 @@
+ 		}
+ 		else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "remwarn ", 8) == 0))
+ 		{
+-		    if((sscanf(temp+9, "%50[^|]|", tempnick) != 1))
++		    if((sscanf(temp+9, "%120[^|]|", temphost) != 1))
+ 		    {
+ 			if(type == 1)
+ 			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !remwarn <%s>|", botnick, lp_badsyntax, lp_nick_);
++                    uprintf(user, "<%s> %s: !remwarn <%s>|", botnick, lp_badsyntax, lp_host_);
+ 		    return 1;
+ 		    }
+-		ret = remove_warnings(tempnick);
++            ret = remove_warnings(temphost);
+ 		    if(ret > 0)
+ 		    {
+ 		    loadfile2buf(&warn_mem,WARN_FILE);
+ 			if(type == 1)
+ 			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: [ %s ]|", botnick, lp_removedallwarns, tempnick);			
++                    uprintf(user, "<%s> %s: [ %s ]|", botnick, lp_removedallwarns, temphost);			
+ 		    }
+ 		    else
+ 		    {
+ 			if(type == 1)
+ 			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: [ %s ]|", botnick, lp_nowarnings, tempnick);
++                    uprintf(user, "<%s> %s: [ %s ]|", botnick, lp_nowarnings, temphost);
+ 		    }
+ 		return 1;
+ 		}
+@@ -10069,17 +10230,31 @@
+ 			uprintf(user, "<%s> %s: !report <%s> <%s>|", botnick, lp_badsyntax, lp_user_, lp_reason);
+ 			return 1;
+ 			}
+-		    if(((tempuser = get_human_user(tempnick)) == NULL))
+-		    {
++
++            char badusernick[MAX_NICK_LEN+1];
++            char baduserip[MAX_HOST_LEN+1];
++		    if(((tempuser = get_human_user(tempnick)) == NULL)) {
++                if (proxybotonline && !strncasecmp(tempnick, proxybotnick, strlen(proxybotnick)) &&
++                    strlen(tempnick) == strlen(proxybotnick)) {
++
++                    snprintf(badusernick, MAX_NICK_LEN, "%s", proxybotnick);
++                    strcpy(baduserip, "proxybot");
++                }
++                else {
+ 		    uprintf(user, "<%s> [ %s ] %s|", botnick, tempnick, lp_isoffline);
+ 		    return 1;
+ 		    }
++            }
++            else {
++                strncpy(badusernick, tempuser->nick, MAX_NICK_LEN);
++                strncpy(baduserip, tempuser->hostname, MAX_HOST_LEN);
++            }
+ 		human_user = human_sock_list;
+ 		    while(human_user != NULL)
+ 		    {
+ 		    next_human = human_user->next;
+ 		    if((human_user->user->type & (OP | CHEEF | ADMIN | OWNER)) != 0)
+-		    uprintf(human_user->user, "$To: %s From: %s $<%s> [ %s (IP: %s) ] %s [ %s ]. %s [ %s (IP: %s) ].|", human_user->user->nick, opchatnick, opchatnick, tempuser->nick, tempuser->hostname, lp_shouldbechecked, largestring, lp_reportedby, user->nick, user->hostname);
++                        uprintf(human_user->user, "$To: %s From: %s $<%s> [ %s (IP: %s) ] %s [ %s ]. %s [ %s (IP: %s) ].|", human_user->user->nick, opchatnick, opchatnick, badusernick, baduserip, lp_shouldbechecked, largestring, lp_reportedby, user->nick, user->hostname);
+ 		human_user = next_human;
+ 		}
+ 		uprintf(user, "<%s> %s|", botnick, lp_reportsend);
+@@ -10246,9 +10421,9 @@
+ 		{	    	     
+ 		    if((sscanf(temp+6, "%lu%c %s %500[^|]|", &nicklistban, &onestring, tempnick, largestring) != 4))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !tban <%s> <%s> <%s> (eg: !tban 2h nick reason)|", botnick, lp_badsyntax, lp_time_, lp_nick_, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !tban <%s> <%s> <%s> (eg: !tban 2h nick reason)|", curbotnick, lp_badsyntax, lp_time_, lp_nick_, lp_reason);
+ 		    return 1;
+ 		    }
+ 			if(onestring == 's')
+@@ -10271,15 +10446,15 @@
+ 				if((tempuser->type & (REGULAR | PROTECTED | REG | VIP | KVIP)) != 0)	
+ 				{
+ 				snprintf(tempstring, 150, "%s %lu%c|", tempuser->hostname, nicklistban, onestring);
+-				if(type == 1)
+-				uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 				if((ret = ballow(tempstring, BAN, user)) == -1)
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_couldntaddentry, tempuser->hostname);
++                                uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_couldntaddentry, tempuser->hostname);
+ 				else if(ret == 0)		  
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_entryalreadyonlist, tempuser->hostname);
++                                uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_entryalreadyonlist, tempuser->hostname);
+ 				else
+ 				{
+-				uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", botnick, lp_addedentryto, tempuser->hostname, nicklistban, onestring);
++                                    uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", curbotnick, lp_addedentryto, tempuser->hostname, nicklistban, onestring);
+ 			if(strchr(largestring, '\n') == NULL)
+ 			{
+ 			snprintf(bigstring, 1000, "%lu %s [ %s ]", now + exp, tempuser->hostname, largestring);
+@@ -10288,15 +10463,15 @@
+ 			add_line_to_file(bigstring, path);
+ 			}
+ 			snprintf(tempstring, 150, "%s %lu%c|", tempuser->nick, nicklistban, onestring);
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++                                    if(type)
++                                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, NICKBAN, user)) == -1)
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++                                        uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++                                        uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", botnick, lp_addedentryto, tempnick, nicklistban, onestring);
++                                            uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", curbotnick, lp_addedentryto, tempnick, nicklistban, onestring);
+ 			if(strchr(largestring, '\n') == NULL)
+ 			{
+ 			snprintf(bigstring, 1000, "%lu %s [ %s ]", now + exp, tempuser->nick, largestring);
+@@ -10305,45 +10480,45 @@
+ 			add_line_to_file(bigstring, path);
+ 			}
+ 			}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s %lu%c %s: %s|", tempuser->nick, user->nick, user->nick, lp_youwerebanned, lp_fornext, nicklistban, onestring, lp_because, largestring);
+-			snprintf(bigstring, 1000, "<%s> %s %s (IP: %s) %s %lu%c %s: %s|", user->nick, lp_isbanning, tempuser->nick, tempuser->hostname, lp_fornext, nicklistban, onestring, lp_because, largestring);
++                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s %lu%c %s: %s|", tempuser->nick, curusernick, curusernick, lp_youwerebanned, lp_fornext, nicklistban, onestring, lp_because, largestring);
++                                    snprintf(bigstring, 1000, "<%s> %s %s (IP: %s) %s %lu%c %s: %s|", curusernick, lp_isbanning, tempuser->nick, tempuser->hostname, lp_fornext, nicklistban, onestring, lp_because, largestring);
+                     	send_to_humans(bigstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu ", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban);
++                                    snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu ", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban);
+ 			if(onestring == 's')
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_seconds);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_seconds);
+ 			else if(onestring == 'm')
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			else if(onestring == 'h')
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_hours);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_hours);
+ 			else if(onestring == 'd')
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_days);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_days);
+ 			else if(onestring == 'w')
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_weeks);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_weeks);
+ 			else
+-			snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                                        snprintf(lastbuf, 800, "%s (IP: %s): %s [ %s %s ] [ %s %lu %s ]", tempuser->nick, tempuser->hostname, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			last_temp(lastbuf);
+ 			if(punishment != 0)
+ 			uprintf(tempuser, "$ForceMove %s|", redirect_host_kickban);                                             
+ 	    		tempuser->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_wasbannedby, user->nick, lp_fornext, nicklistban, onestring, lp_because, largestring);
++                                            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", tempuser->nick, tempuser->hostname, lp_wasbannedby, curusernick, lp_fornext, nicklistban, onestring, lp_because, largestring);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
+ 			}
+ 			}
+ 			}
+ 			else
+ 			{
+-    		        if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> %s: %s", botnick, lp_nopermission, temp);			
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                            uprintf(user, "<%s> %s: %s", curbotnick, lp_nopermission, temp);			
+ 			}
+ 			}
+ 			else
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> '%s' %s|", botnick, tempnick, lp_isoffline);			
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> '%s' %s|", curbotnick, tempnick, lp_isoffline);			
+ 			}
+ 		return 1;
+ 		}	
+@@ -10351,9 +10526,9 @@
+ 		{	    	     
+ 			if((sscanf(temp+8, "%lu%c %s %500[^|]|", &nicklistban, &onestring, tempnick, largestring) != 4))
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> %s: !tbanip <%s> <IP> <%s> (eg: !tbanip 2h IP reason)|", botnick, lp_badsyntax, lp_time_, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !tbanip <%s> <IP> <%s> (eg: !tbanip 2h IP reason)|", curbotnick, lp_badsyntax, lp_time_, lp_reason);
+ 			return 1;
+ 			}
+ 			if(onestring == 's')
+@@ -10372,15 +10547,15 @@
+ 			onestring = 'm';
+ 			}
+ 			snprintf(tempstring, 150, "%s %lu%c|", tempnick, nicklistban, onestring);
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++			if(type)
++                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, BAN, user)) == -1)
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++				uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s banlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++				uprintf(user, "<%s> %s banlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", botnick, lp_addedentryto, tempnick, nicklistban, onestring);
++                    uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", curbotnick, lp_addedentryto, tempnick, nicklistban, onestring);
+ 			if(strchr(largestring, '\n') == NULL)
+ 			{
+ 			snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, BANRS_FILE);
+@@ -10388,21 +10563,21 @@
+ 			add_line_to_file(bigstring, path);
+ 			}
+ 			if(onestring == 's')
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_seconds);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_seconds);
+ 			else if(onestring == 'm')
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			else if(onestring == 'h')
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_hours);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_hours);
+ 			else if(onestring == 'd')
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_days);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_days);
+ 			else if(onestring == 'w')
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_weeks);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_weeks);
+ 			else
+-			snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                        snprintf(lastbuf, 800, "[ IP: %s ]: %s [ %s %s ] [ %s %lu %s ]", tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			last_temp(lastbuf);
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ IP: %s ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", tempnick, lp_wasbannedby, user->nick, lp_fornext, nicklistban, onestring, lp_because, largestring);
++                            snprintf(bigstring, 1000, "[ IP: %s ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", tempnick, lp_wasbannedby, curusernick, lp_fornext, nicklistban, onestring, lp_because, largestring);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
+ 			}
+ 			}
+@@ -10412,9 +10587,9 @@
+ 		{	    	     
+ 			if((sscanf(temp+10, "%lu%c %s %500[^|]|", &nicklistban, &onestring, tempnick, largestring) != 4))
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> %s: !tbannick <%s> <%s> <%s> (eg: !tbannick 2h nick reason)|", botnick, lp_badsyntax, lp_time_, lp_nickname, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !tbannick <%s> <%s> <%s> (eg: !tbannick 2h nick reason)|", curbotnick, lp_badsyntax, lp_time_, lp_nickname, lp_reason);
+ 			return 1;
+ 			}
+ 			if(onestring == 's')
+@@ -10433,15 +10608,15 @@
+ 			onestring = 'm';
+ 			}
+ 			snprintf(tempstring, 150, "%s %lu%c|", tempnick, nicklistban, onestring);
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
++			if(type)
++                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
+ 			if((ret = ballow(tempstring, NICKBAN, user)) == -1)
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_couldntaddentry, tempnick);
++				uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_couldntaddentry, tempnick);
+ 			else if(ret == 0)		  
+-				uprintf(user, "<%s> %s nickbanlist -> %s|", botnick, lp_entryalreadyonlist, tempnick);
++				uprintf(user, "<%s> %s nickbanlist -> %s|", curbotnick, lp_entryalreadyonlist, tempnick);
+ 			else
+ 			{
+-			uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", botnick, lp_addedentryto, tempnick, nicklistban, onestring);
++                    uprintf(user, "<%s> %s banlist -> %s [%lu%c]|", curbotnick, lp_addedentryto, tempnick, nicklistban, onestring);
+ 			if(strchr(largestring, '\n') == NULL)
+ 			{
+ 			snprintf(bigstring, 1000, "%lu %s [ %s ]", now + exp, tempnick, largestring);
+@@ -10449,21 +10624,21 @@
+ 			add_line_to_file(bigstring, path);
+ 			}
+ 			if(onestring == 's')
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_seconds);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_seconds);
+ 			else if(onestring == 'm')
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			else if(onestring == 'h')
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_hours);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_hours);
+ 			else if(onestring == 'd')
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_days);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_days);
+ 			else if(onestring == 'w')
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_weeks);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_weeks);
+ 			else
+-			snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, user->nick, lp_ban_, nicklistban, lp_minutes);
++                        snprintf(lastbuf, 800, "[ %s: %s ]: %s [ %s %s ] [ %s %lu %s ]", lp_nick_, tempnick, largestring, lp_bannedby, curusernick, lp_ban_, nicklistban, lp_minutes);
+ 			last_temp(lastbuf);
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s: %s ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", lp_nickname, tempnick, lp_wasbannedby, user->nick, lp_fornext, nicklistban, onestring, lp_because, largestring);
++                            snprintf(bigstring, 1000, "[ %s: %s ] %s [ %s ] %s [ %lu%c ] %s: [ %s ]|", lp_nickname, tempnick, lp_wasbannedby, curusernick, lp_fornext, nicklistban, onestring, lp_because, largestring);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
+ 			}
+ 			}
+@@ -10498,7 +10673,7 @@
+ 		snprintf(tempnick, 50, "%s", asctime (timeinfo));
+ 		trim_string(tempnick);
+ 		sscanf(tempnick, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-		sdate[5] = '\0';
++                            sdate[8] = '\0';
+ 		if(strcmp(smont, "Jan") == 0)
+ 		snprintf(smont, 3, "01");
+ 		if(strcmp(smont, "Feb") == 0)
+@@ -10769,18 +10944,39 @@
+ 		    }
+ 		return 1;
+ 		}		
+-                else if(((user->type & (ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "unhideme|", 9) == 0))
++    else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "unhideme|", 9) == 0))
+ 		{
+ 		    if(user->hide_share == 2)
+ 		    {	
+ 		    increase_user_list();
+ 		    add_user_to_list(user);
+ 		    user->hide_share = 0;
++                    user->jointime = time (NULL);
+ 		if(send_user_info(user, user->version) == 0)
+ 		{
+ 		user->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;
+ 		return 1;
+ 		}
++                    if (show_welcomes) {
++                        char curclass[51];
++                        char tmpstring[301];
++                        char welcomemsg[MAX_MSG_LEN+1];
++                        
++                        if (user->type & OP) {
++                            strcpy (curclass, lp_class6);
++                            strcpy (welcomemsg, welcomeop);
++                        }
++                        else if (user->type & CHEEF) {
++                            strcpy (curclass, lp_class7);
++                            strcpy (welcomemsg, welcomecheef);
++                        }
++                        else if (user->type & (ADMIN | OWNER)) {
++                            strcpy (curclass, lp_class8);
++                            strcpy (welcomemsg, welcomeadmin);
++                        }
++                        snprintf(tmpstring, 500, "<%s> %s %s %s|", botnick, curclass, user->nick, welcomemsg);
++                        send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++                    }
+ 			if(type == 1)
+ 			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+ 		    uprintf(user, "<%s> %s|", botnick, lp_unhidingpresence);
+@@ -10850,9 +11046,9 @@
+ 		{	    	     
+ 		    if((sscanf(temp+6, "%s %500[^|]|", tempnick, largestring) < 2))
+ 		    {
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-		    uprintf(user, "<%s> %s: !warn <%s> <%s>|", botnick, lp_badsyntax, lp_user_, lp_reason);
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s: !warn <%s> <%s>|", curbotnick, lp_badsyntax, lp_user_, lp_reason);
+ 		    return 1;
+ 		    }
+ 		    if(((tempuser = get_human_user(tempnick)) != NULL))
+@@ -10867,8 +11063,8 @@
+ 			snprintf(temppass, 50, "%s", asctime (timeinfo));
+ 			trim_string(temppass);
+ 			sscanf(temppass, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-			sdate[5] = '\0';
+-			snprintf(bigstring, 1000, "%s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->nick, now + (expiredwarn * 86400), user->nick, sday, smont, syear, sdate , largestring);			
++                                    sdate[8] = '\0';
++                                    snprintf(bigstring, 1000, "%s %s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->hostname, tempuser->nick, now + (expiredwarn * 86400), curusernick, sday, smont, syear, sdate , largestring);			
+ 			snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
+ 			add_line_to_file(bigstring, path);
+ 			if(ret > max_warnings)
+@@ -10877,12 +11073,12 @@
+ 			{
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, user->nick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_kick_);
++                                                            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_kick_);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
+ 			}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, user->nick, user->nick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
+ 			uprintf(tempuser, "<%s> %s %s: %s [ %d/%d ], %s|", botnick, lp_youwerekicked, lp_because, lp_toomanywarnings, ret, max_warnings, lp_nextwarningban);			
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s [ %d/%d ], %s|", tempuser->nick, user->nick, user->nick, lp_youwerekicked, lp_because, lp_toomanywarnings, ret, max_warnings, lp_nextwarningban);			
++                                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s [ %d/%d ], %s|", tempuser->nick, curusernick, curusernick, lp_youwerekicked, lp_because, lp_toomanywarnings, ret, max_warnings, lp_nextwarningban);			
+ 			if(punishment != 0)
+ 			uprintf(tempuser, "$ForceMove %s|", redirect_host_kickban);                                             
+ 	    		tempuser->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		
+@@ -10891,25 +11087,25 @@
+ 			{
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s: %s %s %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, user->nick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_gaggedfrom, lp_chatting_, lp_searching_, lp_downloading_);
++                                                            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s: %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_gaggedfrom, lp_chatting_);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
+ 			}
+ 			tempuser->gagc = 1;
+-			tempuser->gags = 1;
+-			tempuser->gagd = 1;
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, user->nick, user->nick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
+-			uprintf(tempuser, "<%s> %s %s/%s/%s %s: %s [ %d/%d ]|", botnick, lp_youweregagged, lp_chatting_, lp_downloading_, lp_searching_, lp_because, lp_toomanywarnings, ret, max_warnings);			
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s/%s/%s %s: %s [ %d/%d ]|", tempuser->nick, user->nick, user->nick, lp_youweregagged, lp_chatting_, lp_downloading_, lp_searching_, lp_because, lp_toomanywarnings, ret, max_warnings);			
++/*                                                     tempuser->gags = 1; */
++/*                                                     tempuser->gagd = 1; */
++                                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                                                    uprintf(tempuser, "<%s> %s %s %s: %s [ %d/%d ]|", botnick, lp_youweregagged, lp_chatting_, lp_because, lp_toomanywarnings, ret, max_warnings);			
++                                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s %s: %s [ %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youweregagged, lp_chatting_, lp_because, lp_toomanywarnings, ret, max_warnings);			
+ 			}
+ 			}
+ 			else
+ 			{
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, user->nick, lp_because, largestring, lp_warning_, ret, max_warnings);
++                                                    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
+ 			}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, user->nick, user->nick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                                            uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
+ 			}
+ 		}
+ 			else
+@@ -10918,32 +11114,133 @@
+ 			snprintf(temppass, 50, "%s", asctime (timeinfo));
+ 			trim_string(temppass);
+ 			sscanf(temppass, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
+-			sdate[5] = '\0';
+-			snprintf(bigstring, 1000, "%s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->nick, now + (expiredwarn * 86400), user->nick, sday, smont, syear, sdate , largestring);			
++                                    sdate[8] = '\0';
++                                    snprintf(bigstring, 1000, "%s %s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->hostname, tempuser->nick, now + (expiredwarn * 86400), curusernick, sday, smont, syear, sdate , largestring);			
+ 			snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
+ 			add_line_to_file(bigstring, path);
+ 			if(show_actions > 0)
+ 			{
+-			snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, user->nick, lp_because, largestring, lp_warning_, max_warnings);
++                                            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, max_warnings);
+ 			send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
+ 			}
+-			uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, user->nick, user->nick, lp_youwerewarned, lp_because, largestring, lp_warning_, max_warnings);			
++                                    uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, max_warnings);			
+ 			}
+ 			loadfile2buf(&warn_mem,WARN_FILE);
+ 			}
+ 			else
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> %s|", botnick, lp_youcanwarnonly);			
++                            if(type)
++                                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                            uprintf(user, "<%s> %s|", curbotnick, lp_youcanwarnonly);			
+ 			}
+ 			}
+ 			else
+ 			{
+-			if(type == 1)
+-			uprintf(user, "$To: %s From: %s $", user->nick, botnick);
+-			uprintf(user, "<%s> '%s' %s|", botnick, tempnick, lp_isoffline);			
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> '%s' %s|", curbotnick, tempnick, lp_isoffline);			
++                }
++			return 1;
+ 			}
++    else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "warnip ", 7) == 0)) {
++        if((sscanf(temp+8, "%120s %500[^|]|", temphost, largestring) < 2)) {
++            if(type)
++                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++            uprintf(user, "<%s> %s: !warnip <%s> <%s>|", curbotnick, lp_badsyntax, lp_host_, lp_reason);
++            return 1;
++        }
++        if (get_users_nick(temphost, tempnick)) { 
++            if(((tempuser = get_human_user(tempnick)) != NULL)) {
++                if(tempuser->type < user->type) {
++                    ret = check_warning(tempuser, 1);
++                    if(ret >= 1) {
++                        ret = ret + 1;
++                        timeinfo = localtime ( &now );			
++                        snprintf(temppass, 50, "%s", asctime (timeinfo));
++                        trim_string(temppass);
++                        sscanf(temppass, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
++                        sdate[8] = '\0';
++                        snprintf(bigstring, 1000, "%s %s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->hostname, tempuser->nick, now + (expiredwarn * 86400), curusernick, sday, smont, syear, sdate , largestring);			
++                        snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
++                        add_line_to_file(bigstring, path);
++                        if(ret > max_warnings) {
++                            if(ret - max_warnings == 1) {
++                                if(show_actions > 0) {
++                                    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_kick_);
++                                    send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
++                                }
++                                uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                                uprintf(tempuser, "<%s> %s %s: %s [ %d/%d ], %s|", botnick, lp_youwerekicked, lp_because, lp_toomanywarnings, ret, max_warnings, lp_nextwarningban);			
++                                uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: %s [ %d/%d ], %s|", tempuser->nick, curusernick, curusernick, lp_youwerekicked, lp_because, lp_toomanywarnings, ret, max_warnings, lp_nextwarningban);			
++                                if(punishment != 0)
++                                    uprintf(tempuser, "$ForceMove %s|", redirect_host_kickban);                                             
++                                tempuser->rem = REMOVE_USER | SEND_QUIT | REMOVE_FROM_LIST;		
++                            }
++                            else if(ret - max_warnings > 1) {
++                                if(show_actions > 0) {
++                                    snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ] [ %s: %s ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings, lp_gaggedfrom, lp_chatting_);
++                                    send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
++                                }
++                                tempuser->gagc = 1;
++/*                                 tempuser->gags = 1; */
++/*                                 tempuser->gagd = 1; */
++                                uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                                uprintf(tempuser, "<%s> %s %s %s: %s [ %d/%d ]|", botnick, lp_youweregagged, lp_chatting_, lp_because, lp_toomanywarnings, ret, max_warnings);			
++                                uprintf(tempuser, "$To: %s From: %s $<%s> %s %s %s: %s [ %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youweregagged, lp_chatting_, lp_because, lp_toomanywarnings, ret, max_warnings);			
++                            }
++                        }
++                        else {
++                            if(show_actions > 0) {
++                                snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, ret, max_warnings);
++                                send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
++                            }
++                            uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s %d/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, ret, max_warnings);			
++                        }
++                    }
++                    else {
++                        timeinfo = localtime ( &now );			
++                        snprintf(temppass, 50, "%s", asctime (timeinfo));
++                        trim_string(temppass);
++                        sscanf(temppass, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
++                        sdate[8] = '\0';
++                        snprintf(bigstring, 1000, "%s %s %lu [ %s @ %s %s %s, %s ]: %s", tempuser->hostname, tempuser->nick, now + (expiredwarn * 86400), curusernick, sday, smont, syear, sdate , largestring);			
++                        snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
++                        add_line_to_file(bigstring, path);
++                        if(show_actions > 0) {
++                            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, tempuser->hostname, lp_waswarnedby, curusernick, lp_because, largestring, lp_warning_, max_warnings);
++                            send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
++                        }
++                        uprintf(tempuser, "$To: %s From: %s $<%s> %s %s: [ %s ] [ %s 1/%d ]|", tempuser->nick, curusernick, curusernick, lp_youwerewarned, lp_because, largestring, lp_warning_, max_warnings);			
++                    }
++                    loadfile2buf(&warn_mem,WARN_FILE);
++                }
++                else {
++                    if(type)
++                        uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++                    uprintf(user, "<%s> %s|", curbotnick, lp_youcanwarnonly);			
++                }
++                return 1;
++            }
++        }
++        else {
++            /* no nick was found for the given IP (neither online nor offline),
++             * so we are going to use the default one instead */
++            strcat(tempnick, "WARNIP_NO_NICK");
++        }
++        /* add warning for an offline ip */
++        timeinfo = localtime ( &now );			
++        snprintf(temppass, 50, "%s", asctime (timeinfo));
++        trim_string(temppass);
++        sscanf(temppass, "%5s %5s %3s %10s %5s", sdayn, smont, sday, sdate, syear);
++        sdate[8] = '\0';
++        snprintf(bigstring, 1000, "%s %s %lu [ %s @ %s %s %s, %s ]: %s", temphost, tempnick, now + (expiredwarn * 86400), curusernick, sday, smont, syear, sdate , largestring);			
++        snprintf(path, MAX_FDP_LEN, "%s/%s", config_dir, WARN_FILE);
++        add_line_to_file(bigstring, path);        
++        if(show_actions > 0) {
++            snprintf(bigstring, 1000, "[ %s (IP: %s) ] %s [ %s ] %s: [ %s ]|", tempnick, temphost, lp_waswarnedby, curusernick, lp_because, largestring);
++            send_to_ops(bigstring, OP | CHEEF | ADMIN | OWNER, show_actions);							
++        }
++        loadfile2buf(&warn_mem,WARN_FILE);
+ 			return 1;
+ 		}	
+ 		else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && (strncasecmp(temp+1, "whohubs ", 8) == 0))
+@@ -11106,6 +11403,73 @@
+ 		uprintf(user, "[ %d %s ]|", matches, lp_users); 
+ 		return 1;
+ 		}
++    else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && proxybot && strncasecmp(temp+1, "proxyboton", 10) == 0) {
++        if (proxybotonline) {
++            if(type)
++                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++            uprintf(user, "<%s> %s|", curbotnick, lp_proxybotalreadyonline);
++            return 1;
++        }
++        char tmpstring[501];
++        char *op_list;
++
++        snprintf(tmpstring, 200, "$MyINFO $ALL %s %s|", proxybotnick, proxybotinfo);
++        send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        proxybotonline = 1;
++        proxybotjointime = time(NULL);
++        total_users++;
++#ifdef HAVE_PERL
++        command_to_scripts("$Script stat_info %d %llu|", total_users, total_share);                         
++#endif
++        if(strlen(welcomeop) > 0) {
++            snprintf(tmpstring, 500, "<%s> %s %s %s|", botnick, lp_class6, proxybotnick, welcomeop);
++            send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        }
++        snprintf(tmpstring, 100, "Proxy bot %s %s|", proxybotnick, welcomeop);
++        if(show_actions > 0)
++            send_to_ops(tmpstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
++        if(type) {
++            uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++            uprintf(user, "<%s> %s|", curbotnick, tmpstring);
++        }
++
++        op_list = get_op_list();
++        send_to_humans(op_list, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        free(op_list); 	
++        return 1;
++    }
++    else if(((user->type & (OP | CHEEF | ADMIN | OWNER)) != 0) && proxybot && strncasecmp(temp+1, "proxybotoff", 11) == 0) {
++        if (!proxybotonline) {
++            if(type)
++                uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++            uprintf(user, "<%s> %s|", curbotnick, lp_proxybotalreadyoffline);
++            return 1;
++        }
++        char tmpstring[301];
++        char *op_list;
++
++        snprintf(tmpstring, 100, "$Quit %s|", proxybotnick);
++        send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        proxybotonline = 0;
++        total_users--;
++#ifdef HAVE_PERL
++        command_to_scripts("$Script stat_info %d %llu|", total_users, total_share);                         
++#endif
++
++        snprintf(tmpstring, 300, "<%s> %s %s %s|", botnick, lp_class6, proxybotnick, partmsg);
++        send_to_humans(tmpstring, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        snprintf(tmpstring, 100, "Proxy bot %s %s|", proxybotnick, partmsg);
++        if(show_actions > 0)
++            send_to_ops(tmpstring, OP | CHEEF | ADMIN | OWNER, show_actions);				
++        if(type) {
++            uprintf(user, "$To: %s From: %s $", user->nick, curbotnick);
++            uprintf(user, "<%s> %s|", curbotnick, tmpstring);
++        }
++        op_list = get_op_list();
++        send_to_humans(op_list, REGULAR | PROTECTED | REG | VIP | KVIP | OP | CHEEF | ADMIN | OWNER, NULL);
++        free(op_list); 	
++        return 1;
++    }
+ return 0;
+ }
+ 

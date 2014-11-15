@@ -1,0 +1,7 @@
+#!/bin/sh
+
+/etc/init.d/S80owftpd stop
+/etc/init.d/S80owfs stop
+/etc/init.d/S80owhttpd stop
+/etc/init.d/S70owserver stop
+

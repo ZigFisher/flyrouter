@@ -1,0 +1,8 @@
+config BR2_PACKAGE_CONVERSD
+	prompt "conversd.......................... daemon conversd-saupp"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Convers daemon conversd-saupp
+	  
+	  http://x-berg.in-berlin.de/cgi-bin/viewcvs.cgi/ampr/conversd-saupp/

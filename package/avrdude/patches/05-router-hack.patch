@@ -1,0 +1,19 @@
+--- avrdude-5.5/ser_posix.c_orig	2007-05-15 23:30:15.000000000 +0300
++++ avrdude-5.5/ser_posix.c	2009-03-08 16:40:36.000000000 +0200
+@@ -238,7 +238,7 @@
+ 
+   /*
+    * set serial line attributes
+-   */
++
+   rc = ser_setspeed(fdp, baud);
+   if (rc) {
+     fprintf(stderr, 
+@@ -246,6 +246,7 @@
+             progname, port, strerror(-rc));
+     exit(1);
+   }
++  */
+ }
+ 
+ 

@@ -1,0 +1,22 @@
+CFLAGS+=@CFLAGS@
+obj-m := adm5120sw.o
+
+adm5120sw.ko: adm5120sw.c
+	make -C @KERNSRC@ SUBDIRS=$(PWD) modules CROSS_COMPILE=@CROSS_PREFIX@
+
+all: adm5120sw.ko
+
+install: adm5120sw.ko
+	install -m 600 adm5120sw.ko @INST_PATH@/lib/modules/@KERNVER@
+	install -m 700 tools/S06adm5120sw @INST_PATH@/etc/init.d/	
+
+clean:
+	rm --preserve-root -f .*.o*
+	rm --preserve-root -f .*.ko*
+	rm --preserve-root -f *.o*
+	rm --preserve-root -f *.ko*
+	rm --preserve-root -f *.mod.*
+	rm --preserve-root -f -R .tmp*
+
+
+

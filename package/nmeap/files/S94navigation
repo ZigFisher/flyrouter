@@ -1,0 +1,19 @@
+#!/bin/sh
+# Start navigation.
+#
+exit 0
+#
+# 9600 bd
+SETBAUD="0:4:8bd:a30:3:1c:7f:15:1:0:0:0:11:13:1a:0:12:f:17:16:4:0:0:0:2f:64:65:0:0:0:0:0:0:0:0:0"
+# 4800 bd
+#SETBAUD="1500:5:cbc:b3b:3:1c:7f:15:1:0:0:0:11:13:1a:0:12:f:17:16:4:0:0:0:2f:64:65:0:0:0:0:0:0:0:0:0"
+#
+DEVICE="/dev/ttyS1"
+
+test -r /etc/navigation/nmeap2kml.cfg || exit 0
+
+(sleep 5 ; while true ; do /bin/stty -F $DEVICE $SETBAUD ; /usr/sbin/nmeap2kml > /dev/null ; done) &
+
+# Diff params
+# Good: -hupcl -inlcr -ixon -isig -icanon -iexten -echo                                                      
+# Bad: hupcl icrnl ixon opost isig icanon iexten echo 

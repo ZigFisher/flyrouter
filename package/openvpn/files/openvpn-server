@@ -1,0 +1,14 @@
+#!/bin/sh
+#
+
+[ -d /etc/openvpn ] || exit 0
+
+case "$1" in
+start)
+	/usr/sbin/openvpn --daemon server1 --cd /etc/openvpn --config /etc/openvpn/server1.conf
+	#/usr/sbin/openvpn --daemon server2 --cd /etc/openvpn --config /etc/openvpn/server2.conf
+	;;
+stop)	killall openvpn
+	;;
+*)	echo "Usage: $0 start|stop"
+esac

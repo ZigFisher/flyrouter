@@ -1,0 +1,31 @@
+--- mpcs-1.0/Makefile	2009-01-27 14:52:00.000000000 +0200
++++ mpcs-1.0/Makefile_new	2009-04-08 12:12:18.000000000 +0300
+@@ -17,7 +17,8 @@
+ 	cross-mipsel-router-linux-uclibc927 \
+ 	cross-mipsel-router-linux-uclibc928 \
+ 	cross-mipsel-tuxbox-linux-glibc \
+-	cross-sh4-linux
++	cross-sh4-linux \
++	cross-flyrouter
+ 
+ all:	\
+ 	cross-sparc-sun-solaris2.7 \
+@@ -429,3 +428,18 @@
+ 		DS_LD="arm-linux-ld -EL" \
+ 		DS_RL="arm-linux-ranlib" \
+ 		DS_ST="arm-linux-strip"
++
++######################################################################
++#
++#	Linux crosscompiler for FlyRouter Team
++#
++######################################################################
++cross-flyrouter:
++	#@-mipsel-linux-uclibc-setlib 0.9.27
++	@-$(MAKE) --no-print-directory \
++		-f Maketype TYP=$(subst cross-,,$@) \
++		OS_LIBS="" \
++		OS_CULI="-lncurses" \
++		OS_PTLI="-lpthread" \
++		DS_OPTS="-DOS_LINUX -DUCLIBC"\
++		DS_ARFLAGS="-rvsl"

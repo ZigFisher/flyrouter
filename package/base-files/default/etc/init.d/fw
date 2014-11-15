@@ -1,0 +1,6 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+msg "Starting firewall..."
+test -x /etc/network/fw && /etc/network/fw
+

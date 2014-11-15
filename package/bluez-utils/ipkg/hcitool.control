@@ -1,0 +1,5 @@
+Package: hcitool
+Priority: optional
+Section: net
+Description: hcitool - configure Bluetooth connections
+Depends: kmod-bluetooth, bluez-libs

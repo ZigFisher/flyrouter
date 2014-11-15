@@ -1,0 +1,50 @@
+#!/bin/sh
+#
+# Check & start network interfaces
+# FlyRouter Team (c) 2004-2009 | http://www.flyrouter.net
+# Version 0.4 20090406
+
+test -f /bin/router_functions && . /bin/router_functions
+
+start() {
+	msgn "Checking network settings:"
+	if /sbin/ifup -a -n >/dev/null 2>/dev/null && ok || fail ; then
+ 	    msg "Starting network... "
+	    /sbin/ifup -a
+	else
+   	    msg "Network test configuration failed, attaching 01234 port to eth0, setting 192.168.0.1/24 on eth0"
+   	    for i in 0 1 2 3 4; do ifconfig eth${i} down; done
+   	    echo 01234 >/proc/sys/net/adm5120sw/eth0
+	    ifconfig eth0 192.168.0.1 netmask 255.255.255.0 up
+	    ifconfig lo 127.0.0.1 netmask 255.0.0.0 up
+	    ip route add default via 192.168.0.2
+		sed -i "s/^#\(telnet.*\)/\1/" /etc/inetd.conf
+	fi
+}	
+
+stop() {
+	msgn "Stopping network:"
+	/sbin/ifdown -a && ok || fail
+}
+restart() {
+	stop
+	start
+}	
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

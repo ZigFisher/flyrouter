@@ -1,0 +1,3 @@
+#define PKG_VERSION "0.6.6-1"
+#define ROMEDRIVER_VERSION "3.6-1"
+#define BEEROUTER_FLASH_VERSION "0.1"

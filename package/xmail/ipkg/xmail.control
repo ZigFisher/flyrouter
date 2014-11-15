@@ -1,0 +1,4 @@
+Package: xmail
+Priority: optional
+Section: net
+Description: XMail is an Internet mail server featuring an SMTP, POP3 and finger server

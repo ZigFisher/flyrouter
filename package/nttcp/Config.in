@@ -1,0 +1,11 @@
+config BR2_PACKAGE_NTTCP
+	prompt "nttcp............................. A TCP connection performance tester"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  A small utility to test TCP connection performance
+	  
+	  http://linux.die.net/man/1/nttcp
+	  http://sd.wareonearth.com/~phil/net/ttcp/
+	  
+

@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBBER
+	prompt "libber............................ A Basic Encoding Rules (ITU X.690) implementation"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+		A Basic Encoding Rules (ITU X.690) implementation
+
+		http://oasis.frogfoot.net/code/libber/

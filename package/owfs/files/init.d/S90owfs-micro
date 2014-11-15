@@ -1,0 +1,20 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+exit 0
+
+case "$1" in
+  start)
+	if [ -x /usr/bin/owserver ]; then
+		msg "Start OW-server...";
+		/usr/bin/owserver -d /dev/ttyS0 -p 127.0.0.1:4304 2>/dev/null
+	fi
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

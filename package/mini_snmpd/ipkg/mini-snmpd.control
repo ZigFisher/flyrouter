@@ -1,0 +1,4 @@
+Package: mini-snmpd
+Priority: optional
+Section: net
+Description: SNMP server for embedded systems

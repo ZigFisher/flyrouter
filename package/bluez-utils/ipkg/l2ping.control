@@ -1,0 +1,5 @@
+Package: l2ping
+Priority: optional
+Section: net
+Description: l2ping - Send L2CAP echo request and receive answer
+Depends: kmod-bluetooth, bluez-libs

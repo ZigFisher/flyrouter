@@ -1,0 +1,6 @@
+config BR2_PACKAGE_GPIOCTL
+	prompt "gpioctl.......................... Tool for controlling gpio pins"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  Tool for controlling gpio pins

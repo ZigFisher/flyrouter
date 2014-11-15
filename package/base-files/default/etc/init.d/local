@@ -1,0 +1,9 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+# Pinger script:
+# while sleep 5m; do if ! ping -q -c 5 remote_host; then logger "Ping error, may be need reboot ?"; sleep 5; reboot; else logger "ping remote_host: OK"; fi; done &
+
+# Pinger script (for GPRS modem):
+# while sleep 5m; do if ! ping -q -c 5 remote_host; then logger "Ping error, may be need reset modem ?"; sleep 5; resetdev modem; else logger "ping remote_host: OK"; fi; done &

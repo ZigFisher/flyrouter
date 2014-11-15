@@ -1,0 +1,12 @@
+config BR2_PACKAGE_URONODE
+	prompt "uronode........................... Amateur Packet Radio node (AX25,NetRom,Rose,FlexNet)"
+	tristate
+	default n
+	select BR2_PACKAGE_LIBAX25
+	help
+	  UROnode is based on AWZ|LinuxNode by Tomi Manninen OH2BNS and FlexNode
+	  by Roy PE1RJA. It was born initially for the aripisa.ampr.org system
+	  by Stefano Noferi IZ5AWZ of ARI Ham Radio Association of Pisa (ITALY)..
+	  
+	  ftp://ftp.n1uro.net/pub/ax25/
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/

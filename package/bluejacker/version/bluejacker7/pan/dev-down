@@ -1,0 +1,6 @@
+#!/bin/sh
+
+#/bin/ip link set br0 down
+#/bin/brctl delif br0 bnep0
+#/bin/brctl delif br0 eth1
+#/bin/brctl delbr br0

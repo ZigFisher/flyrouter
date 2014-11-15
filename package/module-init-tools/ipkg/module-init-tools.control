@@ -1,0 +1,4 @@
+Package: module-init-tools
+Priority: optional
+Section: base
+Description: module-init-tools

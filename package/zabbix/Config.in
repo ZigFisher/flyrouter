@@ -1,0 +1,25 @@
+#menu "zabbix............................. Zabbix monitoring system"
+
+config BR2_COMPILE_ZABBIX
+	tristate
+	default y
+	depends BR2_PACKAGE_ZABBIX-AGENTD || BR2_PACKAGE_ZABBIX-SENDER
+	select BR2_PACKAGE_LIBREADLINE
+	
+config BR2_PACKAGE_ZABBIX-AGENTD
+	prompt "zabbix-agentd..................... Zabbix agent daemon"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_ZABBIX-AGENTD
+	help
+	  Zabbix agent daemon
+
+config BR2_PACKAGE_ZABBIX-SENDER
+	prompt "zabbix-sender..................... Zabbix sender"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_COMPILE_ZABBIX-SENDER
+	help
+	  Zabbix sender
+
+#endmenu

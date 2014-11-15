@@ -1,0 +1,32 @@
+[global]
+Nice            = -15
+ClientTimeout   = 4
+ClientMaxIdle   = 60
+CacheDelay      = 0
+FallbackTimeout = 1
+BindWait        = 10
+ResolveDelay    = 10
+DyndnsInterval  = 120
+LogFile         = syslog
+#PidFile         = /ramdsk/kpcs.pid
+#MaxLogSize     = 102400
+showecmdw = 0
+showemmdw = 0
+disablecache1 = 0
+disablecache2 = 0
+disablecache = 0
+Filter = 0
+#Filter = 500
+
+[newcamd]
+Key  = 0102030405060708091011121314
+Port = 23423@0604:000000;
+# -- camd 3.5x ----------------------------------------------------------------
+# Port            : Port-Number (0 disables this protocol)
+# ServerIP        : bind service to ONE dedicated ip-address
+# -----------------------------------------------------------------------------
+[cs378x]
+Port        = 54343
+
+[cs357x]
+Port        = 54343

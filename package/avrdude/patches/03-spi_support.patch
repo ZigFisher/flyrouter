@@ -1,0 +1,206 @@
+--- avrdude-5.5.orig/debian/patches/03-spi_support.patch
++++ avrdude-5.5/debian/patches/03-spi_support.patch
+@@ -0,0 +1,203 @@
++diff -r -u avrdude-5.5.orig/bitbang.c avrdude-5.5/bitbang.c
++--- avrdude-5.5.orig/bitbang.c	2007-01-24 23:07:54.000000000 +0200
+++++ avrdude-5.5/bitbang.c	2008-11-29 16:58:09.000000000 +0200
++@@ -225,6 +225,39 @@
++   return 0;
++ }
++ 
+++/*
+++ * transmit bytes via SPI and return the results; 'cmd' and
+++ * 'res' must point to data buffers
+++ */
+++int bitbang_spi(PROGRAMMER * pgm, unsigned char cmd[],
+++                   unsigned char res[], int count)
+++{
+++  int i;
+++
+++  pgm->setpin(pgm, pgm->pinno[PIN_LED_PGM], 0);
+++
+++  for (i=0; i<count; i++) {
+++    res[i] = bitbang_txrx(pgm, cmd[i]);
+++  }
+++
+++  pgm->setpin(pgm, pgm->pinno[PIN_LED_PGM], 1);
+++
+++  if(verbose >= 2)
+++	{
+++        fprintf(stderr, "bitbang_cmd(): [ ");
+++        for(i = 0; i < count; i++)
+++            fprintf(stderr, "%02X ", cmd[i]);
+++        fprintf(stderr, "] [ ");
+++        for(i = 0; i < count; i++)
+++		{
+++            fprintf(stderr, "%02X ", res[i]);
+++		}
+++        fprintf(stderr, "]\n");
+++	}
+++
+++  return 0;
+++}
+++
++ 
++ /*
++  * issue the 'chip erase' command to the AVR device
++diff -r -u avrdude-5.5.orig/bitbang.h avrdude-5.5/bitbang.h
++--- avrdude-5.5.orig/bitbang.h	2007-01-25 00:43:46.000000000 +0200
+++++ avrdude-5.5/bitbang.h	2008-11-29 16:49:19.000000000 +0200
++@@ -39,6 +39,8 @@
++ int  bitbang_vfy_led        (PROGRAMMER * pgm, int value);
++ int  bitbang_cmd            (PROGRAMMER * pgm, unsigned char cmd[4],
++                                 unsigned char res[4]);
+++int  bitbang_spi            (PROGRAMMER * pgm, unsigned char cmd[],
+++                                unsigned char res[], int count);
++ int  bitbang_chip_erase     (PROGRAMMER * pgm, AVRPART * p);
++ int  bitbang_program_enable (PROGRAMMER * pgm, AVRPART * p);
++ void bitbang_powerup        (PROGRAMMER * pgm);
++diff -r -u avrdude-5.5.orig/par.c avrdude-5.5/par.c
++--- avrdude-5.5.orig/par.c	2007-01-30 15:41:53.000000000 +0200
+++++ avrdude-5.5/par.c	2008-11-29 17:04:28.000000000 +0200
++@@ -416,6 +416,7 @@
++   pgm->program_enable = bitbang_program_enable;
++   pgm->chip_erase     = bitbang_chip_erase;
++   pgm->cmd            = bitbang_cmd;
+++  pgm->spi            = bitbang_spi;
++   pgm->open           = par_open;
++   pgm->close          = par_close;
++   pgm->setpin         = par_setpin;
++diff -r -u avrdude-5.5.orig/pgm.c avrdude-5.5/pgm.c
++--- avrdude-5.5.orig/pgm.c	2007-01-30 15:41:53.000000000 +0200
+++++ avrdude-5.5/pgm.c	2008-11-29 16:59:38.000000000 +0200
++@@ -117,6 +117,7 @@
++    * assigned before they are called
++    */
++   pgm->cmd            = NULL;
+++  pgm->spi            = NULL;
++   pgm->paged_write    = NULL;
++   pgm->paged_load     = NULL;
++   pgm->write_setup    = NULL;
++diff -r -u avrdude-5.5.orig/pgm.h avrdude-5.5/pgm.h
++--- avrdude-5.5.orig/pgm.h	2007-01-30 15:41:53.000000000 +0200
+++++ avrdude-5.5/pgm.h	2008-11-29 16:59:06.000000000 +0200
++@@ -77,6 +77,8 @@
++   int  (*chip_erase)     (struct programmer_t * pgm, AVRPART * p);
++   int  (*cmd)            (struct programmer_t * pgm, unsigned char cmd[4], 
++                           unsigned char res[4]);
+++  int  (*spi)            (struct programmer_t * pgm, unsigned char cmd[], 
+++                          unsigned char res[], int count);
++   int  (*open)           (struct programmer_t * pgm, char * port);
++   void (*close)          (struct programmer_t * pgm);
++   int  (*paged_write)    (struct programmer_t * pgm, AVRPART * p, AVRMEM * m, 
++diff -r -u avrdude-5.5.orig/term.c avrdude-5.5/term.c
++--- avrdude-5.5.orig/term.c	2007-01-25 00:43:46.000000000 +0200
+++++ avrdude-5.5/term.c	2008-11-29 18:21:30.000000000 +0200
++@@ -88,6 +88,11 @@
++ static int cmd_sck   (PROGRAMMER * pgm, struct avrpart * p,
++ 		      int argc, char *argv[]);
++ 
+++static int cmd_spi   (PROGRAMMER * pgm, struct avrpart * p,
+++		      int argc, char *argv[]);
+++
+++static int cmd_pgm   (PROGRAMMER * pgm, struct avrpart * p,
+++		      int argc, char *argv[]);
++ 
++ struct command cmd[] = {
++   { "dump",  cmd_dump,  "dump memory  : %s <memtype> <addr> <N-Bytes>" },
++@@ -102,6 +107,8 @@
++   { "varef", cmd_varef, "set <V[aref]> (STK500 only)" },
++   { "fosc",  cmd_fosc,  "set <oscillator frequency> (STK500 only)" },
++   { "sck",   cmd_sck,   "set <SCK period> (STK500 only)" },
+++  { "spi",   cmd_spi,   "enter direct SPI mode" },
+++  { "pgm",   cmd_pgm,   "return to programming mode" },
++   { "help",  cmd_help,  "help" },
++   { "?",     cmd_help,  "help" },
++   { "quit",  cmd_quit,  "quit" }
++@@ -111,7 +118,7 @@
++ 
++ 
++ 
++-
+++static int spi_mode = 0;
++ 
++ static int nexttok(char * buf, char ** tok, char ** next)
++ {
++@@ -445,8 +452,18 @@
++     return -1;
++   }
++ 
++-  if (argc != 5) {
++-    fprintf(stderr, "Usage: send <byte1> <byte2> <byte3> <byte4>\n");
+++  if (spi_mode && (pgm->spi == NULL)) {
+++    fprintf(stderr,
+++	    "The %s programmer does not support direct SPI transfers.\n",
+++	    pgm->type);
+++    return -1;
+++  }
+++
+++
+++  if ((argc > 5) || ((argc < 5) && (!spi_mode))) {
+++    fprintf(stderr, spi_mode?
+++      "Usage: send <byte1> [<byte2> [<byte3> [<byte4>]]]\n":
+++      "Usage: send <byte1> <byte2> <byte3> <byte4>\n");
++     return -1;
++   }
++ 
++@@ -465,7 +482,10 @@
++ 
++   pgm->err_led(pgm, OFF);
++ 
++-  pgm->cmd(pgm, cmd, res);
+++  if (spi_mode)
+++    pgm->spi(pgm, cmd, res, argc-1);
+++  else
+++    pgm->cmd(pgm, cmd, res);
++ 
++   /*
++    * display results
++@@ -707,6 +727,22 @@
++   return 0;
++ }
++ 
+++static int cmd_spi(PROGRAMMER * pgm, struct avrpart * p,
+++        int argc, char * argv[])
+++{
+++  pgm->setpin(pgm, pgm->pinno[PIN_AVR_RESET], 1);
+++  spi_mode = 1;
+++  return 0;
+++}
+++
+++static int cmd_pgm(PROGRAMMER * pgm, struct avrpart * p,
+++        int argc, char * argv[])
+++{
+++  pgm->setpin(pgm, pgm->pinno[PIN_AVR_RESET], 0);
+++  spi_mode = 0;
+++  pgm->initialize(pgm, p);
+++  return 0;
+++}
++ 
++ static int tokenize(char * s, char *** argv)
++ {
++diff -r -u avrdude-5.5.orig/term.c avrdude-5.5/term.c
++--- avrdude-5.5.orig/avrdude.1	2007-10-29 20:03:02.000000000 +0200
+++++ avrdude-5.5/avrdude.1	2008-11-29 18:40:07.000000000 +0200
++@@ -642,13 +642,19 @@
++ .Nm ,
++ this command allows you to use it, even though
++ .Nm
++-does not implement the command.
+++does not implement the command. When using direct SPI mode, up to 3 bytes
+++can be omitted.
++ .It Ar sig
++ Display the device signature bytes.
+++.It Ar spi
+++Enter direct SPI mode.
+++.Em Only supported on parallel bitbang programmers.
++ .It Ar part
++ Display the current part settings and parameters.  Includes chip
++ specific information including all memory types supported by the
++ device, read/write timing, etc.
+++.It Ar pgm
+++Return to programming mode
++ .It Ar vtarg voltage
++ Set the target's supply voltage to
++ .Ar voltage
++

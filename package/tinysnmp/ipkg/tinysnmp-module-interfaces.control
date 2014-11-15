@@ -1,0 +1,5 @@
+Package: tinysnmp-module-interfaces
+Section: net
+Priority: optional
+Description: Interfaces MIB module for TinySNMP
+Depends: tinysnmp-agent

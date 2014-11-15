@@ -1,0 +1,41 @@
+#!/bin/sh
+
+NAME="pptp"
+DESC="PPTP Server"
+DAEMON=/usr/sbin/pptpd
+DAEMON_ARGS=""
+PIDFILE=/var/run/$NAME.pid
+
+# Exit if the package is not installed
+[ -x "$DAEMON" ] || exit 0
+
+eval `kdb -qq ls svc_pptp_*`
+
+start(){
+	if [ "x${svc_pptp_enabled}x" = "x1x" ]; then
+		echo "Starting $DESC."
+		start-stop-daemon --quiet --start --pid=$PIDFILE --exec $DAEMON -- $DAEMON_ARGS
+	else
+		echo "Do not starting $DESC"
+	fi
+}
+
+stop(){
+	echo "Stoping $NAME."
+	start-stop-daemon --quiet --stop --pid=$PIDFILE --name $NAME
+}
+
+case $1 in
+	start)
+		start
+		;;
+	stop)
+		stop
+		;;
+	restart)
+		stop
+		start
+		;;
+esac
+
+

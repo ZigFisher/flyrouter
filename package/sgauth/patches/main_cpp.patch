@@ -1,0 +1,11 @@
+diff -Naur sgauth-2/main.cpp sgauth-2-new/main.cpp
+--- sgauth-2/main.cpp	2005-01-13 17:30:36.000000000 +0200
++++ sgauth-2-new/main.cpp	2006-01-31 19:37:24.000000000 +0200
+@@ -101,6 +101,7 @@
+ clnp->SetCallBackFn(EventsFn);
+ clnp->SetCallBackInfoFn(ShowMessage);
+ clnp->SetCallBackDirNameFn(SetDirName);
++clnp->SetReconnect(1);
+ 
+ 
+ #ifdef linux

@@ -1,0 +1,25 @@
+[ "$INTERFACE" = "wan" ] || exit
+
+USER=root
+export USER
+
+local HOSTANME
+local PARAM
+
+HOSTNAME="$(uname -n)"
+
+case "$ACTION" in
+        ifup)
+                . /etc/functions.sh
+                include /lib/network
+                config_load network
+                scan_interfaces
+                config_get PARAM wan ipaddr
+                zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -s "$HOSTNAME" -k "net.if.ipaddr[wan]" -o "$PARAM"
+                config_get PARAM wan ifname
+                zabbix_sender -c /etc/zabbix/zabbix_agentd.conf -s "$HOSTNAME" -k "net.if.name[wan]" -o "$PARAM"
+                ;;
+        ifdown)
+                ;;
+esac
+

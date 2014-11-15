@@ -1,0 +1,8 @@
+config BR2_PACKAGE_LIBABZ
+	prompt "libabz............................ Miscellaneous useful routines"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+		Miscellaneous useful routines
+
+		http://oasis.frogfoot.net/code/libabz/

@@ -1,0 +1,42 @@
+# $Id: Makefile 3112 2006-02-01 23:53:19Z mbm $
+
+include $(TOPDIR)/rules.mk
+
+PKG_NAME:=rtlflash
+PKG_RELEASE:=0.0.2
+
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
+
+include $(TOPDIR)/package/rules.mk
+
+$(eval $(call PKG_template,RTLFLASH,rtlflash,$(PKG_RELEASE),$(ARCH)))
+
+$(PKG_BUILD_DIR)/.prepared:
+	mkdir -p $(PKG_BUILD_DIR)
+	$(CP) ./src/* $(PKG_BUILD_DIR)
+	touch $@
+
+$(PKG_BUILD_DIR)/.configured:
+	touch $@
+
+ifeq ($(BEEROUTER_TARGET_DLINK),y)
+BEEROUTER_TARGET_MAGIC=0x59a0e842
+endif
+ifeq ($(BEEROUTER_TARGET_EDIMAX),y)
+BEEROUTER_TARGET_MAGIC=0x59a0e845
+endif
+
+$(PKG_BUILD_DIR)/.built:
+	$(MAKE) -C $(PKG_BUILD_DIR) \
+		HOSTCC=$(HOSTCC) \
+		$(TARGET_CONFIGURE_OPTS) \
+		CFLAGS="$(TARGET_CFLAGS) -I $(STAGING_DIR)/usr/include -DBEEROUTER_FLASH_SIZE=$(BEEROUTER_FLASH_SIZE) -DBEEROUTER_TARGET_MAGIC=$(BEEROUTER_TARGET_MAGIC) -DBEEROUTER_DATAFS_SIZE=$(BEEROUTER_DATAFS_SIZE)"
+	$(CP) $(PKG_BUILD_DIR)/bixcrypt $(STAGING_DIR)/bin/bixcrypt
+	touch $@
+
+$(IPKG_RTLFLASH):
+	mkdir -p $(IDIR_RTLFLASH)/sbin
+	$(CP) $(PKG_BUILD_DIR)/flash $(IDIR_RTLFLASH)/sbin
+	$(CP) $(PKG_BUILD_DIR)/gpio $(IDIR_RTLFLASH)/sbin
+	$(RSTRIP) $(IDIR_RTLFLASH)
+	$(IPKG_BUILD) $(IDIR_RTLFLASH) $(PACKAGE_DIR)

@@ -1,0 +1,25 @@
+menu "aprsdigi.......................... APRSDIGI (aprsdigi, aprsmon)"
+                                                                                                                                              
+config BR2_COMPILE_APRSDIGI
+        tristate
+        default m if CONFIG_DEVEL
+	depends BR2_PACKAGE_APRSDIGI || BR2_PACKAGE_APRSMON
+        select BR2_PACKAGE_LIBAX25
+
+config BR2_PACKAGE_APRSDIGI
+        prompt "aprsdigi.......................... APRSDIGI"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_APRSDIGI
+        help
+          aprsdigi - APRS(tm) digipeater
+
+config BR2_PACKAGE_APRSMON
+        prompt "aprsmon........................... APRSMON"
+        tristate
+        default m if CONFIG_DEVEL
+        select BR2_COMPILE_APRSDIGI
+        help
+          aprsmon - monitor APRS AX.25 traffic
+                                                                                                                                              
+endmenu

@@ -1,0 +1,4 @@
+Package: nsca
+Priority: optional
+Section: net
+Description: NSCA daemon - Nagios Service Check Acceptor

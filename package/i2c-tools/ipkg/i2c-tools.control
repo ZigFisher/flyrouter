@@ -1,0 +1,4 @@
+Package: i2c-tools
+Priority: optional
+Section: utils
+Description: I2C tools for Linux

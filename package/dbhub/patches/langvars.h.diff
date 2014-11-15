@@ -1,0 +1,52 @@
+diff -wuBr dbhub-0.451.orig/src/langvars.h dbhub-0.451/src/langvars.h
+--- dbhub-0.451.orig/src/langvars.h	2008-01-21 04:19:35.000000000 +0200
++++ dbhub-0.451/src/langvars.h	2009-02-27 17:01:20.000000000 +0200
+@@ -40,6 +40,7 @@
+ extern char lp_categlist[101];
+ extern char lp_categnotfound[101];
+ extern char lp_category_[51];
++extern char lp_changedhost[51];
+ extern char lp_charnumbers[101];
+ extern char lp_chatting_[51];
+ extern char lp_cheefs_[51];
+@@ -60,6 +61,7 @@
+ extern char lp_couldntaddentry[51];
+ extern char lp_couldntremoveentry[51];
+ extern char lp_currentdate[51];
++extern char lp_currenthost[51];
+ extern char lp_cut_[51];
+ extern char lp_datashared[51];
+ extern char lp_days[51];
+@@ -171,6 +173,7 @@
+ extern char lp_newcommand[101];
+ extern char lp_newregistered[101];
+ extern char lp_nextwarningban[101];
++extern char lp_host_[51];
+ extern char lp_nick_[51];
+ extern char lp_nickban_[51];
+ extern char lp_nickbans[51];
+@@ -193,6 +196,7 @@
+ extern char lp_notenoughslots[101];
+ extern char lp_nowarnings[101];
+ extern char lp_number_[51];
++extern char lp_oldhost[51];
+ extern char lp_opped_[51];
+ extern char lp_ops_[51];
+ extern char lp_owners_[51];
+@@ -215,6 +219,8 @@
+ extern char lp_prottype[51];
+ extern char lp_proxy_[51];
+ extern char lp_proxynotallowed[51];
++extern char lp_proxybotalreadyonline[51];
++extern char lp_proxybotalreadyoffline[51];
+ extern char lp_psvnotallowed[51];
+ extern char lp_psvwithmodea[101];
+ extern char lp_psvwithoutpsvinnick[101];
+@@ -600,6 +606,7 @@
+ extern char lp_he127[101];
+ extern char lp_he128[101];
+ extern char lp_he129[101];
++extern char lp_he130[101];
+ 
+ #endif /* _LANGVARS_H_ */
+ 

@@ -1,0 +1,4 @@
+Package: bcmflash
+Priority: optional
+Section: base
+Description: bcmflash - flash save/restore/clear for BCM6345 SOC

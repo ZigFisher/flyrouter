@@ -1,0 +1,10 @@
+config BR2_PACKAGE_AXIP
+	prompt "axip.............................. A daemon to encapsulate AX25 frames in UDP datagrams"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBAX25
+	help
+	  A daemon to encapsulate AX25 frames in UDP datagrams.
+	  
+	  ftp://ham2.cc.fer.hr/pub/users/9a4gl/openwrt/
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/

@@ -1,0 +1,42 @@
+#!/bin/sh
+
+# You don't usually need to touch this file at all, the full configuration
+# of the bridge can be done in a standard way on /etc/network/interfaces.
+
+# Have a look at /usr/share/doc/bridge-utils/README.Debian.gz if you want
+# more info about the way on wich a bridge is set up on Debian.
+
+if [ ! -x /usr/sbin/brctl ]
+then
+  exit 0
+fi
+
+case "$IF_BRIDGE_PORTS" in
+    "")
+	exit 0
+	;;
+    none)
+	INTERFACES=""
+	;;
+    *)
+	INTERFACES="$IF_BRIDGE_PORTS"
+	;;
+esac
+
+ifconfig $IFACE down
+
+for i in $INTERFACES
+do
+  if [ "$i" = "all" ]; then
+    i=$(grep eth /proc/net/dev|sed 's/\(\ *\)\(eth[^:]*\)\(.*\)/\2/')
+  fi
+  for port in $i
+  do
+    ifconfig $port down && brctl delif $IFACE $port && \
+      if [ -x /etc/network/if-post-down.d/vlan ]; then
+        env IFACE=$port /etc/network/if-post-down.d/vlan
+      fi
+  done
+done
+
+brctl delbr $IFACE

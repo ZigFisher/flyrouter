@@ -1,0 +1,43 @@
+diff -wuBr dbhub-0.451.orig/configure.ac dbhub-0.451/configure.ac
+--- dbhub-0.451.orig/configure.ac	2008-02-02 04:05:03.000000000 +0200
++++ dbhub-0.451/configure.ac	2009-02-24 19:39:43.000000000 +0200
+@@ -100,29 +100,13 @@
+ 		AC_MSG_CHECKING([Perl C Flags])
+ 		perl_ccflags=`perl -MExtUtils::Embed -e ccopts`
+ 		AC_MSG_RESULT([$perl_ccflags])
+-		for item in $(perl -MExtUtils::Embed -e ldopts); do
+-			if test "${item: -12}" = "DynaLoader.a"; then
+-				perl_loader=$item
+-			fi
+-			if test "${item:0:1}" = "-"; then
+-				perl_ld="$perl_ld $item"
+-			else
+-				perl_ldd="$perl_ldd $item"
+-			fi
+-		done
+-		AC_MSG_CHECKING([Perl LD FLags])
+-		AC_MSG_RESULT([$perl_ld])
+-		AC_MSG_CHECKING([Perl LD Objs])
+-		AC_MSG_RESULT([$perl_ldd])
+ 		CPPFLAGS="$CPPFLAGS $perl_ccflags"
+-		LDFLAGS="$LDFLAGS $perl_ld"
+ 		MISSING_PERL_HEADERS=""
+ 		AC_CHECK_HEADERS([EXTERN.h perl.h],,HAVE_PERL="false"; MISSING_PERL_HEADERS="$ac_header $MISSING_PERL_HEADERS",[[#if HAVE_EXTERN_H
+ 		#include <EXTERN.h>
+ 		#endif
+ 		]])
+ 		AC_CHECK_LIB([perl],[perl_run],,LIBPERL_MISSING="true";HAVE_PERL="false")
+-		AC_CHECK_FILE("$perl_loader", [AC_SUBST(perl_ldd) HAVE_DYNLOAD="yes"], HAVE_DYNLOAD="no";HAVE_PERL="false")
+ 	else
+ 		HAVE_PERL="false"
+ 	fi
+@@ -189,9 +173,6 @@
+ 	if test "$LIBPERL_MISSING" = "true"; then
+ 		echo -e "\e@<:@31m    But libperl seems to be missing\e@<:@0m"
+ 	fi
+-	if test "$HAVE_DYNLOAD" = "no"; then
+-		echo -e "\e@<:@31m    But DynaLoader.a seems to be missing\e@<:@0m"
+-	fi
+ 	echo -en "\e@<:@1m Perl support is turned: "
+ 	if test "$HAVE_PERL" = "true" ; then
+ 		echo -e "\e@<:@32mon \e@<:@0m"

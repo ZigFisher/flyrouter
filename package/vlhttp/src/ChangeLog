@@ -1,0 +1,12 @@
+
+Version 0.22 released on 2005-02-23. Changes from version 0.21:
+
+        * elhttp can now be run from inetd
+
+Version 0.21 released on 2004-06-18. Changes from version 0.2:
+
+        * fixed a bug in the Win32 code so that child thread handles
+          are properly closed by the master thread
+
+Version 0.2 released on 2004-05-07
+

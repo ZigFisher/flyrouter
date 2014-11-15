@@ -1,0 +1,263 @@
+#!/bin/sh
+# Sigrand SG-17PCI configuration tool 
+# for Linux kernel v 2.6
+#
+#	Written 2007 by Artem U. Polyakov
+#
+#---------------------------------------------------------
+
+PCI_PATH="/sys/class/net"
+
+#---------------------------------------------------------
+
+print_usage()
+{
+    echo "SIGRAND SG-17PCI configuration tool"
+    echo "Usage:"
+    echo "  sg16cfg <if>               - get statistics"
+    echo "  sg16cfg <if> [args]        - set DSL parameters"
+    echo "  <if> - SG-17PCI network interface name"
+    echo "Possible arguments:"
+    echo "  master | slave             - set modem mode: master(STU-C) or slave(STU-R)"
+    echo "  tcpam32 | tcpam16          - line coding"
+    echo "  annex A|B|AB               - G.SHDSL.bis Annex type"    
+    echo "  rate <value>               - line rate"
+    echo "  crc32 | crc16              - CRC length"
+    echo "  mac-addr <value>           - less significant part of MAC-address"
+    echo "  rboff | rbon               - PCI read burst mode off"
+    echo "  wboff | wbon               - PCI write burst mode off"
+    echo "  fill_ff | fill_7e          - fill byte value"
+    echo "  normal | invert            - data inversion"
+    echo "Compatibility:"    
+    echo "  NSGate_comp [on|off]       - Compatibility with NSGate qBridge"    
+}
+
+print_stat()
+{
+    if [ $# -lt 1 ]; then
+	exit
+    fi
+    IFACE=$1
+
+    master=`cat mode`
+    code=`cat tcpam`
+    rate=`cat rate`
+    if [ -n "$rate" ]; then
+	rate="rate=$rate"
+    else
+	rate=""
+    fi
+    annex=`cat annex`    
+    if [ -n "$annex" ]; then
+	annex="annex=$annex"
+    else
+	annex=""
+    fi
+    rb=`cat rburst`
+    wb=`cat wburst`
+    fill=`cat fill_7e`
+    inv=`cat inv`
+    crc=`cat crc16`
+
+
+    echo "$1:"
+    echo "      shdsl:   $master $rate $code $annex"
+    echo "      hdlc:    fill="$fill" inversion="$inv" "$crc
+    echo "      PCI bus: rb$rb wb$wb"
+    echo "Statistics:"
+    cat statistics
+}
+
+
+print_stat_all()
+{
+	cd "$PCI_PATH"
+        echo "SIGRAND SG-17PCI SHDSL modem statistics"	
+	for iface in *; do
+		if [ -d "$iface/sg17_private" ]; then
+			bkp_dir=`pwd`
+			cd "$iface/sg17_private"
+			print_stat $iface
+			cd $bkp_dir
+		fi
+	done
+}
+
+#---------------------------------------------------------
+
+# Check that interface name specifyed
+if [ $# = 0 ]; then
+    print_stat_all
+    exit
+fi
+
+if [ "$1" = "--help" -o "$2" = "-h" ]; then
+	print_usage
+	exit
+fi
+
+cdir=`pwd`
+iface=$1
+
+
+
+if [ -d "$PCI_PATH/$1/sg17_private" ]; then
+	cd "$PCI_PATH/$1/sg17_private"
+else
+	echo "$0: No such device $1"
+	exit
+fi
+
+if [ "$#" = 1 ]; then
+        echo "SIGRAND SG-17PCI SHDSL modem statistics"
+	print_stat $iface
+	exit
+fi
+
+tst=`ifconfig $iface | grep UP`
+if [ -n "$tst" ]; then
+	echo "    Error: $iface is UP"
+	echo "    To configure bring it down first:"
+	echo "         # ifconfig $iface down"
+	exit
+fi
+
+
+# configuring config
+shdsl_need_reconf=0
+shift
+while [ ! -z $1 ]; do
+
+    case $1 in
+#------------ SHDSL settings --------------------------------------    
+    "master")
+	echo 1 > mode
+	shdsl_need_reconf=1
+	;;
+    "slave")
+	echo 0 > mode
+	shdsl_need_reconf=1	
+	;;
+    "rate")
+	if [ -z $2 ]; then
+	    shift
+	    echo $0": rate value is missing"		
+	    break
+	fi
+	chk=`echo $2 | grep '[^0-9]'`
+	if [ ! -z $chk ]; then
+	    echo $0": rate value is missing"
+	    break
+	fi
+	echo $2 > rate
+	shdsl_need_reconf=1	
+	shift
+	;;
+    "annex")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"annex\" "
+	    break
+	fi
+
+	if [ "$2" = "A" ]; then
+	    echo 0 > annex
+	    shift
+	elif [ "$2" = "B" ]; then
+	    echo 1 > annex
+	    shift
+	elif [ $2 = "AB" ]; then
+	    echo 2 > annex
+	    shift
+	fi
+	shdsl_need_reconf=1	
+	;;
+    "tcpam32")
+	echo 1 > tcpam
+	shdsl_need_reconf=1	
+	;;
+    "tcpam16")
+	echo 0 > tcpam
+	shdsl_need_reconf=1	
+	;;
+
+#------------ if settings --------------------------------------
+
+    "mac-addr")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"mac-addr\" "
+	    break
+	fi
+	echo "$2" > maddr 
+	shift
+	;;
+
+#------------ HDLC settings --------------------------------------
+
+    "crc32")
+	echo 0 > crc16
+	;;
+    "crc16")
+	echo 1 > crc16
+	;;
+    "rboff")
+	echo 0 > rburst
+	;;
+    "wboff")
+	echo 0 > wburst
+	;;
+    "rbon")
+	echo 1 > rburst
+	;;
+    "wbon")
+	echo 1 > wburst
+	;;
+    "normal")
+	echo 0 > inv
+	;;
+    "invert")
+	echo 1 > inv
+	;;
+    "fill_ff")
+	echo 0 > fill_7e
+	;;
+    "fill_7e")
+	echo 1 > fill_7e
+	;;
+	
+#------------ Compat settings --------------------------------------	
+	
+    "NSGate_comp")
+	if [ -z "$2" ]; then
+	    echo $0": syntax error, after \"NSGate_comp\" "
+	    break
+	fi
+
+	if [ "$2" = "on" ]; then
+	    echo 1 > nsg_comp
+	    shift
+	elif [ "$2" = "off" ]; then
+	    echo 0 > nsg_comp
+	    shift
+	fi
+	;;
+
+#------------ DEBUG --------------------------------------	
+
+    "debug_off")
+	echo 0 > debug_on
+	;;
+    "debug_on")
+	echo 1 > debug_on
+	;;
+
+	
+    *)
+	echo $0": error parameter - "$1
+    ;;
+    esac
+    shift
+done
+
+if [ "$shdsl_need_reconf" = 1 ]; then
+    echo 1 > apply_cfg
+fi

@@ -1,0 +1,5 @@
+Package: hciconfig
+Priority: optional
+Section: net
+Description: hciconfig - configure Bluetooth devices
+Depends: kmod-bluetooth, bluez-libs

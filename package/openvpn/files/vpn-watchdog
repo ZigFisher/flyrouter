@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+
+export PING_CMD="/bin/ping -c 2"
+export INET_GW=212.110.128.65
+export VPN_GW=10.0.0.1
+
+inet_watchdog() {
+  ( while sleep 3m; do $PING_CMD $INET_GW || killall pppd ; done 2>&1 | logger -t inet_watchdog ) &
+}
+
+vpn_watchdog() {
+  ( while sleep 5m; do $PING_CMD $VPN_GW || /etc/init.d/openvpn-client restart; done 2>&1 | logger -t vpn_watchdog ) &
+}
+
+case "$1" in
+  start)
+  	#inet_watchdog
+	vpn_watchdog
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

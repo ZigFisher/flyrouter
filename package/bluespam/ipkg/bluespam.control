@@ -1,0 +1,5 @@
+Package: bluespam
+Section: net
+Priority: optional
+Description: bluespam
+Depends: bluez-libs

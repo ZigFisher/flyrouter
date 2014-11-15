@@ -1,0 +1,10 @@
+config BR2_PACKAGE_USSP-PUSH
+	prompt "ussp-push......................... object pusher, using the BlueZ BlueTooth stack"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_LIBUSB
+	help
+	  ussp-push is a OBEX object pusher for Linux, using the BlueZ BlueTooth stack.
+	  
+	  http://www.xmailserver.org/ussp-push.html
+	  http://www.hamradio.crimea.ua/downloads/software/linux/archive/

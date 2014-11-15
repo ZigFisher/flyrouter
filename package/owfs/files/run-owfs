@@ -1,0 +1,6 @@
+#!/bin/sh
+
+/etc/init.d/S70owserver start force
+/etc/init.d/S80owfs start force
+/etc/init.d/S80owhttpd start force
+/etc/init.d/S80owftpd start force

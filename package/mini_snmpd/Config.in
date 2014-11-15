@@ -1,0 +1,8 @@
+config BR2_PACKAGE_MINI_SNMPD
+	prompt "mini-snmpd........................ SNMP server for embedded systems"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  SNMP server for embedded systems
+	  
+	  http://members.aon.at/linuxfreak/linux/mini_snmpd.html

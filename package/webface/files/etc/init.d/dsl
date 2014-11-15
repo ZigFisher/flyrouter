@@ -1,0 +1,243 @@
+#!/bin/sh
+
+kdb="kdb"
+mr16h_cfg="/sbin/sg16cfg"
+mr17h_cfg="/sbin/mr17h_cfg"
+ifcfg="/sbin/ifconfig"
+
+. /etc/templates/sigrand-lib
+
+# checks that DSL service is enabled
+_dsl_init_svc(){
+    return 0;
+}
+
+# stops service
+_dsl_stop_svc(){
+    return 0;
+}
+
+# insmod DSL drivers
+_dsl_sg16_init(){
+    return 0;
+}
+_dsl_sg17_init(){
+    return 0;
+}
+_dsl_init_drv(){
+    _dsl_sg16_init
+    _dsl_sg17_init
+    return 0;
+}
+
+# rmmod DSL drivers
+_dsl_sg16_stop(){
+    return 0;
+}
+_dsl_sg17_stop(){
+    return 0;
+}
+_dsl_stop_drv(){
+	_dsl_sg16_stop()
+	_dsl_sg17_stop()
+	return 0;
+}
+
+# Device configurations
+
+_dsl_sg16_if_defconfig(){
+	local def_mode="slave"
+	local def_rate="192"
+	local def_coding="tcpam32"
+	local def_cfg="local"
+	local def_annex="A"
+	#local def_mac="00:FF:01:A3:93:80"
+	local def_fill="fill_ff"	
+	local def_inv="invert"
+	
+
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+
+	# check that MASTER variable is set
+	if [ -z "$mode" ]; then
+		$kdb set sys_dsl_${iface}_mode="$def_mode"
+	fi
+	# check that RATE variable is set
+	if [ -z "$rate" ]; then
+		$kdb set sys_dsl_${iface}_rate="$def_rate"
+	fi
+
+	# check that CODING variable is set
+	if [ -z "$coding" ]; then
+		$kdb set sys_dsl_${iface}_coding="$def_coding"
+	fi
+	# check that CFG variable is set
+	if [ -z "$cfg" ]; then
+		$kdb set sys_dsl_${iface}_cfg="$def_cfg"
+	fi
+	# check that ANNEX variable is set
+	if [ -z "$annex" ]; then
+		$kdb set sys_dsl_${iface}_annex="$def_annex"
+	fi
+	# check that MAC variable is set
+	#if [ -z "$mac" ]; then
+	#	$kdb set sys_dsl_${iface}_mac="$def_mac"
+	#fi
+	# check that FILL BYTE variable is set
+	if [ -z "$fill" ]; then
+		$kdb set sys_dsl_${iface}_fill="$def_fill"
+	fi
+	# check that INVERSION variable is set
+	if [ -z "$inv" ]; then
+		$kdb set sys_dsl_${iface}_inv="$def_inv"
+	fi
+
+	return 0;
+}
+
+_dsl_sg17_if_defconfig(){
+	local def_mode="slave"
+	local def_rate="768"
+	local def_coding="tcpam32"
+	local def_annex="A"
+	local def_fill="fill_ff"	
+	local def_inv="normal"
+	
+	unset mode rate annex coding inv fill
+		
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+	
+	# check that MASTER variable is set
+	if [ -z "$mode" ]; then
+		$kdb set sys_dsl_${iface}_mode="$def_mode"
+	fi
+	# check that RATE variable is set
+	if [ -z "$rate" ]; then
+		$kdb set sys_dsl_${iface}_rate="$def_rate"
+	fi
+
+	# check that CODING variable is set
+	if [ -z "$coding" ]; then
+		$kdb set sys_dsl_${iface}_coding="$def_coding"
+	fi
+	# check that ANNEX variable is set
+	if [ -z "$annex" ]; then
+		$kdb set sys_dsl_${iface}_annex="$def_annex"
+	fi
+	# check that FILL BYTE variable is set
+	if [ -z "$fill" ]; then
+		$kdb set sys_dsl_${iface}_fill="$def_fill"
+	fi
+	# check that INVERSION variable is set
+	if [ -z "$inv" ]; then
+		$kdb set sys_dsl_${iface}_inv="$def_inv"
+	fi
+	return 0;
+}
+
+
+_dsl_if_defconfig(){
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+	if [ "$mtype" == "mr16h" ]; then
+	    _dsl_sg16_if_defconfig $iface
+	elif [ "$mtype" == "mr17h" ]; then
+	    _dsl_sg17_if_defconfig $iface
+	fi
+}
+
+_dsl_if_stop(){
+	ifconfig $1 down
+}
+
+_dsl_sg16_apply_cfg(){
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+	# apply configuration
+	$ifcfg $iface down 
+	[ -n "$rate" ] && rate="rate $rate"
+	[ -n "$cfg" ] && cfg="cfg $cfg"
+	[ -n "$annex" ] && annex="annex $annex"
+	$mr16h_cfg $iface $mode $rate $code $cfg $annex $fill $inv $crc 
+        enabled=`kdb get sys_iface_${iface}_enabled`
+        [ "$enabled" = 1 ] && $ifcfg $iface up	
+}
+
+_dsl_sg17_apply_cfg(){
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+	# apply configuration
+	$ifcfg $iface down 
+	if [ "$mode" == "slave" ]; then
+	    $mr17h_cfg $iface $mode $fill $inv $crc
+	else
+	    [ -n "$rate" ] && rate="rate $rate"
+	    [ -n "$annex" ] && annex="annex $annex"
+	    $mr17h_cfg $iface $mode $rate $code $annex $fill $inv $crc 
+	fi
+        enabled=`kdb get sys_iface_${iface}_enabled`
+        [ "$enabled" = 1 ] && $ifcfg $iface up	
+}
+
+_dsl_apply_cfg(){
+	iface=$1
+	eval `$kdb -qq sls sys_dsl_${iface}_`
+	if [ "$mtype" == "mr16h" ]; then
+	    _dsl_sg16_apply_cfg $iface
+	elif [ "$mtype" == "mr17h" ]; then
+	    _dsl_sg17_apply_cfg $iface
+	fi
+}
+
+	
+_dsl_start(){
+	
+	# start service if enabled
+	_dsl_init_svc || return 0
+
+	# init service
+	_dsl_init_drv || echo "Cannot find DSL modules"
+
+	_sg_if_refresh "dsl" "sys_dsl"
+	_sg_dsl_set_mtypes
+
+	#apply defconfig if no configuration
+	for iface in `$kdb get sys_dsl_ifaces`; do
+	    eval `$kdb -qq sls sys_dsl_${iface}_`
+	    if [ "$mtype" == "mr16h" ]; then
+		$mr16h_cfg $iface reload
+	    fi
+	    _dsl_if_defconfig $iface
+	    _dsl_apply_cfg $iface
+	done
+
+}
+
+_dsl_stop(){
+
+	# stop all interfaces
+	for iface in `$kdb get sys_dsl_ifaces`; do
+		_dsl_if_stop $iface
+	done
+	
+	# stop driver
+	_dsl_stop_drv
+
+	# stop service
+	_dsl_stop_svc 
+}
+
+_dsl_restart(){
+        _dsl_apply_cfg $1
+}
+
+case "$1" in
+	start) 
+		_dsl_start ;;
+	stop)
+		_dsl_stop ;;
+	restart)
+		_dsl_restart $2 ;;
+esac

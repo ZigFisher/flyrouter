@@ -1,0 +1,9 @@
+config BR2_PACKAGE_I2C-TOOLS
+	prompt "i2c-tools......................... I2C tools for Linux"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  I2C tools for Linux.
+	  
+	  http://dl.lm-sensors.org/i2c-tools/releases/
+

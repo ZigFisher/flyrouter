@@ -1,0 +1,64 @@
+diff -ur etherdump-2.01.orig/etherdump.c etherdump-2.01/etherdump.c
+--- etherdump-2.01.orig/etherdump.c	2004-05-28 20:28:40.000000000 +0300
++++ etherdump-2.01/etherdump.c	2008-11-24 23:06:40.000000000 +0200
+@@ -142,6 +142,7 @@
+ 	"    -e,--etherdump\tprint packetd out in etherdump format\n"
+ 	"    \t\t\t[default]\n"
+ 	"    -i,--interface\tinterface to listen for traffic on\n"
++	"    -T,--time\t\ttime to dump\n"
+     "\n");
+ 	return(0);
+ }
+@@ -274,6 +275,7 @@
+ 	{ "hex",	0, NULL, 'h' },
+ 	{ "tcpdump",	0, NULL, 't' },
+ 	{ "etherdump",	0, NULL, 'e' },
++	{ "time",	1, NULL, 'T' },
+ 	{ 0, 0, 0, 0 }
+ };
+ 
+@@ -288,6 +290,8 @@
+     int socktype = SOCK_DGRAM;
+ 
+     int i;
++	long timetodump=0;
++	time_t start_time=time(NULL);
+     struct protoent *proto;
+     char *outputfile = NULL;
+     FILE *F_logfd = stdout; /* guess. :P */
+@@ -344,10 +348,15 @@
+     if (strstr(argv[0], "tcpdump") != NULL)
+ 	    printformat = 1;
+ 
+-    while ((i = getopt_long (argc, argv, "htro:ei:f:", // fhrtio:
++    while ((i = getopt_long (argc, argv, "htro:ei:f:T:", // fhrtio:
+ 		    etherdump_long_options, NULL)) > 0)
+     {
+ 	 switch (i) {
++		case 'T':
++		//fprintf(stderr, "optarg: %s\n", optarg);
++		timetodump = atoi(optarg);
++		//fprintf(stderr, "timetodump: %ld\n", timetodump);
++		break;
+ 	    /* for some reason, "case 't'" causes a seg fault if it's not above the 'i' or 'e' part... strange huh? */
+ 	    case 'h':
+ 		socktype = SOCK_RAW;
+@@ -379,6 +388,7 @@
+ 			return(1);
+ 		}
+ 		break;
++
+ 	}
+     }
+ 
+@@ -434,6 +444,10 @@
+ 
+     while( 1 ) {
+ 
++		//fprintf(stderr, "time(): %ld\n", time(NULL));
++		if ( timetodump && (time(NULL) > (start_time + timetodump)))
++			exit(0);
++
+ 	next_packet = 0;
+ 	memset(buffer, '\0', sizeof(buffer));
+ 

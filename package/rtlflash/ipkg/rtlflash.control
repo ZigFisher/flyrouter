@@ -1,0 +1,4 @@
+Package: rtlflash
+Priority: optional
+Section: base
+Description: rtlflash - flash save/restore/clear for RTL865xB SOC

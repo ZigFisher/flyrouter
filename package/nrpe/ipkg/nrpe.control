@@ -1,0 +1,4 @@
+Package: nrpe
+Priority: optional
+Section: net
+Description: Daemon to execute Nagios check commands on remote hosts

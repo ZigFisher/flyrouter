@@ -1,0 +1,8 @@
+config BR2_PACKAGE_WEBADMIN
+	prompt "webadmin.......................... FlyRouter WEB administration interface"
+	tristate
+	default m if CONFIG_DEVEL
+	select BR2_PACKAGE_HASERL
+	help
+	  WEB administration interface for FlyRouter
+	  

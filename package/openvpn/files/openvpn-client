@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+
+CONFIG=client.conf
+PIDFILE=/var/run/openvpn.pid
+
+[ -d /etc/openvpn ] || exit 0
+
+
+start(){
+  /usr/sbin/openvpn \
+  	--cd /etc/openvpn \
+  	--daemon $CONFIG \
+  	--config /etc/openvpn/$CONFIG \
+  	--writepid $PIDFILE
+}
+
+stop(){
+  if [ -r $PIDFILE ]; then
+    kill `cat $PIDFILE`;
+  else
+    killall openvpn
+  fi
+}
+
+
+
+case "$1" in
+start)
+	start
+	;;
+stop)	
+	stop
+	;;
+restart)
+	stop; 
+	sleep 2; 
+	start;
+	;;
+*)	echo "Usage: $0 start|stop"
+esac
