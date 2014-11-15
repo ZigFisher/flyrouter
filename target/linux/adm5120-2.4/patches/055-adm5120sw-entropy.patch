@@ -1,0 +1,11 @@
+--- linux-2.4.32/drivers/net/adm5120sw.c.orig	2006-10-25 12:54:09.000000000 +0300
++++ linux-2.4.32/drivers/net/adm5120sw.c	2006-10-25 12:52:50.000000000 +0300
+@@ -1113,7 +1113,7 @@
+ 	    } else
+ 		device_present++;
+ 	}
+-        result = request_irq(SW_IRQ, swdrv_ProcessInt,SA_SHIRQ,"adm5120_sw",&sw_context);
++        result = request_irq(SW_IRQ, swdrv_ProcessInt, SA_SHIRQ | SA_SAMPLE_RANDOM, "adm5120_sw",&sw_context);
+         if (result)
+             return -ENODEV;
+ 								

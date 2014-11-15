@@ -1,0 +1,391 @@
+diff -ur linux-2.4.32/arch/mips/am5120/serial.c linux-2.4.32-serial/arch/mips/am5120/serial.c
+--- linux-2.4.32/arch/mips/am5120/serial.c	2006-01-04 17:21:37.000000000 +0200
++++ linux-2.4.32-serial/arch/mips/am5120/serial.c	2006-01-04 12:36:00.000000000 +0200
+@@ -100,7 +100,8 @@
+  */
+ static struct serial_state rs_table[] = 
+ {
+-	{baud_base:UART_115200bps_DIVISOR, port:KSEG1ADDR(UART0_BASE), irq:1, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM}
++	{baud_base:UART_115200bps_DIVISOR, port:KSEG1ADDR(UART0_BASE), irq:1, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM},
++	{baud_base:UART_115200bps_DIVISOR, port:KSEG1ADDR(UART1_BASE), irq:2, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM}
+ };
+ 
+ 
+@@ -117,7 +118,7 @@
+ void __init setup_prom_printf(int tty_no) 
+ {
+ 	struct serial_state *ser = &rs_table[tty_no];
+-
++//	printk("tty_no: %d...\n", tty_no);
+ 	prom_port_info.state = ser;
+ 	prom_port_info.magic = SERIAL_MAGIC;
+ 	prom_port_info.port = ser->port;
+@@ -222,6 +223,16 @@
+ 	}
+ }
+ 
++
++/*
++ *	Receive character from the serial port
++ */
++static int serial_console_wait_key(struct console *co)
++{
++	return 0;
++}
++
++
+ /*
+  * Get serial console device
+  */
+@@ -250,6 +261,7 @@
+ 	name:		"ttyS",
+ 	write:		serial_console_write,
+ 	device:		serial_console_device,
++//	wait_key:	serial_console_wait_key,
+ 	setup:		serial_console_setup,
+ 	flags:		CON_PRINTBUFFER,
+ 	index:		-1,
+@@ -270,8 +282,8 @@
+  *
+  *----------------------------------------------------*/
+ 
+-static char *serial_version = "0.01";
+-static char *serial_revdate = "2003-04-17";
++static char *serial_version = "0.02";
++static char *serial_revdate = "2005-12-06 ;)";
+ 
+ #define LOCAL_VERSTRING ""
+ 
+@@ -286,14 +298,16 @@
+ static struct semaphore tmp_buf_sem = MUTEX;
+ #endif
+ 
+-static struct tty_driver dev_tty_driver, callout_driver;
++static struct tty_driver dev_tty_driver;
++//static struct tty_driver dev_tty2_driver;
+ static int serial_refcount;
+ static struct tty_struct *serial_table[NR_PORTS];
+ static struct termios *serial_termios[NR_PORTS];
+ static struct termios *serial_termios_locked[NR_PORTS];
+ static unsigned char *tmp_buf = 0;
+-static struct async_struct *IRQ_ports[NR_IRQS] = {0};
+-//static struct async_struct async_info[NR_PORTS];
++static struct async_struct *IRQ_ports[NR_IRQS] = {0,0};
++
++
+ 
+ 
+ static void do_softint(void *private_)
+@@ -380,7 +394,8 @@
+ 	}
+ 	
+ 	do {
+-		while ((serial_in(info, UART_FR_REG) & UART_TX_FIFO_FULL) != 0);
++		while ((serial_in(info, UART_FR_REG) & UART_TX_FIFO_FULL) != 0)
++			;
+ 
+ 		serial_out(info, UART_DR_REG, info->xmit.buf[info->xmit.tail]);
+ 		info->xmit.tail = (info->xmit.tail + 1) & (SERIAL_XMIT_SIZE-1);
+@@ -409,10 +424,12 @@
+ 
+ 
+ 
+-static void receive_chars(struct async_struct *info, struct pt_regs * regs)
++static void receive_chars(struct async_struct *info,
++				 struct pt_regs * regs)
+ {
+ 	struct tty_struct *tty = info->tty;
+ 	unsigned char ch;
++	//int ignored = 0;
+ 	struct	async_icount *icount;
+ 	unsigned int status;
+ 	unsigned int rsr_flag;
+@@ -527,9 +544,9 @@
+ 	else
+ 		info->xmit.buf = (unsigned char *) page;
+ 
+-#ifdef SERIAL_DEBUG_OPEN
++//#ifdef SERIAL_DEBUG_OPEN
+ 	printk("starting up ttyS%d (irq %d)...", info->line, state->irq);
+-#endif
++//#endif
+ 
+ 	/*
+ 	 * Allocate the IRQ if necessary
+@@ -545,7 +562,7 @@
+ 			handler = rs_interrupt;
+ 
+ 		retval = request_irq(state->irq, handler, SA_SHIRQ,
+-					"serial", &IRQ_ports[state->irq]);
++							"serial", &IRQ_ports[state->irq]);
+ 		if (retval) 
+ 		{
+ 			if (capable(CAP_SYS_ADMIN)) 
+@@ -613,6 +630,9 @@
+ 	unsigned long		page;
+ 
+ 	line = MINOR(tty->device) - tty->driver.minor_start;
++//printk("rs_open 1 %s%d, \n", tty->driver.name, line);	
++	
++	
+ 	if ((line < 0) || (line >= NR_PORTS)) 
+ 	{
+ 		return -ENODEV;
+@@ -692,7 +712,7 @@
+ 	info->pgrp = current->pgrp;
+ 
+ #ifdef SERIAL_DEBUG_OPEN
+-	printk("rs_open ttys%d successful...", info->line);
++	printk("rs_open ttyS%d successful...", info->line);
+ #endif
+ 
+ 	return 0;
+@@ -725,7 +745,7 @@
+ 	//}
+ 	
+ #ifdef SERIAL_DEBUG_OPEN
+-	printk("rs_close ttys%d, count = %d\n", info->line, state->count);
++	printk("rs_close ttyS%d, count = %d\n", info->line, state->count);
+ #endif
+ 
+ 	if ((tty->count == 1) && (state->count != 1)) {
+@@ -779,7 +799,7 @@
+ 	//info->IER &= ~UART_IER_RLSI;
+ 	//info->read_status_mask &= ~UART_LSR_DR;
+ 	//if (info->flags & ASYNC_INITIALIZED) {
+-		//	serial_out(info, UART_IER, info->IER);
++	//	serial_out(info, UART_IER, info->IER);
+ 		/*
+ 		 * Before we drop DTR, make sure the UART transmitter
+ 		 * has completely drained; this is especially
+@@ -941,7 +961,7 @@
+ static int rs_chars_in_buffer(struct tty_struct *tty)
+ {
+ 	struct async_struct *info = (struct async_struct *)tty->driver_data;
+-
++				
+ 	return CIRC_CNT(info->xmit.head, info->xmit.tail, SERIAL_XMIT_SIZE);
+ }
+ 
+@@ -982,7 +1002,7 @@
+ 	//if (HIGH_BITS_OFFSET)
+ 	//	tmp.port_high = state->port >> HIGH_BITS_OFFSET;
+ 	//else
+-	tmp.port_high = 0;
++		tmp.port_high = 0;
+ 	tmp.irq = state->irq;
+ 	tmp.flags = state->flags;
+ 	tmp.xmit_fifo_size = state->xmit_fifo_size;
+@@ -998,7 +1018,7 @@
+ }
+ 
+ 
+-#if 0
++//#if 0
+ static int set_serial_info(struct async_struct * info,
+ 			   struct serial_struct * new_info)
+ {
+@@ -1014,8 +1034,8 @@
+ 	old_state = *state;
+ 
+ 	new_port = new_serial.port;
+-	if (HIGH_BITS_OFFSET)
+-		new_port += (unsigned long) new_serial.port_high << HIGH_BITS_OFFSET;
++//	if (HIGH_BITS_OFFSET)
++//		new_port += (unsigned long) new_serial.port_high << HIGH_BITS_OFFSET;
+ 
+ 	change_irq = new_serial.irq != state->irq;
+ 	change_port = (new_port != ((int) state->port)) ||
+@@ -1041,7 +1061,7 @@
+ 	new_serial.irq = irq_cannonicalize(new_serial.irq);
+ 
+ 	if ((new_serial.irq >= NR_IRQS) || (new_serial.irq < 0) || 
+-	    (new_serial.baud_base < 9600)|| (new_serial.type < PORT_UNKNOWN) ||
++	    (new_serial.baud_base < 1200)|| (new_serial.type < PORT_UNKNOWN) ||
+ 	    (new_serial.type > PORT_MAX) || (new_serial.type == PORT_CIRRUS) ||
+ 	    (new_serial.type == PORT_STARTECH)) {
+ 		return -EINVAL;
+@@ -1049,8 +1069,8 @@
+ 
+ 	if ((new_serial.type != state->type) ||
+ 	    (new_serial.xmit_fifo_size <= 0))
+-		new_serial.xmit_fifo_size =
+-			uart_config[new_serial.type].dfl_xmit_fifo_size;
++		new_serial.xmit_fifo_size = 16;
++//			uart_config[new_serial.type].dfl_xmit_fifo_size;
+ 
+ 	/* Make sure address is not already in use */
+ 	if (new_serial.type) {
+@@ -1078,8 +1098,8 @@
+ 	state->close_delay = new_serial.close_delay * HZ/100;
+ 	state->closing_wait = new_serial.closing_wait * HZ/100;
+ 	info->tty->low_latency = (info->flags & ASYNC_LOW_LATENCY) ? 1 : 0;
+-	info->xmit_fifo_size = state->xmit_fifo_size =
+-		new_serial.xmit_fifo_size;
++	info->xmit_fifo_size = state->xmit_fifo_size = 16;
++//===		new_serial.xmit_fifo_size;
+ 
+ 	if ((state->type != PORT_UNKNOWN) && state->port) {
+ 		release_region(state->port,8);
+@@ -1090,7 +1110,7 @@
+ 		 * We need to shutdown the serial port at the old
+ 		 * port/irq combination.
+ 		 */
+-		shutdown(info);
++//		shutdown(info);
+ 		state->irq = new_serial.irq;
+ 		info->port = state->port = new_port;
+ 		info->hub6 = state->hub6 = new_serial.hub6;
+@@ -1119,21 +1139,21 @@
+ 				info->tty->alt_speed = 230400;
+ 			if ((state->flags & ASYNC_SPD_MASK) == ASYNC_SPD_WARP)
+ 				info->tty->alt_speed = 460800;
+-			change_speed(info, 0);
++//			change_speed(info, 0);
+ 		}
+ 	} else {
+ 		retval = startup(info);
+ 	}
+ 	return retval;
+ }
+-#endif
++//#endif
+ 
+ 
+ static int rs_ioctl(struct tty_struct *tty, struct file * file,
+ 		    unsigned int cmd, unsigned long arg)
+ {
+ 	struct async_struct * info = (struct async_struct *)tty->driver_data;
+-	struct async_icount cnow;	/* kernel counter temps */
++	struct async_icount cprev, cnow;	/* kernel counter temps */
+ 	struct serial_icounter_struct icount;
+ 	unsigned long flags;
+ 	
+@@ -1154,9 +1174,9 @@
+ 		case TIOCGSERIAL:
+ 			return get_serial_info(info,
+ 					       (struct serial_struct *) arg);
+-		//case TIOCSSERIAL:
+-		//	return set_serial_info(info,
+-					       //(struct serial_struct *) arg);
++		case TIOCSSERIAL:
++	return set_serial_info(info,
++					       (struct serial_struct *) arg);
+ 		//case TIOCSERCONFIG:
+ 		//	return do_autoconfig(info);
+ 
+@@ -1277,13 +1297,13 @@
+ 	save_flags(flags); cli();
+ 	serial_out(info, UART_MCR, info->MCR);
+ 	restore_flags(flags);
+-#endif
++#endif 
+ }
+ 
+ 
+ static void rs_unthrottle(struct tty_struct * tty)
+ {
+-#if 0
++#if 0 
+ 	struct async_struct *info = (struct async_struct *)tty->driver_data;
+ 	unsigned long flags;
+ #ifdef SERIAL_DEBUG_THROTTLE
+@@ -1464,7 +1484,7 @@
+  */
+ static void rs_wait_until_sent(struct tty_struct *tty, int timeout)
+ {
+-#if 0
++// #if 0 
+ 	struct async_struct * info = (struct async_struct *)tty->driver_data;
+ 	unsigned long orig_jiffies, char_time;
+ 	int lsr;
+@@ -1473,7 +1493,8 @@
+ 		return;
+ 
+ 	if (info->xmit_fifo_size == 0)
+-		return; /* Just in case.... */
++		return;
++		 /* Just in case.... */
+ 
+ 	orig_jiffies = jiffies;
+ 	/*
+@@ -1505,7 +1526,7 @@
+ 	printk("In rs_wait_until_sent(%d) check=%lu...", timeout, char_time);
+ 	printk("jiff=%lu...", jiffies);
+ #endif
+-	while (!((lsr = serial_inp(info, UART_LSR)) & UART_LSR_TEMT)) {
++	while (!((lsr = serial_in(info, UART_LSR)) & UART_LSR_TEMT)) {
+ #ifdef SERIAL_DEBUG_RS_WAIT_UNTIL_SENT
+ 		printk("lsr = %d (jiff=%lu)...", lsr, jiffies);
+ #endif
+@@ -1520,7 +1541,8 @@
+ #ifdef SERIAL_DEBUG_RS_WAIT_UNTIL_SENT
+ 	printk("lsr = %d (jiff=%lu)...done\n", lsr, jiffies);
+ #endif
+-#endif
++
++// #endif 
+ }
+ 
+ /*
+@@ -1529,14 +1551,14 @@
+ 
+ static inline int line_info(char *buf, struct serial_state *state)
+ {
+-#if 0
++//#if 0
+ 	struct async_struct *info = state->info, scr_info;
+ 	char	stat_buf[30], control, status;
+ 	int	ret;
+ 	unsigned long flags;
+ 
+ 	ret = sprintf(buf, "%d: uart:%s port:%lX irq:%d",
+-		      state->line, uart_config[state->type].name, 
++		      state->line, "unknown", 
+ 		      state->port, state->irq);
+ 
+ 	if (!state->port || (state->type == PORT_UNKNOWN)) {
+@@ -1601,7 +1623,7 @@
+ 	 */
+ 	ret += sprintf(buf+ret, " %s\n", stat_buf+1);
+ 	return ret;
+-#endif
++//#endif
+ 	return 0;
+ }
+ 
+@@ -1638,21 +1660,20 @@
+  */
+ int serial5120_init(void) 
+ {
+-
+ 	memset(&dev_tty_driver, 0, sizeof(struct tty_driver));
+ 
+ 	dev_tty_driver.magic = TTY_DRIVER_MAGIC;
+-	dev_tty_driver.driver_name = "/dev/ttyS0";
+-	dev_tty_driver.name = "ttyS0";
++	dev_tty_driver.driver_name = "serial";
++	dev_tty_driver.name = "ttyS";
+ 	dev_tty_driver.major = TTY_MAJOR;
+ 	dev_tty_driver.minor_start = 64;
+-	dev_tty_driver.num = 1;
++	dev_tty_driver.num = 2;
+ 	dev_tty_driver.type = TTY_DRIVER_TYPE_SERIAL;
+ 	dev_tty_driver.subtype = SERIAL_TYPE_NORMAL;
+ 	dev_tty_driver.init_termios = tty_std_termios;
+ 	dev_tty_driver.init_termios.c_cflag =
+ 		B115200 | CS8 | CREAD | HUPCL | CLOCAL;
+-	dev_tty_driver.flags = TTY_DRIVER_REAL_RAW | TTY_DRIVER_NO_DEVFS;
++	dev_tty_driver.flags = TTY_DRIVER_REAL_RAW /*| TTY_DRIVER_NO_DEVFS*/;
+ 	dev_tty_driver.refcount = &serial_refcount;
+ 	dev_tty_driver.table = serial_table;
+ 	dev_tty_driver.termios = serial_termios;
+@@ -1679,7 +1700,7 @@
+ 	dev_tty_driver.read_proc = rs_read_proc;
+ 
+ 	if (tty_register_driver(&dev_tty_driver))
+-		panic("Couldn't register serial driver\n");		
++		panic("Couldn't register /dev/ttyS0 driver\n");
+ 
+ 	return 0;
+ }

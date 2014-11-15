@@ -1,0 +1,146 @@
+--- linux/drivers/net/adm5120sw.c.orig	2007-01-30 09:24:17.000000000 +0200
++++ linux/drivers/net/adm5120sw.c	2007-01-30 09:31:01.000000000 +0200
+@@ -456,6 +456,9 @@
+ #define PFS_VLAN4 4
+ #define PFS_VLAN5 5
+ #define PFS_STATUS 6
++#define PFS_SPEED 7
++#define PFS_AUTONEGOTIATION 8
++#define PFS_DUPLEX 9
+ char adm5120_procdir[]="sys/net/adm5120sw";
+ struct proc_dir_entry *adm5120_entry;
+ struct proc_dir_entry *vlan_entry;
+@@ -473,6 +476,15 @@
+ store_vlan2port(struct file *file,const char *buffer,unsigned long count,void *data);
+ 
+ static int
++set_speed(struct file *file,const char *buffer,unsigned long count,void *data);
++
++static int
++set_autonegotiation(struct file *file,const char *buffer,unsigned long count,void *data);
++
++static int
++set_duplex(struct file *file,const char *buffer,unsigned long count,void *data);
++
++static int
+ read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data); 
+ 
+ /*static int
+@@ -486,6 +498,9 @@
+ 	{ "eth4", PFS_VLAN4, NULL, 400, NULL, store_vlan2port },
+ 	{ "eth5", PFS_VLAN5, NULL, 400, NULL, store_vlan2port },
+ 	{ "status", PFS_STATUS, NULL, 400, read_switch_status, NULL },
++	{ "speed", PFS_SPEED, NULL, 400, NULL, set_speed },
++	{ "autonegotiation", PFS_AUTONEGOTIATION, NULL, 400, NULL, set_autonegotiation },
++	{ "duplex", PFS_DUPLEX, NULL, 400, NULL, set_duplex },
+ /*	{ "settings", PFS_STATUS, NULL, 400, read_switch_status, write_portsettings },*/
+ };
+ 
+@@ -660,6 +675,85 @@
+ 	return count;
+ }
+ 
++/* begin patch by ValXdater */
++static int
++set_speed(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++	int port;
++	unsigned int data_reg;
++	if (buffer[0] >= '0' && buffer[0] < ('0' + ETH_PORT_NUM) && buffer[1] == ':' && (buffer[2] == '0' || buffer[2] == '1'))
++	{
++		port = buffer[0] - '0';
++		data_reg = ADM5120_SW_REG(PHY_cntl2_REG);
++		if (buffer[2] == '0')
++		{
++			data_reg &= 0xffffffff - (1<<(port + 5));
++		} else
++		{
++			data_reg |= 1<<(port + 5);
++		}
++		ADM5120_SW_REG(PHY_cntl2_REG) = data_reg;
++		printk ("ADM5120SW: port %d - speed %s.\n", port, buffer[2] == '1' ? "100M" : "10M");
++	} else
++	{
++		printk ("ADM5120SW: Setting SPEED - bad syntax.\n");
++	}
++	
++	return (count);
++}
++
++static int
++set_autonegotiation(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++	int port;
++	unsigned int data_reg;
++	if (buffer[0] >= '0' && buffer[0] < ('0' + ETH_PORT_NUM) && buffer[1] == ':' && (buffer[2] == '0' || buffer[2] == '1'))
++	{
++		port = buffer[0] - '0';
++		data_reg = ADM5120_SW_REG(PHY_cntl2_REG);
++		if (buffer[2] == '0')
++		{
++			data_reg &= 0xffffffff - (1<<port);
++		} else
++		{
++			data_reg |= 1<<port;
++		}
++		ADM5120_SW_REG(PHY_cntl2_REG) = data_reg;
++		printk ("ADM5120SW: port %d - autonegotiation %s.\n", port, buffer[2] == '1' ? "enabled" : "disabled");
++	} else
++	{
++		printk ("ADM5120SW: Setting AUTONEGOTIATION - bad syntax.\n");
++	}
++	
++	return (count);
++}
++
++static int
++set_duplex(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++	int port;
++	unsigned int data_reg;
++	if (buffer[0] >= '0' && buffer[0] < ('0' + ETH_PORT_NUM) && buffer[1] == ':' && (buffer[2] == '0' || buffer[2] == '1'))
++	{
++		port = buffer[0] - '0';
++		data_reg = ADM5120_SW_REG(PHY_cntl2_REG);
++		if (buffer[2] == '0')
++		{
++			data_reg &= 0xffffffff - (1<<(port + 10));
++		} else
++		{
++			data_reg |= 1<<(port + 10);
++		}
++		ADM5120_SW_REG(PHY_cntl2_REG) = data_reg;
++		printk ("ADM5120SW: port %d - duplex %s.\n", port, buffer[2] == '1' ? "full" : "half");
++	} else
++	{
++		printk ("ADM5120SW: Setting DUPLEX - bad syntax.\n");
++	}
++	
++	return (count);
++}
++
+ static int
+ read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data) {
+ 	/*
+@@ -672,16 +766,16 @@
+ 
+ 	i = ADM5120_SW_REG(PHY_st_REG);
+ 	for ( j=0; j < 5; j++ ) {
+-		len += sprintf(buf + len, (j)?"Port%d\t":"WAN\t",j);
+-		len += sprintf(buf + len, (i & (1<<j))?"up\t":"down\t");
++		len += sprintf(buf + len, (j)?"Port%d\t":"WAN  \t",j);
++		len += sprintf(buf + len, (i & (1<<j))?"up  \t":"down\t");
+ 
+ 		if (i & (1<<j)) {
+-			len += sprintf(buf + len, (i & (256<<j)?"100M\t":"10M\t"));
++			len += sprintf(buf + len, (i & (256<<j)?"100M\t":"10M \t"));
+ 			len += sprintf(buf + len, (i & (65536<<j)?"full-duplex\t":"half-duplex\t"));
+ 		} else 
+ 			len += sprintf(buf + len, "-\t-\t\t");
+ 
+-		len += sprintf(buf + len, "%s\t", (sw_context->port[j].status == PORT_ENABLED)?"enabled":"disabled");
++		len += sprintf(buf + len, "%s\t", (sw_context->port[j].status == PORT_ENABLED)?"enabled ":"disabled");
+ 		len += sprintf(buf + len, "vlanid=%d\t", (int) sw_context->port[j].vlanId);
+ 		len += sprintf(buf + len, "unit=%d\t", (int) sw_context->port[j].ifUnit);
+ 		len += sprintf(buf + len, "\n"); 
+

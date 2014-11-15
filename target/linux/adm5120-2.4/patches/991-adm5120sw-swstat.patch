@@ -1,0 +1,12 @@
+--- linux-2.4.32/drivers/net/adm5120sw.c	2006-07-30 15:26:38.000000000 +0600
++++ linux-2.4.32/drivers/net/adm5120sw.c	2006-08-08 13:45:30.000000000 +0600
+@@ -685,6 +685,9 @@
+ 
+ int adm5120sw_ioctl(struct net_device *dev, struct ifreq *rq, int cmd)
+ {
++	if (cmd==0x89FF){
++	    return ADM5120_SW_REG(PHY_st_REG);
++	}
+ 	return 0;
+ }
+ 

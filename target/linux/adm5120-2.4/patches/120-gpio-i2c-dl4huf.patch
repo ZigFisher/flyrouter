@@ -1,0 +1,253 @@
+--- linux-2.4.32/drivers/i2c/Config.in.org	2006-11-02 15:12:54.000000000 +0100
++++ linux-2.4.32/drivers/i2c/Config.in	2006-11-03 10:42:28.000000000 +0100
+@@ -20,6 +20,12 @@
+    fi
+ 
+    dep_tristate 'NatSemi SCx200 ACCESS.bus' CONFIG_SCx200_ACB $CONFIG_I2C
++  
++   dep_tristate 'ADM5120-GPIO-Interface' CONFIG_I2C_ADM5120 $CONFIG_I2C
++      if [ "$CONFIG_I2C_ADM5120" != "n" ]; then
++         int  '    GPIO pin used for SCL' CONFIG_I2C_ADM5120_SCL 1
++         int  '    GPIO pin used for SDA' CONFIG_I2C_ADM5120_SDA 3
++      fi
+ 
+    dep_tristate 'I2C PCF 8584 interfaces' CONFIG_I2C_ALGOPCF $CONFIG_I2C
+    if [ "$CONFIG_I2C_ALGOPCF" != "n" ]; then
+--- linux-2.4.32/drivers/i2c/Makefile.org	2006-11-02 15:12:54.000000000 +0100
++++ linux-2.4.32/drivers/i2c/Makefile	2006-11-03 10:42:28.000000000 +0100
+@@ -26,6 +26,7 @@
+ obj-$(CONFIG_I2C_MAX1617)	+= i2c-max1617.o
+ obj-$(CONFIG_I2C_ALGO_SGI)	+= i2c-algo-sgi.o
+ obj-$(CONFIG_I2C_ALGO_AU1550)	+= i2c-algo-au1550.o i2c-au1550.o
++obj-$(CONFIG_I2C_ADM5120)       += i2c-adm5120.o
+ 
+ # This is needed for automatic patch generation: sensors code starts here
+ # This is needed for automatic patch generation: sensors code ends here
+--- linux-2.4.32/drivers/i2c/i2c-adm5120.c.org	1970-01-01 01:00:00.000000000 +0100
++++ linux-2.4.32/drivers/i2c/i2c-adm5120.c	2006-11-03 10:14:28.000000000 +0100
+@@ -0,0 +1,224 @@
++/* linux/drivers/i2c/i2c-adm5120.c 
++
++   Copyright (c) 2006 Steve Tsai <steve@synso.com>
++
++   ADM5120 I2C bus on GPIO pins
++
++   Based on i2c-velleman.c Copyright (C) 1995-96, 2000 Simon G. Vogl
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++   
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++   
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.		     
++*/
++
++#include <linux/config.h>
++#include <linux/module.h>
++#include <linux/errno.h>
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/i2c.h>
++#include <linux/i2c-algo-bit.h>
++#include <asm/io.h>
++
++#include <asm/am5120/adm5120.h>
++
++#include <linux/delay.h>
++
++
++static int scl = CONFIG_I2C_ADM5120_SCL;
++static int sda = CONFIG_I2C_ADM5120_SDA;
++
++#define GPIO_PORT0		(*(unsigned long *)0xb20000b8)
++
++#if 1
++static void adm5120_gpio_set(int id, int state)
++{
++    	unsigned long led_bit,led_bit_val;
++    	if(id <= 3 && id >= 0) {
++	    	led_bit = 1 << (id);
++	    	led_bit_val = led_bit << 24;
++
++    		GPIO_PORT0 |= (led_bit << 16);   // Output
++		if (state)
++			GPIO_PORT0 |=  led_bit_val;
++		else
++			GPIO_PORT0 &= ~led_bit_val;
++    	}
++
++}
++
++
++static int adm5120_gpio_get(int id)
++{
++    	unsigned long led_bit, val;
++    	if(id <= 3 && id >= 0) {
++	    	led_bit = 1 << (id);
++
++    		GPIO_PORT0 &= ~(led_bit << 16);   // Input
++
++		val = (GPIO_PORT0 >> 8) & led_bit;
++
++		GPIO_PORT0 |= (led_bit << 16);  // ??? Can not stay in input mode 
++		return val;
++    	}
++
++	return 0;
++}
++
++#else
++static void adm5120_gpio_set(int id, int state)
++{
++	unsigned long reg=0;
++	int shl = id*4;
++
++    	reg = ADM5120_SW_REG(Port2_LED_REG)&(~(0xf<<shl)) ;
++	reg |= ((0x3 & (~state))<<shl);
++
++    	ADM5120_SW_REG(Port2_LED_REG) = reg;
++}
++static int adm5120_gpio_get(int id)
++{
++	unsigned long reg=0, val;
++	int shl = id*4;
++
++    	reg = ADM5120_SW_REG(Port2_LED_REG)&(~(0xf<<shl)) ;
++    	ADM5120_SW_REG(Port2_LED_REG) = reg;
++
++	val = (ADM5120_SW_REG(Port2_LED_REG)>>(12+id))&0x1;
++
++	return val;
++//    	return (ADM5120_SW_REG(Port2_LED_REG)>>(12+id))&0x1;
++}
++#endif
++
++static void bit_adm5120_setscl(void *data, int state)
++{
++	adm5120_gpio_set(scl, state);
++}
++
++static void bit_adm5120_setsda(void *data, int state)
++{
++	adm5120_gpio_set(sda, state);
++} 
++
++static int bit_adm5120_getscl(void *data)
++{
++	return adm5120_gpio_get(scl);
++}
++
++static int bit_adm5120_getsda(void *data)
++{
++	return adm5120_gpio_get(sda);
++}
++
++static int bit_adm5120_reg(struct i2c_client *client)
++{
++	return 0;
++}
++
++static int bit_adm5120_unreg(struct i2c_client *client)
++{
++	return 0;
++}
++
++static void bit_adm5120_inc_use(struct i2c_adapter *adap)
++{
++	MOD_INC_USE_COUNT;
++}
++
++static void bit_adm5120_dec_use(struct i2c_adapter *adap)
++{
++	MOD_DEC_USE_COUNT;
++}
++
++/* ------------------------------------------------------------------------
++ * Encapsulate the above functions in the correct operations structure.
++ * This is only done when more than one hardware adapter is supported.
++ */
++
++static struct i2c_algo_bit_data bit_adm5120_data = {
++	NULL,
++	bit_adm5120_setsda,
++	bit_adm5120_setscl,
++	bit_adm5120_getsda,
++	bit_adm5120_getscl,
++	10, 10, 100,		/* waits, timeout */
++};
++
++static struct i2c_adapter bit_adm5120_ops = {
++	.name              = "ADM5120 I2C",
++	.id		   = I2C_HW_B_VELLE,
++	.algo_data	   = &bit_adm5120_data,
++	.inc_use	   = bit_adm5120_inc_use,
++	.dec_use	   = bit_adm5120_dec_use,
++	.client_register   = bit_adm5120_reg,
++	.client_unregister = bit_adm5120_unreg,
++};
++
++int i2c_bitadm5120_init(void)
++{
++	printk(KERN_INFO "i2c-adm5120.o: ADM5120 I2C Driver\n");
++
++	printk(KERN_INFO "i2c-adm5120.o: SCL=GPIO-%02u, SDA=GPIO-%02u\n", 
++	       scl, sda);
++
++	if (scl < 0 || sda < 0 || scl == sda) {
++		printk(KERN_ERR "i2c-adm5120.o: scl and sda must be specified\n");
++		return -EINVAL;
++	}
++
++	/* Configure GPIOs as open collector outputs */
++	adm5120_gpio_set(scl, 0);
++	adm5120_gpio_set(sda, 0);
++
++	if (i2c_bit_add_bus(&bit_adm5120_ops) < 0) {
++		printk(KERN_ERR "i2c-adm5120.o: adapter %s registration failed\n", 
++		       bit_adm5120_ops.name);
++		return -ENODEV;
++	}
++	
++	return 0;
++}
++
++void i2c_bitadm5120_cleanup(void)
++{
++	i2c_bit_del_bus(&bit_adm5120_ops);
++}
++
++
++EXPORT_NO_SYMBOLS;
++
++#ifdef MODULE
++MODULE_AUTHOR("Steve Tsai <steve@synso.com>");
++MODULE_DESCRIPTION("ADM5120 I2C Driver");
++MODULE_LICENSE("GPL");
++
++
++MODULE_PARM(scl, "i");
++MODULE_PARM_DESC(scl, "GPIO line for SCL");
++MODULE_PARM(sda, "i");
++MODULE_PARM_DESC(sda, "GPIO line for SDA");
++
++
++
++int init_module(void) 
++{
++	return i2c_bitadm5120_init();
++}
++
++void cleanup_module(void) 
++{
++	i2c_bitadm5120_cleanup();
++}
++
++#endif
+

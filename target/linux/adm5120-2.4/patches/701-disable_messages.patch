@@ -1,0 +1,27 @@
+--- linux-2.4.32/arch/mips/am5120/serial.c	2008-03-09 18:56:59.000000000 +0200
++++ linux-2.4.32/arch/mips/am5120/serial_new.c	2008-03-09 18:35:27.000000000 +0200
+@@ -181,6 +181,7 @@
+  */
+ void __init prom_printf(char *fmt, ...)
+ {
++#if 0
+ 	va_list args;
+ 	int l;
+ 	char *p, *buf_end;
+@@ -202,6 +203,7 @@
+ 		putPromChar(*p);
+ 	}
+ 	restore_flags(flags);
++#endif
+ }
+ 
+ 
+@@ -278,7 +280,7 @@
+  */
+ void __init am5120_serial_console_init(void)
+ {
+-	register_console(&sercons);
++	// register_console(&sercons);
+ }
+ 
+ 

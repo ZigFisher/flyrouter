@@ -1,0 +1,16 @@
+--- linux-2.4.32/arch/mips/kernel/head.S	2006-02-10 02:43:16.000000000 +0100
++++ linux-2.4.32-adm5120/arch/mips/kernel/head.S	2006-02-10 02:07:07.000000000 +0100
+@@ -142,7 +142,12 @@
+ 		.set	noreorder
+ 		j       nmi_handler
+ 		 nop
+- 		.fill	0xd4 
++			// Changed by Torsten Albrecht - Engeneers Office AttNet 
++			// Germany (E-Mail: info@attnet.de / Internet: www.AttNet.de) at 09-02-2006
++			// Original: .fill 0xd4  but, this changes the Kernel entry address so, that it's 8 Bytes to eraly.
++			// In most bootloaders, the kernel_entry address is hardcoded, so this change is needed ....
++			//.fill	0xd4 
++			.fill	0xdc 
+ 		.set	pop
+ 		END(except_vec_nmi)
+ 

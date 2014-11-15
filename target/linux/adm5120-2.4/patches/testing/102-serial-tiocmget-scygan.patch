@@ -1,0 +1,57 @@
+--- linux-2.4.32/arch/mips/am5120/serial.c.orig	2008-05-21 19:39:56.000000000 +0200
++++ linux-2.4.32/arch/mips/am5120/serial.c	2008-05-21 19:45:12.000000000 +0200
+@@ -26,6 +26,7 @@
+ : 1.second uart 12.12.2005
+ ; 2.chahge speed  3.3.2006
+ ; 3.lcr_h register fixup 31.3.2008 Slawomir Cygan ( slaffek_gmail.com )
++; 4.TIOCMGET ioctl implementation 20.5.2008 Slawomir Cygan
+ ;
+ ;*****************************************************************************/
+ #include <linux/config.h>
+@@ -1286,6 +1287,36 @@
+ 	return 0;
+ }
+ 
++static int get_modem_info (struct async_struct *info, unsigned int *value)	/*Based on pl2303 driver*/
++{
++	unsigned long flags;
++	unsigned int mcr;
++	unsigned int status;
++	unsigned int result;
++
++	mcr = info->MCR;
++
++	save_flags(flags);
++	cli();
++	status = serial_in(info, UART_MSR);
++	restore_flags(flags);
++
++	result = ((mcr & UART_MCR_DTR)  ? TIOCM_DTR : 0)
++			| ((mcr & UART_MCR_RTS) ? TIOCM_RTS : 0)
++			| ((status & UART_MSR_CTS)  ? TIOCM_CTS : 0)
++			| ((status & UART_MSR_DSR)  ? TIOCM_DSR : 0)
++			| ((status & UART_MSR_RI) ? TIOCM_RI  : 0)
++			| ((status & UART_MSR_DCD)  ? TIOCM_CD  : 0);
++
++#ifdef SERIAL_DEBUG_OPEN
++	printk("%s - result = %x", __FUNCTION__, result);
++#endif
++	if (copy_to_user(value, &result, sizeof(int)))
++		return -EFAULT;
++	return 0;
++}
++
++
+ static int rs_ioctl(struct tty_struct *tty, struct file * file,
+ 		    unsigned int cmd, unsigned long arg)
+ {
+@@ -1304,8 +1335,7 @@
+ 	
+ 	switch (cmd) {
+ 		case TIOCMGET:
+-			//	return get_modem_info(info, (unsigned int *) arg);
+-			printk ("TIOCMGET ignored.\n");
++			return get_modem_info(info, (unsigned int *) arg);
+ 		case TIOCMBIS:
+ 		case TIOCMBIC:
+ 		case TIOCMSET:

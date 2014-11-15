@@ -1,0 +1,474 @@
+--- linux-2.4.32/drivers/net/adm5120sw.c.orig	2006-10-09 17:03:28.000000000 +0300
++++ linux-2.4.32/drivers/net/adm5120sw.c	2006-10-09 17:03:24.000000000 +0300
+@@ -41,6 +41,8 @@
+ #include <linux/errno.h>	
+ #include <linux/types.h>
+ #include <linux/interrupt.h>
++#include <linux/proc_fs.h>
++#include <linux/string.h>
+ 
+ #include <linux/in.h>
+ #include <linux/netdevice.h>
+@@ -53,12 +55,33 @@
+ #include <asm/checksum.h>
+ #include "adm5120sw.h"
+ 
+-#define NUM_TX_H_DESC		16	/* Number of the Transmitting descriptors of high priority */
+-#define NUM_TX_L_DESC		128	/* Number of the Transmitting descriptors of low priority */
+-#define NUM_RX_H_DESC		16	/* Number of the Receiving descriptors of high priority */
+-#define NUM_RX_L_DESC		64	/* Number of the Receiving descriptors of low priority */
++#define NUM_TX_H_DESC			24	/* Number of the Transmitting descriptors of high priority */
++#define NUM_TX_L_DESC			128	/* Number of the Transmitting descriptors of low priority */
++#define NUM_RX_H_DESC			24	/* Number of the Receiving descriptors of high priority */
++#define NUM_RX_L_DESC			128	/* Number of the Receiving descriptors of low priority */
+ 
+ #define SW_IRQ			9
++#define ETH_PORT_NUM	5
++
++#define PDEBUG(debug_lev,fmt,args...)
++
++// #define ADM5120_DEBUG
++#define DEBUG_DEF 6
++#ifdef ADM5120_DEBUG 
++#	define DEBUG_1 1
++#	define DEBUG_2 2
++#	define DEBUG_3 3
++#	define DEBUG_4 4
++#	define DEBUG_5 5
++#	ifndef DEBUG_DEF
++#		define DEBUG_DEF 0
++#	endif
++#	undef PDEBUG
++#	define PDEBUG(debug_lev,fmt,args...) \
++    	    if( debug_lev < DEBUG_DEF ) \
++		printk(KERN_NOTICE"%s: " fmt " \n", __FUNCTION__, ## args )
++#endif
++
+ 
+ int adm5120sw_init(struct net_device *dev);
+ 
+@@ -68,15 +91,15 @@
+ 
+ PSW_CONTEXT_T sw_context;
+ 
+-static int vlan_mx[] = {0x7F,0,0,0,0,0};
++static int vlan_mx[] = { 0x41,0x42,0x44,0x48,0x50,0x60 };
++static struct device *adm5120_dev;
+ 
+ MODULE_PARM(vlan_mx,"6i");
+ MODULE_PARM_DESC(vlan_mx, "vlan_mx n,n,.. 6n");
+ MODULE_DESCRIPTION("ADM5120 switch ethernet driver");
+-MODULE_AUTHOR("Joco (rjoco77@kezdionline.ro)");
++MODULE_AUTHOR("Joco, art, vlad");
+ MODULE_LICENSE("GPL");
+ 
+-
+ struct net_device adm5120sw_devs[MAX_VLAN_GROUP] = {
+     { name: "eth0", init:adm5120sw_init },
+     { name: "eth1", init:adm5120sw_init },
+@@ -94,7 +117,12 @@
+     return nr;
+ }
+ 
+-/* InitTxDesc */
++
++/* ------------------------------------------------------
++		    Switch driver init    	
++  ------------------------------------------------------*/
++
++// InitTxDesc 
+ static void InitTxDesc(PTX_ENG_T pTxEng)
+ {
+ 	int num = pTxEng->numDesc;
+@@ -250,8 +278,11 @@
+ 	/* Update link status */
+ 	sw_context->linkStatus = 0;
+ 	
+-	sw_context->intMask = RX_H_INT | RX_L_INT | TX_H_INT | TX_L_INT;
+-	
++	sw_context->intMask = RX_H_INT | RX_L_INT | TX_H_INT | TX_L_INT | PORT0_QUE_FULL_INT |
++				PORT1_QUE_FULL_INT | PORT2_QUE_FULL_INT | PORT3_QUE_FULL_INT |
++				PORT4_QUE_FULL_INT | PORT5_QUE_FULL_INT | CPU_QUE_FULL_INT |
++				CPU_HOLD_INT | SEND_DESC_ERR_INT | RX_DESC_ERR_INT;
++
+ 	ADM5120_SW_REG(CPUp_conf_REG) &= ~SW_CPU_PORT_DISABLE;
+ 	
+ 	spin_lock_init(&sw_context->lock);
+@@ -287,7 +318,6 @@
+ 	int srcPort;
+ 	int idx;
+ 	int len;
+-
+ 	idx = rxEng->idx;
+ 	rxDesc = &rxEng->hwDesc[idx];
+ 	while (!(rxDesc->buf1cntl & OWN_BIT))
+@@ -348,9 +378,7 @@
+ 		
+ 		rxDesc = &rxEng->hwDesc[idx];
+ 	}
+-
+ 	rxEng->idx = idx;
+-
+     return;
+ }
+ 
+@@ -410,12 +438,306 @@
+ 	/* transmit one normal priority packet from cpu */
+ 	if (intReg & TX_L_INT)
+ 		ProcessTxInt(&sw_context->txL);
+-		
++
++
+ 	ADM5120_SW_REG(SW_Int_mask_REG) &= ~sw_context->intMask;
+ 	
+ 	spin_unlock(&sw_context->lock);		
+ }
+ 
++/*------------------------------------------------------
++    			PROC FS
++  ------------------------------------------------------*/
++#define MAX_PROC_STR 256
++#define PFS_VLAN0 0
++#define PFS_VLAN1 1
++#define PFS_VLAN2 2
++#define PFS_VLAN3 3
++#define PFS_VLAN4 4
++#define PFS_VLAN5 5
++#define PFS_STATUS 6
++char adm5120_procdir[]="sys/net/adm5120sw";
++struct proc_dir_entry *adm5120_entry;
++struct proc_dir_entry *vlan_entry;
++
++struct dev_entrie{
++	char *name;
++        int mark;
++	struct proc_dir_entry *pent;
++	mode_t mode;
++	read_proc_t *fread;
++	write_proc_t *fwrite;
++};
++
++static int
++store_vlan2port(struct file *file,const char *buffer,unsigned long count,void *data);
++
++static int
++read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data); 
++
++/*static int
++write_portsettings(struct file *file,const char *buffer,unsigned long count,void *data);*/
++
++static struct dev_entrie entries[]={
++	{ "eth0", PFS_VLAN0, NULL, 400, NULL, store_vlan2port },
++	{ "eth1", PFS_VLAN1, NULL, 400, NULL, store_vlan2port },
++	{ "eth2", PFS_VLAN2, NULL, 400, NULL, store_vlan2port },
++	{ "eth3", PFS_VLAN3, NULL, 400, NULL, store_vlan2port },
++	{ "eth4", PFS_VLAN4, NULL, 400, NULL, store_vlan2port },
++	{ "eth5", PFS_VLAN5, NULL, 400, NULL, store_vlan2port },
++	{ "status", PFS_STATUS, NULL, 400, read_switch_status, NULL },
++/*	{ "settings", PFS_STATUS, NULL, 400, read_switch_status, write_portsettings },*/
++};
++
++#define PFS_ENTS  (sizeof(entries)/sizeof(struct dev_entrie))
++
++static int init_adm5120_in_procfs(void);
++static void del_adm5120_from_procfs(void);
++
++
++static int
++set_entry(struct proc_dir_entry *ent,read_proc_t *fread,
++            write_proc_t *fwrite,int mark)
++{
++	short *mk;
++	
++	if( !( mk=(short *)kmalloc( sizeof( short ),GFP_KERNEL ) ) )
++	        return -1;
++	*mk=mark;
++	ent->data=(void *)mk;
++	ent->owner=THIS_MODULE;
++	ent->read_proc=fread;
++	ent->write_proc=fwrite;
++	return 0;
++}
++							
++							
++static int
++init_adm5120_in_procfs(void)
++{
++	/*
++	 *	Original code by art art(a)sigrand.ru
++	 *	ported to 2.4 kernel by Vlad Moskovets midge(a)vlad.org.ua 20061002
++	 *
++	 */
++	int i,j;
++        adm5120_entry=proc_mkdir(adm5120_procdir,NULL);
++	if( adm5120_entry==NULL )
++    		return -ENOMEM;
++	for(i=0;i<PFS_ENTS;i++){
++    		if( !(entries[i].pent=
++		    create_proc_entry(entries[i].name,entries[i].mode,adm5120_entry) ) )
++			goto err1;
++    		if( set_entry(	entries[i].pent,entries[i].fread,
++				entries[i].fwrite,entries[i].mark) )
++			goto err1;
++	}
++	return 0;
++
++err1:
++	for(j=0;j<=i;j++)
++        	if( entries[j].pent->data )
++	                kfree(entries[j].pent->data);
++	for(j=0;j<=i;j++)
++		remove_proc_entry(entries[j].name,adm5120_entry);
++        remove_proc_entry("",adm5120_entry);
++	return -1;
++}        
++
++static void
++del_adm5120_from_procfs(void)
++{
++	int j;
++	for(j=0;j<PFS_ENTS;j++)
++        	if( entries[j].pent->data )
++	                kfree(entries[j].pent->data);
++	for(j=0;j<=PFS_ENTS;j++)
++		remove_proc_entry(entries[j].name,adm5120_entry);
++        remove_proc_entry("",adm5120_entry);
++}        
++
++/*
++static int
++show_vlan(char* page, char** start, off_t off, int count, int* eof, void* data)
++{
++}
++*/
++static int
++skip_blanks(char **ptr,int cnt)
++{
++	int i;
++	PDEBUG(5,"start ptr=%x",*ptr);
++	for(i=0;i<cnt;i++,(*ptr)++)
++		if( (**ptr)!=' ')
++			break;
++	PDEBUG(5,"end ptr=%x,num of blanks=%d",*ptr,i);			
++	return i;
++}
++
++/*
++static int _atoi(const char **s)
++{
++	int i=0;
++
++	while (isdigit(**s))
++		i = i*10 + *((*s)++) - '0';
++	return i;
++}
++
++static int
++write_portsettings(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++	char portparam[10];
++	char port_num_s[2], *s;
++	int port=200;
++
++	printk("CODE IS NOT TESTED\n");
++	if ( buffer == NULL ) return 0;
++	if ( count < 3 || buffer[0] < '0' || buffer[0]>'5' || buffer[1]!='=' ) {
++		printk("param error");
++		return 0;
++	}
++	port_num_s[0]=buffer[0];
++	port_num_s[1]=0;
++	memset(portparam, 0, sizeof(portparam));
++	strncpy(&portparam[0], &buffer[2], sizeof(portparam));
++	s=&port_num_s;
++	port=_atoi(&s);
++	if (port < 0 || port > 5) {
++		printk("atoi param error");
++		return 0;
++	};
++
++	if (!strncmp("10M", portparam, 3)) {
++		printk("set port %d to 10M\n", port);
++		printk("    port %d was %d\n", port, (int)ADM5120_SW_REG(PHY_cntl2_REG));
++		printk("    port %d set %d\n", port, (int)ADM5120_SW_REG(PHY_cntl2_REG) & ( ~(1<<(port+5))) );
++		;
++	}
++	
++	return count;
++}
++*/
++static int
++store_vlan2port(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++	int i;
++	char *ptr=(char*)buffer;
++	u8 cport,vnum;
++	int vlan_val=0;
++	int unit;
++
++	PDEBUG(5,"start store vlan to port mapping\nstr=%s",buffer);	
++	// check for correct symbols
++	for(i=0;i<count;i++)
++		if( ( buffer[i]<'0' || buffer[i]>'9' ) 
++		    && buffer[i]!=' ' && buffer[i]!='\0'
++		    && buffer[i]!='\n'){
++			goto err_ext;
++		}
++	PDEBUG(5,"all characters are ok");
++	// parse input string
++	i=skip_blanks(&ptr,count);
++	while( (ptr-buffer)<count && ( *ptr>='0' && *ptr<='9' ) ){
++		cport=*ptr-'0';
++		if( ( cport>=0 && cport<=ETH_PORT_NUM ) )
++			//vlan_val |= (cport==1) ? 1 : 1<<(cport-1);
++			vlan_val |= 1<<(cport);
++		ptr++;
++	}
++	
++	unit=(*(short*)data);
++	PDEBUG(5,"commit changes: vlan[%d]=%x",*(short*)data,vlan_val);
++	sw_context->vlanGrp[unit] &= 1<<CPU_PORT;
++	sw_context->vlanGrp[unit] |= vlan_val & 0x7F;
++
++	printk("Reopen device: %s\n", adm5120sw_devs[unit].name);
++	adm5120sw_release(&adm5120sw_devs[unit]);
++	adm5120sw_open(&adm5120sw_devs[unit]);
++	
++
++err_ext:
++	return count;
++}
++
++static int
++read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data) {
++	/*
++	 *	Original code by SVIt v1(a)t5.ru
++	 *	ported to kernel mode by Vlad Moskovets midge(a)vlad.org.ua 20061002
++	 *
++	 */
++
++	int len = 0, i, j;
++
++	i = ADM5120_SW_REG(PHY_st_REG);
++	for ( j=0; j < 5; j++ ) {
++		len += sprintf(buf + len, (j)?"Port%d\t":"WAN\t",j);
++		len += sprintf(buf + len, (i & (1<<j))?"up\t":"down\t");
++
++		if (i & (1<<j)) {
++			len += sprintf(buf + len, (i & (256<<j)?"100M\t":"10M\t"));
++			len += sprintf(buf + len, (i & (65536<<j)?"full-duplex\t":"half-duplex\t"));
++		} else 
++			len += sprintf(buf + len, "-\t-\t\t");
++
++		len += sprintf(buf + len, "%s\t", (sw_context->port[j].status == PORT_ENABLED)?"enabled":"disabled");
++		len += sprintf(buf + len, "vlanid=%d\t", (int) sw_context->port[j].vlanId);
++		len += sprintf(buf + len, "unit=%d\t", (int) sw_context->port[j].ifUnit);
++		len += sprintf(buf + len, "\n"); 
++	}
++
++	return len;
++}
++
++/*
++static int
++store_vlan_sw(struct file *file,const char *buffer,unsigned long count,void *data)
++{
++        int i,j;
++	char str[3],*ptr=(char*)buffer;
++	int vlan_mx_tmp[6]={0,0,0,0,0,0};
++	u8 vnum=0,sw_en;
++
++	PDEBUG(5,"start store vlan to port mapping\nstr=%s",buffer);	
++	// check for correct symbols
++	for(i=0;i<count;i++)
++		if( ( buffer[i]<'0' || buffer[i]>'1' ) 
++		    && buffer[i]!=' ' && buffer[i]!='\0'
++		    && buffer[i]!='\n'){
++			PDEBUG(5,"error: bad symbol: i=%d, sym=(%c,%d)",i,buffer[i],buffer[i]);			
++			goto err_ext;
++		}
++	PDEBUG(5,"all characters are ok");
++	// parse input string
++	i=skip_blanks(&ptr,count);
++	while( i<count && pnum<MAX_VLAN_GROUP ){
++		sw_en=ptr[0]-'0';
++		// set vlan_mx
++		vlan_mx_tmp[vnum]|= (1<<CPU_PORT);
++		PDEBUG(5,"swich=%d on at vlan#%d",sw_en,vnum);
++		pnum++;
++		ptr++;
++		j=skip_blanks(&ptr,count-i);
++		if( !j && pnum<ETH_PORT_NUM)
++			goto err_ext;
++		i+=j;
++	}
++	
++	PDEBUG(5,"commit changes:");
++	for (i = 0; i < MAX_VLAN_GROUP; i++){
++		sw_context->vlanGrp[i] &= 1<<CPU_PORT;
++		sw_context->vlanGrp[i] |= vlan_mx_tmp[i] & 0x7F;
++	}
++err_ext:
++	return count;
++}
++*/
++
++/*------------------------------------------------------
++    			VLAN
++  ------------------------------------------------------*/
++
+ static int SetupVLAN(int unit, unsigned long portmask)
+ {
+ 	unsigned long reg, shiftcnt;
+@@ -508,19 +830,6 @@
+ 	int retval;
+ 	int unit = priv->unit;
+ 		
+-	/* enable switch irq routine */
+-	if (!irqEn)
+-	{
+-		retval = request_irq(SW_IRQ, swdrv_ProcessInt, SA_SHIRQ,dev->name,dev);
+-		
+-		if (retval)
+-			return -ENODEV;
+-			
+-		irqEn = 1;
+-	}
+-		
+-	spin_lock(&sw_context->lock);
+-	
+ 	/* setup vlan reg */
+ 	SetupVLAN(unit, sw_context->vlanGrp[unit]);
+ 	
+@@ -804,9 +1113,15 @@
+ 	    } else
+ 		device_present++;
+ 	}
+-	
++        result = request_irq(SW_IRQ, swdrv_ProcessInt,SA_SHIRQ,"adm5120_sw",&sw_context);
++        if (result)
++            return -ENODEV;
++								
++									
+ 	if (device_present != sw_context->nr_if)
+ 	    return (-ENODEV);
++
++	init_adm5120_in_procfs();
+ 	    
+ 	return 0;
+ 		
+@@ -816,11 +1131,14 @@
+ {
+ 	int i;
+ 	
++	free_irq( SW_IRQ , &sw_context );	
+ 	for ( i = 0; i < sw_context->nr_if; i++)
+ 	{
++
+ 	    kfree(adm5120sw_devs[i].priv);
+ 	    unregister_netdev(adm5120sw_devs + i);
+ 	}
++	del_adm5120_from_procfs();
+ }
+ 
+ module_init(adm5120switch_init);

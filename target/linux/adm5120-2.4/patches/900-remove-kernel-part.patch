@@ -1,0 +1,26 @@
+--- linux-2.4.32/include/asm-mips/am5120/mx29lv320b.h.orig	2006-12-01 18:25:53.000000000 +0200
++++ linux-2.4.32/include/asm-mips/am5120/mx29lv320b.h	2006-12-01 18:27:15.000000000 +0200
+@@ -52,9 +52,10 @@
+ 		.mask_flags =   MTD_WRITEABLE
+ 	},
+ 	{
+-		.name =		"Kernel",
++		.name =		"Boot params",
+ 		.offset =	FLASH_PART_KERNEL_ADDR,
+-		.size =		FLASH_PART_KERNEL_SIZE
++		.size =		FLASH_PART_BOOT_SIZE,
++		.mask_flags =   MTD_WRITEABLE
+ 	},
+ 	{
+ 		.name =		"Root",
+@@ -65,11 +66,6 @@
+ 		.name =		"Data",
+ 		.offset =	FLASH_PART_DATA_ADDR,
+ 		.size =		FLASH_PART_DATA_SIZE
+-	},
+-	{
+-		.name =		"WholeFlash",
+-		.offset =	FLASH_PART_KERNEL_ADDR,
+-		.size =		FLASH_SIZE - FLASH_PART_KERNEL_ADDR
+ 	}
+ };

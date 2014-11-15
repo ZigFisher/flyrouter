@@ -1,0 +1,12 @@
+--- linux-2.4.32/drivers/net/ppp_generic.c_orig	2008-04-21 10:30:10.000000000 +0300
++++ linux-2.4.32/drivers/net/ppp_generic.c	2008-04-21 10:28:42.000000000 +0300
+@@ -1446,7 +1446,7 @@
+ static void
+ ppp_receive_error(struct ppp *ppp)
+ {
+-	++ppp->stats.rx_errors;
++	/* ++ppp->stats.rx_errors;  Zigs ppp errors 'fix' */
+ 	if (ppp->vj != 0)
+ 		slhc_toss(ppp->vj);
+ }
+

@@ -1,0 +1,77 @@
+Only in linux-2.4.32: .config
+Only in linux-2.4.32: .config.old
+Only in linux-2.4.32: .configured
+Only in linux-2.4.32: .depend
+Only in linux-2.4.32: .depend_done
+Only in linux-2.4.32: .hdepend
+Only in linux-2.4.32: .modules_done
+Only in linux-2.4.32: .patched
+Only in linux-2.4.32: .unpacked
+Only in linux-2.4.32: .version
+Only in linux-2.4.32: COPYING
+Only in linux-2.4.32: CREDITS
+Only in linux-2.4.32: Documentation
+Only in linux-2.4.32: MAINTAINERS
+Only in linux-2.4.32: Makefile
+Only in linux-2.4.32: README
+Only in linux-2.4.32: REPORTING-BUGS
+Only in linux-2.4.32: Rules.make
+Only in linux-2.4.32: System.map
+Only in linux-2.4.32: arch
+Only in linux-2.4.32: crypto
+Only in linux-2.4.32: drivers
+Only in linux-2.4.32: fs
+Only in linux-2.4.32/include: acpi
+Only in linux-2.4.32/include: asm
+Only in linux-2.4.32/include: asm-alpha
+Only in linux-2.4.32/include: asm-arm
+Only in linux-2.4.32/include: asm-cris
+Only in linux-2.4.32/include: asm-generic
+Only in linux-2.4.32/include: asm-i386
+Only in linux-2.4.32/include: asm-ia64
+Only in linux-2.4.32/include: asm-m68k
+diff -ur linux-2.4.32-or/include/asm-mips/am5120/mx29lv320b.h linux-2.4.32/include/asm-mips/am5120/mx29lv320b.h
+--- linux-2.4.32-or/include/asm-mips/am5120/mx29lv320b.h	2006-02-03 22:21:34.390000000 +0200
++++ linux-2.4.32/include/asm-mips/am5120/mx29lv320b.h	2006-02-03 22:53:12.350000000 +0200
+@@ -65,7 +65,11 @@
+ 		.name =		"Data",
+ 		.offset =	FLASH_PART_DATA_ADDR,
+ 		.size =		FLASH_PART_DATA_SIZE
+-//		.mask_flags =   MTD_WRITEABLE
++	},
++	{
++		.name =		"WholeFlash",
++		.offset =	FLASH_PART_KERNEL_ADDR,
++		.size =		FLASH_SIZE - FLASH_PART_KERNEL_ADDR
+ 	}
+ };
+ 
+Only in linux-2.4.32/include: asm-mips64
+Only in linux-2.4.32/include: asm-parisc
+Only in linux-2.4.32/include: asm-ppc
+Only in linux-2.4.32/include: asm-ppc64
+Only in linux-2.4.32/include: asm-s390
+Only in linux-2.4.32/include: asm-s390x
+Only in linux-2.4.32/include: asm-sh
+Only in linux-2.4.32/include: asm-sh64
+Only in linux-2.4.32/include: asm-sparc
+Only in linux-2.4.32/include: asm-sparc64
+Only in linux-2.4.32/include: asm-x86_64
+Only in linux-2.4.32/include: config
+Only in linux-2.4.32/include: linux
+Only in linux-2.4.32/include: math-emu
+Only in linux-2.4.32/include: net
+Only in linux-2.4.32/include: pcmcia
+Only in linux-2.4.32/include: scsi
+Only in linux-2.4.32/include: video
+Only in linux-2.4.32: init
+Only in linux-2.4.32: ipc
+Only in linux-2.4.32: kernel
+Only in linux-2.4.32: lib
+Only in linux-2.4.32: linux-2.4.32
+Only in linux-2.4.32: mm
+Only in linux-2.4.32: net
+Only in linux-2.4.32: scripts
+Only in linux-2.4.32: vmlinux
+Only in linux-2.4.32: vmlinux.bin
+Only in linux-2.4.32: vmlinuz

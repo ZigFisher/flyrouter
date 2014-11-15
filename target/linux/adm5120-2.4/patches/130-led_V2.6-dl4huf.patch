@@ -1,0 +1,1192 @@
+--- linux-2.4.32-adm5120-orig/arch/mips/am5120/led.c	2006-12-26 20:42:25.000000000 +0100
++++ linux-2.4.32-adm5120/arch/mips/am5120/led.c	2007-01-31 15:50:16.000000000 +0100
+@@ -1,497 +1,677 @@
+ /*
+- * LED interface for WP3200
++ * Linux driver for ADM5120's GPIO
++ * Copyright (C)2006 by Sergio Aguayo, Marcel Groothuis
+  *
+- * Copyright (C) 2002, by Allen Hung
++ * This file is covered by the GNU GPLv2.
++ *
++ * This driver is mostly compatible with the standard ADMtek
++ * driver, but this doesn't use the major 166, only the major
++ * 167, and things just work correctly.
++ *
++ * Differences between this and the old driver:
++ * 1) Things work as expected: "LED ON" turns on the led and
++ *    "LED OFF" turns it off. In the old driver they are inverted
++ *    and due to an unknown bug inverting them again just messes
++ *    up the input pins.
++ * 2) Input and output pins are mapped to the same major device
++ *    number, each identified with its mode. In te old one, major
++ *    166 was used for output and 167 for input. That was the way
++ *    of reconfiguring a certain pin for input or output (writing
++ *    or reading to a 167:x or 166:x).
++ * 3) Much cleaner code: this is no longer just a hack of a
++ *    probably larger driver.
++ * 4) Support for the switch LEDs as GPIO
++ *
++ * Changes:
++ * - 01/Feb/2006:   Now uses spinlocks when writing to the GPIO_IO_CONF0
++ *                  register to avoid corruption.
++ * - 25/April/2006: Added support for configuration of the ADM5120 switch
++ *                  LEDs as GPIO.
++ * - 11/Nov/2006:  DL4HUF
++ * 					Rewrite "concept code" for LED as GPIO, remove any bugs in LED code.
++ *					Add read back the real input and the real registersettings
++ *					from ADM5120 register. 
++ *					Include Version in led.h, add any comment 
++ * - 06/Dez/2006:  DL4HUF
++ *					Add support for all LED and GPIO, now 15 LED and 8 GPIO are available.
++ *					Add support for old ioctl-call. Now old demo "led_set" and userspace tool
++ *					to drive a Standard-LCD working again. 
++ * 					Add proc-interface to check the modes ("/proc/driver/led")
++ *					Only the ioctl-call "set led on/off" are available.
++ *					The numbering are changed ! All GPIO and LED are called sequential.
++ *					Number 0..7 are the real GPIO.
++ *					Number 8..22 are the LED from the Ethernet-switch in the order LED0, LED1, LED2 per port.
++ *					For old tools make a symlink from /dev/led0 to /dev/gpio0 !
++ *					Clean the code for right logic among "mode" and "value".
++ *					Add support for blinking of LED.
++ *					Add support for setting default mode with all available modes for LED.
++ * 					Read from /dev/gpioX prints the input-value 0/1 or the LED-Mode.
++ * 					Write to /dev/gpioX can "led on","led off","led invert" to invert the logic for next on/off
++ *					and for the input reading	
++ *					With "led switch x" x=mode you can now set all modes for led and set the gpio to input or output
++ * 					No external tool needed anymore
++ * - 28/Dez/2006   DL4HUF
++ *					Add support to read input (and mode) via ioctl. So usermode prgs can build own protocols like
++ *					seriall ADC, SPI  etc.
++ * - 20/Jan/2007   DL4HUF
++ *					Removed GPIO/LED initialization to prevent conflict with other drivers. 
++ * 					Setup your modes in init scripts. GPIOs are default on output.
++ * - 29/Jan/2007   DL4HUF
++ *                  Add support to set invert/normal via ioctl. Invert is set with mode + 128 (0x80).
++ *                  Returned mode has also added 128 if "invert" is stored and mode is input or output.
++ * - 30/Jan/2007   DL4HUF
++ *                  changed "switch/case" contruct to modulo and pointer in led section, saves ca. 60 lines code.
++ *
++ *	know bugs : (possibly) hardware bug ?: if led port switch from input to output_1 (high level) a small low level
++ * 					pulse appear. The pulse is 35..45ns long. I do not know the reason but the pulse is always to see.
++ * 					I have tested different programming. 
+  *
+- * 2005.06.22 Joco: fixed some type conversion warnings
+  */
+-
+-#include <linux/types.h>
+-#include <linux/errno.h>
+-#include <linux/ioport.h>
+-#include <linux/fcntl.h>
+-#include <linux/sched.h>
+-#include <linux/module.h>
++#include <linux/module.h> 
++#include <linux/spinlock.h>
++#include <linux/fs.h>
+ #include <linux/proc_fs.h>
+-#include <linux/init.h>
+ #include <linux/timer.h>
+-#include <asm/io.h>
+-#include <asm/uaccess.h>
+-#include <asm/system.h>
++#include <linux/ioport.h>
++#include <linux/init.h>
++#include <asm/checksum.h>
+ #include "led.h"
+ 
+-#define BUF_LEN		30
++#include <asm/am5120/adm5120.h>
+ 
+-struct LED_DATA  {
+-    char sts_buf[BUF_LEN+1];
+-    unsigned long sts;
++
++/* enable ONLY if you want to debug, as (specially during blinks) will generate lots of output */
++#undef GPIO_DEBUG
++
++#define STATUS_BUF_LEN        30
++
++struct adm5120gpio_data {
++	int        mode;
++	int        open_count;
++	int        status_num;
++	int        period;
++	int	  	   invert;						
++	char       status[STATUS_BUF_LEN];
++	char       status_tmp[STATUS_BUF_LEN];
++	struct     timer_list timer;
+ };
+ 
+-struct LED_DATA led_data[LED_DEV_NUM];
+-// sam 01-30-2004 for watchdog
+-static struct timer_list watchdog;
+-// end sam
+-
+-static struct timer_list blink_timer[LED_DEV_NUM];
+-static char cmd_buf[BUF_LEN+1];
+-
+-//------------------------------------------------------------
+-static long atoh(char *p) 
+-{
+-    long v = 0, c;
+-    while ( (c = *p++) )  {
+-        if      ( c >= '0' && c <= '9' )  v = (v << 4) + c - '0';
+-        else if ( c >= 'a' && c <= 'f' )  v = (v << 4) + c - 'a' + 0xA;
+-        else if ( c >= 'A' && c <= 'F' )  v = (v << 4) + c - 'A' + 0xA;
+-        else  break;
+-    }
+-    return v;
+-}
++static int adm5120gpio_init_data[] __initdata = {	/* initial invert status */ 
++				0,1,0,1,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1 };
+ 
++typedef struct {
++	u32 reg_offset;
++} led_config_struct;
++											/* config for GPIO 8..22 */
++static led_config_struct	led_config[] = 	
++{											/* i dont know how a simple array do not work */
++		{Port0_LED_REG + REG_BASE},			/* my c knowlege are to low */
++		{Port1_LED_REG + REG_BASE},
++		{Port2_LED_REG + REG_BASE},					
++		{Port3_LED_REG + REG_BASE},
++	 	{Port4_LED_REG + REG_BASE},
++};
+ 
+-#define GPIO_VAL		(*(unsigned long *)0xb20000b8)
+-#define GPIO_SEL		(*(unsigned long *)0xb20000bc)
+-#define GPIO_SEL_I_O 	(*(unsigned long *)0xb20000b8)
+-#define GPIO_O_EN		(*(unsigned long *)0xb20000b8)
+-#define INIT_WATCHDOG_REGISTER 0x20
+-
+-// sam 1-30-2004 LED status 
+-// bit map as following
+-// BIT 4:0  Link status   -->PHY Link ->1 = up, 0 = down
+-#define LINK_STATUS     (*(unsigned long *)0xb2000014)
+-#define WATCHDOG_VAL    (*(unsigned long *)0xb20000c0)
+-#define WATCHDOG_PERIOD 2000 // unit ms
+-#define EXPIRE_TIME     300 // unit 10 ms
+-#define CLEAR_TIMEER    0xffffa000l  // bit 14:0 -> count up timer, write 0 to clear
+-#define ENABLE_WATCHDOG 0x80000000l  // bit 31 -> 1 enable , 0 disable watchdog
+-#define WATCHDOG_SET_TMR_SHIFT 16    // bit 16:30 -> watchdog timer set
+-// end sam
+-//------------------------------------------------------------
+-static void turn_led(int id, int on)
+-{
+-    unsigned long led_bit,led_bit_val;
+-    if(id <= 7 && id >= 0) {
+-	    led_bit = 1 << (id);
+-
+-	    led_bit_val = led_bit << 24;
+-	
+-	    switch ( on ) {
+-    		case 0:  GPIO_VAL |=  led_bit_val;	break; // LED OFF
+-    		case 1:  GPIO_VAL &= ~led_bit_val;	break; // LED ON
+-    		case 2:  GPIO_VAL ^=  led_bit_val;	break; // LED inverse
+-	    }
+-    }
+-}
+ 
+-static void blink_wrapper(u_long id)
++static struct adm5120gpio_data gpio_data[GPIO_NUM_DEV];
++static spinlock_t adm5120gpio_spinlock;
++
++static char led_modes[13][STATUS_BUF_LEN];
++
++static void adm5120_set_ledreg (int id, int value) 			/* set the LED-register */
+ {
+-    u_long sts = led_data[id].sts;
+-    if ( (sts & LED_BLINK_CMD) == LED_BLINK_CMD )  {
+-	int period = sts & LED_BLINK_PERIOD;
+-	blink_timer[id].expires = jiffies + (period * HZ / 1000);
+-	turn_led(id, 2);
+-	add_timer(&blink_timer[id]);
+-    }
+-    else if ( sts == LED_ON || sts == LED_OFF )
+-	turn_led(id, sts==LED_ON ? 1 : 0);
++	unsigned long data, shift, mask;
++	int index;
++	u32* p_reg;
++	
++	shift = ((id - 8) % 3) * 4;				/* calculate the led number 0,1 or 2 */
++	index = id - 8;
++	index = (int)index / 3;					/* calculate the array index 0..4 */
++	data = (value & 0x0f) << shift;			/* shift value for LED0, LED1 or LED2 per port */
++	mask = ~(0x0f << shift);				/* shift mask for LED0,LED1 or LED2 per port */
++	p_reg = (u32*)(led_config[index].reg_offset);
++	*p_reg = (*p_reg & mask) | data;
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: setreg id:%d mask:0x%x data:0x%x shift:%i, reg:0x%x\n",id, mask,data,shift,p_reg);
++#endif
++
+ }
+-//------------------------------------------------------------
+-static void get_token_str(char *str, char token[][21], int token_num)
++
++static int adm5120gpio_get_mode (int id)	/* read the ADM5120 mode bits */
+ {
+-    int t, i;
+-    for ( t = 0 ; t < token_num ; t++ )  {
+-    	memset(token[t], 0, 21);
+-    	while ( *str == ' ' )  str++;
+-    	for ( i = 0 ; str[i] ; i++ )  {
+-    	    if ( str[i] == '\t' || str[i] == ' ' || str[i] == '\n' )  break;
+-    	    if ( i < 20 )  token[t][i] = str[i];
+-    	}
+-    	str += i;
+-    }
++	int val, shift, index;
++	u32* p_reg;
++
++	if (id < 8)	{
++		val = ((GPIO_IO_CONF0 & (1<<(id+16))) == 0 ? 0 : 1);  /* read the output-enable-bit  */
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: get_mode: 0x%x from pin %i\n", val, id);
++#endif
++
++		return val;
++	}
++	else {
++		shift = ((id - 8) % 3) * 4;													
++		index = id - 8;
++		index = (int)index / 3;
++		p_reg = (u32*)(led_config[index].reg_offset);
++		val = *p_reg & (0x0f << shift);
++	    val = val>>shift;	
++		if (val == 1) val=13;			/* pseudo-mode hardware-flash */
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: get_mode: 0x%x from pin %i\n", val, id);
++#endif
++
++		return (val);
++	}
+ }
+ 
+-//------------------------------------------------------------
+-static void set_led_status_by_str(int id)
++
++static int adm5120gpio_get_value (int id)	/* read the real input bit */
+ {
+-    char token[3][21], *p;
+-    get_token_str(led_data[id].sts_buf, token, 3);
+-    if ( strcmp(token[0], "LED") )   
+-        goto set_led_off;
+-    if ( !strcmp(token[1], "ON") )  {
+-    	turn_led(id, 1);
+-    	led_data[id].sts = LED_ON;
+-    }
+-    else if ( !strcmp(token[1], "OFF") )  {
+-	    goto set_led_off;
+-    }
+-    else if ( !strcmp(token[1], "BLINK") ) {
+-    	int period = 0;
+-    	p = token[2];
+-    	if ( !strcmp(p, "FAST") )
+-    	    period = LED_BLINK_FAST & LED_BLINK_PERIOD;
+-    	else if ( !strcmp(p, "SLOW") )
+-    	    period = LED_BLINK_SLOW & LED_BLINK_PERIOD;
+-    	else if ( !strcmp(p, "EXTRA_SLOW") )
+-    	    period = LED_BLINK_EXTRA_SLOW & LED_BLINK_PERIOD;
+-    	else if ( !strcmp(p, "OFF") )
+-	    goto set_led_off;
+-	else if ( *p >= '0' && *p <= '9' )  {
+-    	while ( *p >= '0' && *p <= '9' )
+-    	    period = period * 10 + (*p++) - '0';
+-    	if ( period > 10000 )  period = 10000;
+-	}
+-	else
+-    	period = LED_BLINK & LED_BLINK_PERIOD;
+-    	if ( period == 0 )
+-    	    goto set_led_off;
+-	    sprintf(led_data[id].sts_buf, "LED BLINK %d\n", period);
+-    	led_data[id].sts = LED_BLINK_CMD + period;
+-    	turn_led(id, 2);
+-     // Set timer for next blink
+-	    del_timer(&blink_timer[id]);
+-        blink_timer[id].function = blink_wrapper;
+-        blink_timer[id].data = id;
+-        init_timer(&blink_timer[id]);
+-        blink_timer[id].expires = jiffies + (period * HZ / 1000);
+-        add_timer(&blink_timer[id]);
+-    }
+-    else
+-        goto set_led_off;
+-    return;
+-  set_led_off:
+-    strcpy(led_data[id].sts_buf, "LED OFF\n");
+-    led_data[id].sts = LED_OFF;
+-    turn_led(id, 0);
++	int val;
++	int shift;
++	int index;
++	u32* p_reg;
++	
++	if (id < 8) {
++		val = ((GPIO_IO_CONF0 & (1<<(id+8))) == 0 ? 0 : 1);  
++		val = (gpio_data[id].invert == 0? val: !val);
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: input value: %i from pin %i\n", val, id);
++#endif
++
++	return val;
++	}
++	else 
++	{
++		shift = ((id - 8) % 3) + 12;	/* input are on other bits */
++		index = id - 8;
++		index = (int)index / 3;
++		p_reg = (u32*)(led_config[index].reg_offset);
++		val = *p_reg & (0x01 << shift);
++	    val = val>>shift;
++		if (gpio_data[id].invert == 1) val = (val==1)? 0: 1;		
++									/* if invers , invert the input also */
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: input value %i from pin %i\n", val, id);
++#endif
++
++		return (val);
++	}
+ }
+ 
+-//----------------------------------------------------------------------
+-static int led_read_proc(char *buf, char **start, off_t fpos, int length, int *eof, void *data)
++
++static void adm5120gpio_set_value (int id, int value)
+ {
+-    int len, dev;
+-    for ( len = dev = 0 ; dev < LED_DEV_NUM ; dev++ )  {
+-    	len += sprintf(buf+len, "%d: %s", dev, led_data[dev].sts_buf);
+-    }
+-    len = strlen(buf) - fpos;
+-    if ( len <= 0 ) {
+-	*start = buf;
+-	*eof = 1;
+-	return 0;
+-    }
+-    *start = buf + fpos;
+-    if ( len <= length )   *eof = 1;
+-    return len < length ? len : length;
++	unsigned long data;
++	int mode;
++  if ((id >= 0) && (id < GPIO_NUM_DEV)) { 
++	gpio_data[id].status_num = value;
++	mode = adm5120gpio_get_mode(id);
++
++    if ((mode > GPIO_MODE_INPUT) && (mode < SW_LED_LINK)) {	
++										 /* only set value if output-mode */
++
++		if ((gpio_data[id].invert == 1) && (value < 2)) value=(value==1)? 0:1;  
++													/* invert only output */
++		spin_lock(&adm5120gpio_spinlock);
++		if (id<8) {
++			data = 1 << (id+24);					/* set the output-bit */
++			switch (value) 	{
++				case 0:        /* off */
++					GPIO_IO_CONF0 &= ~data;
++					break;
++				case 1:        /* on */
++					GPIO_IO_CONF0 |= data;
++					break;
++				case 2:        /* inverse (for blinks) */
++					GPIO_IO_CONF0 ^= data;
++					break;
++				default: ;
++			}													
++#ifdef GPIO_DEBUG					/* for debug return all bits per led */
++	data |= 1 << id;				/* if input or output (only datasheet V1.3) */
++	data |= 1 << (id+8);			/* the real input */
++	data |= 1 << (id+16);  			/* output enable */
++	data = GPIO_IO_CONF0 &= data;	/* output value mask from above */
++#endif
++		}
++		else {	
++			data = value;
++			switch (value)	{
++				case 0:        /* off */
++					adm5120_set_ledreg(id,SW_LED_GPIO_OUTPUT_0);
++					break;
++				case 1:        /* on */
++					adm5120_set_ledreg(id,SW_LED_GPIO_OUTPUT_1);
++					break;
++				case 2:   
++					data = adm5120gpio_get_mode(id); /* get the current mode */
++					value = data;
++					if (data == SW_LED_GPIO_OUTPUT_0) value = SW_LED_GPIO_OUTPUT_1;
++					if (data == SW_LED_GPIO_OUTPUT_1) value = SW_LED_GPIO_OUTPUT_0;
++					adm5120_set_ledreg(id,value);	
++										/* invert the output if output mode */ 
++					break;
++				default: ;			/* nothing to do */		
++			}
++		}	
++		spin_unlock(&adm5120gpio_spinlock);
++	
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: set_value: pin: %i value: 0x%x, mode: %i\n", id, data,gpio_data[id].mode);
++#endif
++	}
++  }
+ }
+ 
+-//----------------------------------------------------------------------
+-static int led_ioctl(struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
++static void adm5120gpio_set_mode(int id,int mode)
+ {
+-    int id = (int)file->private_data;
+-    switch ( cmd )  {
+-      case LED_ON:
+-    	strcpy(led_data[id].sts_buf, "LED ON\n");
+-	set_led_status_by_str(id);
+-	break;
+-      case LED_OFF:
+-    	strcpy(led_data[id].sts_buf, "LED OFF\n");
+-	set_led_status_by_str(id);
+-	break;
+-      default:
+-        if ( (cmd & LED_BLINK_CMD) != LED_BLINK_CMD )
+-	    break;
+-      case LED_BLINK:
+-      case LED_BLINK_FAST:
+-      case LED_BLINK_SLOW:
+-      case LED_BLINK_EXTRA_SLOW:
+-        sprintf(led_data[id].sts_buf, "LED BLINK %d\n", (int)(cmd & LED_BLINK_PERIOD));
+-	set_led_status_by_str(id);
+-	break;
+-    }
+-    return 0;
++  if ((id >= 0) && (id < GPIO_NUM_DEV)) { 
++	strcpy(gpio_data[id].status,led_modes[mode]);			/* save the new mode */
++	gpio_data[id].mode = mode;
++
++#ifdef GPIO_DEBUG
++	printk(KERN_INFO "adm5120gpio: set_mode: pin %i to %s\n", id, led_modes[mode]);
++#endif
++
++	spin_lock(&adm5120gpio_spinlock);
++
++    if (id<8) {
++		unsigned long bit = 1 << (id+16);						/* output enable bit   		*/
++		if (mode == GPIO_MODE_INPUT) GPIO_IO_CONF0 &= ~bit;		/* clear the bit 			*/
++		if (mode == GPIO_MODE_OUTPUT) GPIO_IO_CONF0 |= bit;		/* set the bit 				*/
++
++#ifdef GPIO_DEBUG
++	bit |= 1 << id;			/* the real input/output-mode 1=input! */
++	bit &= GPIO_IO_CONF0;
++	printk(KERN_INFO "adm5120gpio: set_mode: pin %i reg is: 0x%x\n", id, bit);
++#endif
++
++	}
++	else {	/* SWITCH PxLED IO */
++		switch (mode)	{
++			case 1:								
++				adm5120_set_ledreg(id,SW_LED_GPIO_OUTPUT_0);		
++				break;	
++			case 13:					
++				adm5120_set_ledreg(id,SW_LED_GPIO_OUTPUT_FLASH);
++				break;
++			default:												
++				adm5120_set_ledreg(id,mode);	/* all other mode direct */
++		}
++	}
++	spin_unlock(&adm5120gpio_spinlock);
++  }
+ }
+ 
+-static int led_open(struct inode *inode, struct file *file)
++static void adm5120gpio_tokenize (char *str, char token[][STATUS_BUF_LEN], int token_num)
+ {
+-    int led_id = MINOR(inode->i_rdev);
+-    unsigned long led_bit = 1 << (led_id);
++	int t, i;
++	for ( t = 0 ; t < token_num ; t++ )  {
++		memset(token[t], 0, STATUS_BUF_LEN);
++		while ( *str == ' ' )  str++;
++		for ( i = 0 ; str[i] ; i++ )  {
++			if ( str[i] == '\t' || str[i] == ' ' || str[i] == '\n' )  break;
++			if ( i < (STATUS_BUF_LEN-1) )  token[t][i] = str[i];
++		}
++		str += i;
++	}
++}
+ 
+-    if ( led_id >= LED_DEV_NUM )
+-        return -ENODEV;
++static void adm5120gpio_blink (u_long id) {
++	if (gpio_data[id].status_num == 2) {
++		gpio_data[id].timer.expires = jiffies + (gpio_data[id].period * HZ /1000);
++		adm5120gpio_set_value(id, 2);
++		add_timer(&gpio_data[id].timer);
++	}
++}
+ 
+-    GPIO_SEL_I_O &= ~led_bit;   // 0 to GPIO
+-    GPIO_O_EN |= (led_bit << 16);   // 0 to Output
++static void adm5120gpio_set_string (int id) {
++	char token[3][STATUS_BUF_LEN];
++	
++	adm5120gpio_tokenize(gpio_data[id].status_tmp, token, 3);
+ 	
+-    file->private_data = (void*)led_id;
+-    return 0;
++	if (strcmp(token[0], "LED")) return;
++	if (!strcmp(token[1], "ON")) goto _seton;		/* LED ON */
++	if (!strcmp(token[1], "OFF")) goto _setoff;		/* LED OFF */
++	if (!strcmp(token[1], "BLINK"))	{				/* LED BLINK xxxxxx */
++		int period = 0;
++		char *p = token[2];
++		if (!strcmp(token[2], "OFF")) goto _setoff;	/* LED BLINK OFF */
++		if (*p >= '0' && *p <= '9')  {
++			while (*p >= '0' && *p <= '9')
++				period = period * 10 + (*p++) - '0';
++			if (period > 10000)  period = 10000;
++			if (period == 0) goto _setoff;
++		}
++		/*
++		 * Note: the original driver supports periods such as "fast", "slow"
++		 * and so on. We don't support them, but use 500ms for anything we don't
++		 * recognize.
++		 */
++		else period = 500;
++		
++		gpio_data[id].period = period;
++		sprintf(gpio_data[id].status, "LED BLINK %d", period);
++		adm5120gpio_set_value(id, 2);
++		
++		del_timer(&gpio_data[id].timer);
++		
++		/* Configure timer */
++		gpio_data[id].timer.function = adm5120gpio_blink;
++		gpio_data[id].timer.data = id;
++		init_timer(&gpio_data[id].timer);
++		gpio_data[id].timer.expires = jiffies + ( period * HZ / 1000);
++		add_timer(&gpio_data[id].timer);
++		return;
++	}
++	if (!strcmp(token[1], "SWITCH")) {	/* SW LED IO */
++			int value = 0;
++			char *p = token[2];
++			if (*p >= '0' && *p <= '9')  {
++				while (*p >= '0' && *p <= '9')
++					value = value * 10 + (*p++) - '0';
++				value &= 0xF;
++			}
++			else {
++				value = GPIO_MODE_OUTPUT; 
++			}
++			if ((id<8) && (value>1)) return;  				/* gpio has only input or output  */
++			if (value > 13) return;							/* 0..13 are allowed for led */
++
++			printk(KERN_INFO "adm5120gpio: switch gpio %i to %s \n",id,led_modes[value]);
++		
++			strcpy(gpio_data[id].status,led_modes[value]);
++			gpio_data[id].mode = value;
++			adm5120gpio_set_mode(id,value);
++		return;
++	}
++	if (!strcmp(token[1], "INVERT")) {
++		gpio_data[id].invert= (gpio_data[id].invert == 1)?	0: 1;
++		if (gpio_data[id].mode == GPIO_MODE_OUTPUT) adm5120gpio_set_value(id,2); 
++		return;
++	}
++
++/* fall-through */
++
++_seton:
++	strcpy(gpio_data[id].status, "LED ON");
++	adm5120gpio_set_value(id, 1);
++	return;
++
++_setoff:
++	strcpy(gpio_data[id].status, "LED OFF");
++	adm5120gpio_set_value(id, 0);
+ }
+ 
+-static ssize_t led_read(struct file *file, char *buf, size_t count, loff_t *fpos)
++static ssize_t adm5120gpio_write (struct file *file, const char *buffer, size_t length, loff_t *offset)
+ {
+-    int  rem, len;
+-    int  id = (int)file->private_data;
+-    char *p = led_data[id].sts_buf;
+-    len = strlen(p);
+-    rem = len - *fpos;
+-    if ( rem <= 0 )  {
+-    	*fpos = len;
+-    	return 0;
+-    }
+-    if ( rem > count )   rem = count;
+-    memcpy(buf, p+(*fpos), rem);
+-    *fpos += rem;
+-    return rem;
+-}
+-
+-static ssize_t led_write(struct file *file, const char *buf, size_t count, loff_t *fpos)
+-{
+-    int  len;
+-    int  id = (int)file->private_data;
+-    char *p = id == REG_MINOR ? cmd_buf : led_data[id].sts_buf;
+-    memset(p, 0, BUF_LEN);
+-    p += *fpos;
+-    len = 0;
+-    while ( count > 0 )  {
+-    	if ( *fpos < BUF_LEN )  {
+-    	    int c = *buf++;
+-            p[len] = c>='a' && c<='z' ? c-'a'+'A' : c;
+-        }
+-    	(*fpos)++;
+-	    len++;
+-    	count--;
+-    }
+-    return len;
++	int id = (int)file->private_data;
++	char *p = gpio_data[id].status_tmp;
++	int nbytes = 0;
++	char c;
++	
++	if (*offset >= STATUS_BUF_LEN) return -ENOSPC;
++	p += *offset;
++	while (length > 0 && *offset < STATUS_BUF_LEN) {
++		c = *buffer++;
++		p[nbytes] = c>='a' && c<='z' ? c-'a'+'A' : c;
++		length--;
++		(*offset)++;
++		nbytes++;
++	}
++	return nbytes;
+ }
+ 
+-static int led_flush(struct file *file)
++static ssize_t adm5120gpio_read (struct file *file, char *buffer, size_t length, loff_t *offset)
+ {
+-    int  id = (int)file->private_data;
+-    if ( file->f_mode & FMODE_WRITE )
+-    	set_led_status_by_str(id);
+-    return 0;
++	int id = (int)file->private_data;
++	int rem, len, mode;
++	char strTemp[40];
++	
++	mode = adm5120gpio_get_mode(id);
++	if (mode == 0) {												/* if input-mode */
++		len = sprintf(strTemp, "%i\n", adm5120gpio_get_value(id));	/* print the value 0 or 1*/
++	}
++	else {
++		len = sprintf(strTemp, "%s (%i)\n",gpio_data[id].status, mode); /* print the mode 		*/
++	}
++	rem = len - *offset;
++	if (rem <= 0) {
++		*offset = len;
++		return 0;
++	}
++	
++	if (rem > length) rem = length;
++	memcpy(buffer, &strTemp[*offset], rem);
++	*offset += rem;
++	return rem;
+ }
+ 
+-static struct file_operations led_fops = {
+-    read:	led_read,
+-    write:	led_write,
+-    flush:	led_flush,
+-    ioctl:	led_ioctl,
+-    open:	led_open,
+-};
++static int adm5120gpio_open (struct inode *inode, struct file *file)
++{
++	int id = MINOR(inode->i_rdev);
+ 
+-//----------------------------------------------
+-static unsigned long *reg_addr;
+-static int  dump_len;
+-
+-static int dump_content(char *buf)
+-{
+-    int  i=0, j, len=0;
+-    unsigned long *p = reg_addr;
+-    j = dump_len/4 + ((dump_len&3) ? 1 : 0);
+-    len = sprintf(buf, "Reg Addr = %08lX,  Value = ", (unsigned long)p);
+-    for ( i = 0 ; i < j ; i++, p++ ) 
+-        len += sprintf(buf+len,"%08lX%c", *p, (i&7)==7||i==j-1?'\n':' ');
+-    return len;
+-}
+-
+-static ssize_t gpio_read(struct file *file, char *buf, size_t count, loff_t *fpos)
+-{
+-    int  rem, len;
+-    int  id = (int)file->private_data;
+-    char temp[80*10];
+-    if ( id < GPIO_DEV_NUM )  {
+-        int  gpio_bit = 1 << id;
+-        len = sprintf(temp, "%d\n", ((GPIO_VAL >> 8)&gpio_bit) ? 1 : 0);
+-    }
+-    else   // REG device
+-        len = dump_content(temp);
+-    rem = len - *fpos;
+-    if ( rem <= 0 )  {
+-    	*fpos = len;
+-    	return 0;
+-    }
+-    if ( rem > count )   rem = count;
+-    memcpy(buf, temp+(*fpos), rem);
+-    *fpos += rem;
+-    return rem;
+-}
+-
+-static int gpio_flush(struct file *file)
+-{
+-    long v, addr;
+-    int  id = (int)file->private_data;
+-    if ( id == REG_MINOR && (file->f_mode & FMODE_WRITE) )  {
+-        char token[3][21], *p;
+-        get_token_str(cmd_buf, token, 3);
+-        // get reg address
+-        p = token[0];
+-        if ( *p == 0 )   return 0;
+-        addr = atoh(p);
+-        //---------------------
+-        p = token[1];
+-        if ( *p == 'W' )  {
+-            int width = 0;
+-            if ( !strcmp(p, "W") || !strcmp(p, "WW") )
+-                width = 4;
+-            else if ( !strcmp(p, "WH") )
+-                width = 2;
+-            else if ( !strcmp(p, "WB") )
+-                width = 1;
+-            else
+-                return 0;
+-            p = token[2];
+-            if ( *p == 0 )   return 0;
+-            v = atoh(p);
+-            switch ( width )  {
+-              case 1:  *((char *)addr) = (v & 0xFF);    break;
+-              case 2:  *((short*)addr) = (v & 0xFFFF);  break;
+-              case 4:  *((long *)addr) =  v;            break;
+-            }
+-        }
+-        else  { // get dump len
+-            char temp[80*10];
+-            reg_addr = (unsigned long *)(addr & ~3);
+-            dump_len = 4;
+-            if ( *p )   {
+-                dump_len = atoh(p);
+-                dump_len = dump_len < 4 ? 4 : dump_len > 32*10 ? 32*10 : dump_len;
+-            }
+-            dump_content(temp);
+-            //printk( KERN_INFO "%s", temp);
+-        }
+-        cmd_buf[0] = 0;
+-    }
+-    return 0;
++	if (id >= GPIO_NUM_DEV) return -ENODEV;
++	if (gpio_data[id].open_count && !(file->f_mode & FMODE_READ))
++		return -EBUSY;	/* only allow one open, except for reading*/
++	
++	/* count only opens for writing */
++	if (file->f_mode & FMODE_WRITE)
++		gpio_data[id].open_count++;
++	
++	file->private_data = (void*)id;
++	return 0;
++}
++
++static int adm5120gpio_release (struct inode *inode, struct file *file)
++{
++	int id = (int)file->private_data;
++	
++	if (file->f_mode & FMODE_WRITE) {
++		gpio_data[id].open_count--;
++		adm5120gpio_set_string(id);								/* here are the real write-operation */
++		memset(gpio_data[id].status_tmp, 0, STATUS_BUF_LEN);
++	}
++	return 0;
++}
++
++static int adm5120gpio_ioctl (struct inode *inode, struct file *file, unsigned int cmd, unsigned long arg)
++{
++//	int mode[GPIO_NUM_DEV*2];		/* for disabled ioctls */
++	int err, i, id, mode1[3];
++	
++    id 	= (int)file->private_data;
++    if ( arg <= GPIO_NUM_DEV) id = arg;
++
++#ifdef GPIO_DEBUG
++   printk(KERN_INFO "adm5120gpio: cmd:%i, pin:%i\n", cmd,id);
++#endif
++
++    switch (cmd) {
++
++// old no more used ioctrl to set/get all gpios at "same" time
++// used only from old gpioctrl tool but conficts with other driver they use gpios.
++//
++//	    case SIOCDEVSGPIOMODE: 
++//			err = copy_from_user(&mode, (int*)arg, GPIO_NUM_DEV*sizeof(int)*2);
++//			if (err) return -EFAULT;
++//			for (i = 0; i < GPIO_NUM_DEV; i++) {
++//				if ((mode[i*2] < 0) || (mode[i*2] > 13)) return -EINVAL;
++//				gpio_data[i].invert = mode[(i*2)+1];
++//				adm5120gpio_set_mode(i,mode[i*2]);
++//			}
++//			break;
++//		case SIOCDEVGGPIOMODE:
++//			for (i = 0; i < GPIO_NUM_DEV; i++) { 
++//                mode[i*2] = adm5120gpio_get_mode(i); 
++//                mode[(i*2)+1] = gpio_data[i].invert; 
++//            }
++//			err = copy_to_user((int*)arg, mode, GPIO_NUM_DEV*sizeof(int)*2);
++//			if (err) return -EFAULT;
++//			break;
++//
++	    case 0: 							/* set OFF  (from old driver) */
++		  	adm5120gpio_set_value(id, 0);
++			break;
++		case 1: 							/* set ON  (from old driver) */
++	  		adm5120gpio_set_value(id, 1);
++			break;
++		case 2: 				/* read the value (0/1) or mode (2..13) */
++            err = copy_from_user(&mode1, (int*)arg, sizeof(int)*3);
++			if (err) return -EFAULT;
++            id = mode1[0];
++ 			mode1[1] = adm5120gpio_get_mode(id);
++			if (mode1[1] == GPIO_MODE_INPUT) mode1[2] = adm5120gpio_get_value(id);
++			if ((gpio_data[id].invert == 1) && (mode1[1] < 4)) mode1[1] |= 0x80;	/* if INVERT set bit7 */
++			err = copy_to_user((int*)arg, mode1, sizeof(int)*3);
++			if (err) return -EFAULT;
++			break;
++		case 3 :				/* set the mode */ 
++			err = copy_from_user(&mode1, (int*)arg, sizeof(int)*3);
++			if (err) return -EFAULT;
++			id = mode1[0];
++			i = mode1[1];
++			if ((id >= 0) && (id < GPIO_NUM_DEV)) {
++	     		if (i > 0x7F) {
++        			gpio_data[id].invert = 1;
++                    i &= 0x7F;
++				}   
++				else gpio_data[id].invert = 0;
++				if ((i >= 0) && (i < 14)) {
++					adm5120gpio_set_mode(id,i);
++					if ((id < 8 ) && (i = GPIO_MODE_OUTPUT)) adm5120gpio_set_value(id,mode1[2]);  
++				}
++			}
++			break;
++		default:
++			return -EOPNOTSUPP;
++	}
++	return 0;
+ }
+ 
+-static int gpio_open(struct inode *inode, struct file *file)
++ 
++static int led_read_proc(char *buf, char **start, off_t fpos, int length, int *eof, void *data)
+ {
+-    int id = MINOR(inode->i_rdev);
+-    if ( id >= GPIO_DEV_NUM && id != REG_MINOR )
+-        return -ENODEV;
+-    if ( id < GPIO_DEV_NUM )  {
+-        int gpio_bit = 1 << id;
++    int len, id, value, mode;
++    for ( len = id = 0 ; id < GPIO_NUM_DEV ; id++ )  {
++		mode = adm5120gpio_get_mode(id);	
++		if (mode < 4 ) {
++			if (mode == GPIO_MODE_INPUT) {
++				value = adm5120gpio_get_value(id);
++		    	len += sprintf(buf+len, "%d: %s: %i %s\n",id,led_modes[mode],value,(gpio_data[id].invert == 0)? "normal":"inverted");	
++			}
++			else {
++				len += sprintf(buf+len, "%d: %s %s\n",id,led_modes[mode],(gpio_data[id].invert == 0)? "normal":"inverted");
++			}
++		}	
++		else {
++    		len += sprintf(buf+len, "%d: %s\n",id,led_modes[mode]);
++		}
+ 		
+-		GPIO_SEL = 0;
+-      	GPIO_SEL |= gpio_bit;   // bit=0 for GPIO
+     }
+-    file->private_data = (void*)id;
+-    return 0;
++    len = strlen(buf) - fpos;
++    if ( len <= 0 ) {
++	*start = buf;
++	*eof = 1;
++	return 0;
++    }
++    *start = buf + fpos;
++    if ( len <= length )   *eof = 1;
++    return len < length ? len : length;
+ }
+ 
++
+ static struct file_operations gpio_fops = {
+-    read:	gpio_read,
+-    open:	gpio_open,
+-    flush:	gpio_flush,
+-    write:	led_write,
++	.read = adm5120gpio_read,
++	.write = adm5120gpio_write,
++	.open = adm5120gpio_open,
++	.ioctl = adm5120gpio_ioctl,
++	.release = adm5120gpio_release,
+ };
+ 
+-//----------------------------------------------
+-static void watchdog_wrapper(unsigned long period)
++
++static int __init adm5120gpio_init(void)
+ {
+-	// clear timer count
+-	WATCHDOG_VAL &= CLEAR_TIMEER;
+-	watchdog.expires = jiffies + (period * HZ / 1000);
+-	add_timer(&watchdog);
+-}
+-//----------------------------------------------
+-static int init_status;
+-
+-#define INIT_REGION	        0x01
+-#define INIT_LED_REGISTER	0x02
+-#define INIT_LED_PROC_READ	0x04
+-#define INIT_GPIO_REGISTER	0x08
+-
+-static void led_exit(void)
+-{
+-    int id;
+-    for ( id = 0 ; id < LED_DEV_NUM ; id++ )  {
+-        del_timer(&blink_timer[id]);
+-        turn_led(id, 0);
+-    }
+-    if ( init_status & INIT_LED_PROC_READ )
+-    	remove_proc_entry("driver/led", NULL);
+-    	
+-    if ( init_status & INIT_LED_REGISTER )
+-    	unregister_chrdev(LED_MAJOR, "led");
++	int err,id,value;
+ 
+-    if ( init_status & INIT_GPIO_REGISTER )
+-    	unregister_chrdev(GPIO_MAJOR, "gpio");
++	if (!(err = request_mem_region(GPIO_IO_BASE, GPIO_IO_LEN, "adm5120gpio"))) {
++	    printk(KERN_ERR "adm5120gpio: I/O region already used. Cannot proceed.\n");
++	    return err;
++	}
++	err = register_chrdev(GPIO_DEV_MAJOR, "adm5120gpio", &gpio_fops);
++	if (err < 0) {
++		printk(KERN_ERR "adm5120gpio: can't register char device %d.\n",GPIO_DEV_MAJOR);
++		return err;
++	}
++    err = create_proc_read_entry("driver/led", 0, 0, led_read_proc, NULL);
++	if (!(err)) {
++		printk(KERN_ERR "adm5120gpio: unable to register /proc/driver/led\n");
++		return err;
++	}
+ 
+-    if ( init_status & INIT_REGION )
+-    	release_region(GPIO_IO_BASE, GPIO_IO_EXTENT);
++
++	strcpy(led_modes[0],  "INPUT");
++	strcpy(led_modes[1],  "OUTPUT");  	    
++	strcpy(led_modes[2],  "OUTPUT_1");		/* spezial from led */
++	strcpy(led_modes[3],  "OUTPUT_0");		/* spezial from led */
++	strcpy(led_modes[4],  "LINK");
++	strcpy(led_modes[5],  "SPEED");	
++	strcpy(led_modes[6],  "DUPLEX");
++	strcpy(led_modes[7],  "ACTIVITY");
++	strcpy(led_modes[8],  "COLLISION");
++	strcpy(led_modes[9],  "LINK_ACT");
++	strcpy(led_modes[10], "DUPLEX_COL");
++	strcpy(led_modes[11], "10M_ACT");
++	strcpy(led_modes[12], "100M_ACT");
++	strcpy(led_modes[13], "FLASH");			/* pseudo mode, register setting = 1 */
++
++  
++	spin_lock_init(&adm5120gpio_spinlock);
++
++	memset(gpio_data, 0, sizeof(gpio_data));
++
++	printk(KERN_INFO "adm5120gpio: Checking GPIO pins:\n");
++	for (id = 0; id < GPIO_NUM_DEV; id++) {
++        gpio_data[id].mode = adm5120gpio_get_mode(id);
++    	strcpy(gpio_data[id].status,led_modes[gpio_data[id].mode]);
++		gpio_data[id].invert = adm5120gpio_init_data[(id)];   /* old (id*3)+2 */
++		if ( gpio_data[id].mode < 4 ) {
++			if (gpio_data[id].mode == GPIO_MODE_INPUT) {
++				value = adm5120gpio_get_value(id);
++		    	printk(KERN_INFO " GPIO %d: %s: %i %s\n",id,gpio_data[id].status,value,(gpio_data[id].invert == 0)? "normal":"inverted");	
++			}
++			else {
++				printk(KERN_INFO "GPIO %d: %s %s\n",id,gpio_data[id].status,(gpio_data[id].invert == 0)? "normal":"inverted");
++			}
++		}	
++		else {
++    		printk(KERN_INFO "GPIO %d: %s\n",id,gpio_data[id].status);
++		}
++	}
++	printk(KERN_INFO "adm5120gpio: ADM5120 GPIO driver %s ready.\n",version);
++	return 0;
+ }
+ 
+-static int __init led_init(void)
++static void __exit adm5120gpio_exit(void)
+ {
+-    int result, id;
+-    init_status = 0;
+-	
+-  //---- request region --------------------------
+-  /*
+-    if ( check_region(GPIO_IO_BASE, GPIO_IO_EXTENT) )  {
+-	    printk(KERN_ERR "gpio: I/O port %lX is not free.\n", GPIO_IO_BASE);
+-	    return -EIO;
+-    }
+-    request_region(GPIO_IO_BASE, GPIO_IO_EXTENT, "gpio");
+-    init_status |= INIT_REGION;
+-  */
+-  //----- register device (LED)-------------------------
+-    result = register_chrdev(LED_MAJOR, "led", &led_fops);
+-    if ( result < 0 )   {
+-    	printk(KERN_ERR "led: can't register char device\n" );
+-    	led_exit();
+-    	return result;
+-    }
+-    init_status |= INIT_LED_REGISTER;
+-  //----- register device (GPIO)-------------------------
+-    result = register_chrdev(GPIO_MAJOR, "gpio", &gpio_fops);
+-    if ( result < 0 )   {
+-    	printk(KERN_ERR "gpio: can't register char device\n" );
+-    	led_exit();
+-    	return result;
+-    }
+-    init_status |= INIT_GPIO_REGISTER;
+-  // sam 1-30-2004 LAN Status
+-  // ----- register device (LAN_STATUS)-------------------
+-/*    result = register_chrdev(LAN_STATUS_MAJOR, "lanSt", &lanSt_fops);
+-    if ( result < 0 )   {
+-    	printk(KERN_ERR "lanSt: can't register char device\n" );
+-    	led_exit();
+-    	return result;
+-    }
+-    init_status |= INIT_LAN_STATUS_REGISTER;
+-	*/
+- // -----------init watchdog timer-------------------------
+-	 //del_timer(&blink_timer[id]);
+-	 WATCHDOG_VAL = ENABLE_WATCHDOG | ( EXPIRE_TIME  << WATCHDOG_SET_TMR_SHIFT);
+-    watchdog.function = watchdog_wrapper;
+-    watchdog.data = WATCHDOG_PERIOD;
+-    init_timer(&watchdog);
+-    watchdog.expires = jiffies + (WATCHDOG_PERIOD * HZ / 1000);
+-    add_timer(&watchdog);
+-    init_status |= INIT_WATCHDOG_REGISTER;
+-  
+- // end sam   
+-  //------ read proc -------------------
+-    if ( !create_proc_read_entry("driver/led", 0, 0, led_read_proc, NULL) )  {
+-	printk(KERN_ERR "led: can't create /proc/driver/led\n");
+-    	led_exit();
+-    	return -ENOMEM;
+-    }
+-    init_status |= INIT_LED_PROC_READ;
+-  //------------------------------
+-//    reg_addr = (unsigned long *)0xB4000000;
+-    reg_addr = (unsigned long *)0xB2000000;
+-    dump_len = 4;
+-    for ( id = 0 ; id < LED_DEV_NUM ; id++ )  {
+-    	strcpy(led_data[id].sts_buf, "LED OFF\n" );
+-    	set_led_status_by_str(id);
+-    }
+-    strcpy(led_data[0].sts_buf,"LED BLINK 100\n");
+-    set_led_status_by_str(0);
+-    printk(KERN_INFO "LED & GPIO Driver " LED_VERSION "\n");
+-    return 0;
++	unregister_chrdev(GPIO_DEV_MAJOR, "adm5120gpio");
++	remove_proc_entry("driver/led", NULL);
++	release_mem_region(GPIO_IO_BASE, GPIO_IO_LEN);
+ }
+ 
+-module_init(led_init);
+-module_exit(led_exit);
++module_init(adm5120gpio_init);
++module_exit(adm5120gpio_exit);
+ EXPORT_NO_SYMBOLS;
++
++MODULE_LICENSE("GPLv2");
++MODULE_AUTHOR("Sergio Aguayo (webmaster@qmailhosting.net), dl4huf (dl4huf@darc.de)");
++MODULE_DESCRIPTION("Driver for ADM5120's GPIO ports");
++
+--- linux-2.4.32-adm5120-orig/arch/mips/am5120/led.h	2006-12-26 20:42:29.000000000 +0100
++++ linux-2.4.32-adm5120/arch/mips/am5120/led.h	2007-01-31 14:38:22.000000000 +0100
+@@ -1,26 +1,49 @@
+-#ifndef _LED_H_INCLUDED
+-#define _LED_H_INCLUDED
++#ifndef __ADM5120GPIO_H__
++#define __ADM5120GPIO_H__
+ 
+-#include <linux/config.h>
++#define version "V2.6"
+ 
+-#define LED_VERSION 		"v1.1"
+-#define LED_MAJOR       	166
+-#define LED_DEV_NUM		8 
+-#define LED_GPIO_START      	1
+-#define GPIO_MAJOR       	167
+-#define GPIO_DEV_NUM		16
+-#define REG_MINOR           	128
+-//#define GPIO_IO_BASE        	0xB4002480
+-#define GPIO_IO_BASE        	((unsigned long)0xb20000b8)
+-#define GPIO_IO_EXTENT		0x40
+-
+-#define LED_ON              	0x010000
+-#define LED_OFF             	0x020000
+-#define LED_BLINK_CMD       	0x030000
+-#define LED_BLINK_PERIOD    	0x00FFFF
+-#define LED_BLINK           	(LED_BLINK_CMD|1000)
+-#define LED_BLINK_FAST      	(LED_BLINK_CMD|250)
+-#define LED_BLINK_SLOW      	(LED_BLINK_CMD|500)
+-#define LED_BLINK_EXTRA_SLOW    (LED_BLINK_CMD|2000)
++/* IO Address base and length */
++#define GPIO_IO_BASE	((unsigned long)0xb20000b8)
++#define GPIO_IO_LEN	0x1
+ 
+-#endif
++/* Major character device number */
++#define GPIO_DEV_MAJOR	167
++
++/* Various I/O ports used by the driver */
++#define GPIO_IO_CONF0	(*(unsigned long*)0xb20000b8)
++#define SW_PORT0_LED	(*(unsigned long*)0xb2000100)
++#define SW_PORT1_LED	(*(unsigned long*)0xb2000104)
++#define SW_PORT2_LED	(*(unsigned long*)0xb2000108)
++#define SW_PORT3_LED	(*(unsigned long*)0xb200010C)
++#define SW_PORT4_LED	(*(unsigned long*)0xb2000110)
++#define REG_BASE		(0xb2000000)
++
++/* Number of devices */
++#define GPIO_NUM_DEV	23 //8 GPIO + 2*5 SW LED
++
++/* GPIO modes */
++#define GPIO_MODE_INPUT    0
++#define GPIO_MODE_OUTPUT   1
++#define SW_MODE_DEFAULT    2
++
++/* SWITCH PORTx_LED */
++#define SW_LED_GPIO_IN           0x00
++#define SW_LED_GPIO_OUTPUT_FLASH 0x01
++#define SW_LED_GPIO_OUTPUT_1     0x02
++#define SW_LED_GPIO_OUTPUT_0     0x03
++#define SW_LED_LINK              0x04
++#define SW_LED_SPEED             0x05
++#define SW_LED_DUPLEX            0x06
++#define SW_LED_ACTIVITY          0x07
++#define SW_LED_COLLISION         0x08
++#define SW_LED_LINK_ACT          0x09
++#define SW_LED_DUPLEX_COL        0x0A
++#define SW_LED_10M_ACT           0x0B
++#define SW_LED_100M_ACT          0x0C
++
++/* Private IOCTLs */
++#define SIOCDEVSGPIOMODE	SIOCDEVPRIVATE
++#define SIOCDEVGGPIOMODE	SIOCDEVPRIVATE+1
++
++#endif /* __ADM5120GPIO_H__ */

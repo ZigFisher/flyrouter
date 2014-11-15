@@ -1,0 +1,377 @@
+--- linux-2.4.32/arch/mips/am5120/serial.c.orig	2006-10-03 11:05:55.000000000 +0300
++++ linux-2.4.32/arch/mips/am5120/serial.c	2006-10-03 11:07:56.000000000 +0300
+@@ -23,6 +23,8 @@
+ ;    Abstract: 
+ ;
+ ;Modification History:
++: 1.second uart 12.12.2005
++; 2.chahge speed  3.3.2006
+ ;
+ ;*****************************************************************************/
+ #include <linux/config.h>
+@@ -53,10 +55,11 @@
+ #include <asm/irq.h>
+ #include <asm/serial.h>
+ #include <asm/am5120/adm5120.h>
++/* parity check flag */
++#define RELEVANT_IFLAG(iflag)	(iflag & (IGNBRK|BRKINT|IGNPAR|PARMRK|INPCK))
+ 
+-
+-//#define SERIAL_DEBUG_OPEN	1
+-//#define SERIAL_DEBUG_INTR	1
++// #define SERIAL_DEBUG_OPEN	1
++// #define SERIAL_DEBUG_INTR	1
+ 
+ /*
+  * IN_W
+@@ -100,8 +103,8 @@
+  */
+ static struct serial_state rs_table[] = 
+ {
+-	{baud_base:UART_115200bps_DIVISOR, port:KSEG1ADDR(UART0_BASE), irq:1, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM},
+-	{baud_base:UART_115200bps_DIVISOR, port:KSEG1ADDR(UART1_BASE), irq:2, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM}
++	{baud_base:115200, port:KSEG1ADDR(UART0_BASE), irq:1, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM,close_delay:50,closing_wait:3000},
++	{baud_base:9600, port:KSEG1ADDR(UART1_BASE), irq:2, flags:STD_COM_FLAGS, type:SERIAL_IO_MEM,close_delay:50,closing_wait:3000}
+ };
+ 
+ 
+@@ -118,6 +121,7 @@
+ void __init setup_prom_printf(int tty_no) 
+ {
+ 	struct serial_state *ser = &rs_table[tty_no];
++	unsigned long	divisor;
+ //	printk("tty_no: %d...\n", tty_no);
+ 	prom_port_info.state = ser;
+ 	prom_port_info.magic = SERIAL_MAGIC;
+@@ -125,8 +129,9 @@
+ 	prom_port_info.flags = ser->flags;
+ 
+ 	/* set baudrate to 115200 */
+-	serial_out(&prom_port_info, UART_LCR_L_REG, prom_port_info.state->baud_base); 
+-	serial_out(&prom_port_info, UART_LCR_M_REG, prom_port_info.state->baud_base >> 8);
++	divisor = ADM5120_UARTCLK_FREQ/(16*(prom_port_info.state->baud_base)) - 1;
++	serial_out(&prom_port_info, UART_LCR_L_REG, divisor); 
++	serial_out(&prom_port_info, UART_LCR_M_REG, divisor >> 8);
+ 	
+ 	/* Set default line mode */
+ 	serial_out(&prom_port_info, UART_LCR_H_REG, UART_WLEN_8BITS | UART_ENABLE_FIFO);
+@@ -282,8 +287,8 @@
+  *
+  *----------------------------------------------------*/
+ 
+-static char *serial_version = "0.02";
+-static char *serial_revdate = "2005-12-06 ;)";
++static char *serial_version = "0.03";
++static char *serial_revdate = "2006-04-04 ;)";
+ 
+ #define LOCAL_VERSTRING ""
+ 
+@@ -518,7 +523,7 @@
+ 	int	retval=0;
+ 	void (*handler)(int, void *, struct pt_regs *);
+ 	struct serial_state *state= info->state;
+-	unsigned long page;
++	unsigned long page, divisor;
+ 
+ 	if (info->flags & ASYNC_INITIALIZED) 
+ 		return retval;
+@@ -544,9 +549,9 @@
+ 	else
+ 		info->xmit.buf = (unsigned char *) page;
+ 
+-//#ifdef SERIAL_DEBUG_OPEN
+-	printk("starting up ttyS%d (irq %d)...", info->line, state->irq);
+-//#endif
++#ifdef SERIAL_DEBUG_OPEN
++	printk("starting up ttyS%d (irq %d) %dbps ...", info->line, state->irq, info->state->baud_base);
++#endif
+ 
+ 	/*
+ 	 * Allocate the IRQ if necessary
+@@ -588,8 +593,9 @@
+ 	/*
+ 	 * Now, initialize the UART 
+ 	 */
+-	serial_out(info, UART_LCR_L_REG, info->state->baud_base); 
+-	serial_out(info, UART_LCR_M_REG, info->state->baud_base >> 8);
++	divisor = ADM5120_UARTCLK_FREQ/(16*(info->state->baud_base)) - 1;
++	serial_out(info, UART_LCR_L_REG, divisor); 
++	serial_out(info, UART_LCR_M_REG, divisor >> 8);
+ 	serial_out(info, UART_LCR_H_REG, (UART_WLEN_8BITS | UART_ENABLE_FIFO));
+ 
+ 	/*
+@@ -616,7 +622,87 @@
+ 	return retval;
+ }
+ 
++/*
++ * This routine is called to set the UART divisor registers to match
++ * the specified baud rate for a serial port.
++ */
++static void change_speed(struct async_struct *info,
++			 struct termios *old_termios)
++{
++
++	int	quot = 0 ;
++	unsigned cflag ;
++	int	bits, stops, pars;
++	unsigned long	flags, baud, divisor;
++#ifdef SERIAL_DEBUG_OPEN	
++	printk("change speed tty ");
++#endif
++	if (!info->tty || !info->tty->termios)
++		return;
++	cflag = info->tty->termios->c_cflag;
++	if (!CONFIGURED_SERIAL_PORT(info))
++		return;
++#ifdef SERIAL_DEBUG_OPEN	
++	printk(" cflag :%X ",cflag);
++	printk(" base port adress:0x%X",info->port);
++#endif	
++	baud = 115200;
++	switch (cflag & CBAUD) {
++		case B0:	baud  = 115200;	break;
++		case B300:	baud  = 300;	break;
++		case B600:	baud  = 600;	break;
++		case B1200:	baud  = 1200;	break;
++		case B2400:	baud  = 2400;	break;
++		case B4800:	baud  = 4800;	break;
++		case B9600:	baud  = 9600;	break;
++		case B19200:	baud  = 19200;	break;
++		case B38400:	baud  = 38400;	break;
++		case B57600:	baud  = 57600;	break;
++		case B115200:	baud  = 115200;	break;
++		case B230400:	baud  = 230400;	break;
++
++		default:
++			printk("serial.c driver does not support the baudrate requested (fix it)");
++			break;
++			return;
++	}
++	
++	switch (cflag & CSIZE) {
++		case CS5:	bits = UART_WLEN_5BITS;	break;
++		case CS6:	bits = UART_WLEN_6BITS;	break;
++		case CS7:	bits = UART_WLEN_7BITS;	break;
++		default:
++		case CS8:	bits = UART_WLEN_8BITS;	break;
++		
++	}
++	if (cflag & CSTOPB) {
++		stops = UART_TWO_STOP_BITS;
++	} else {
++		stops = 0;
++	}
++	pars = 0;
++	if (cflag & PARENB) {
++		if (cflag & PARODD) {
++			pars = UART_PARITY_EN;
++		} else {
++			pars = UART_PARITY_EN | UART_EVEN_PARITY;
++		}
++	} else {
++		pars = 0;
++	}
++	
++	divisor = ADM5120_UARTCLK_FREQ/(16*(baud)) - 1;
++#ifdef SERIAL_DEBUG_OPEN	
++	printk(" divisor:0x%X bits:0x%X stops:0x%X pars:0x%X \n",divisor,bits,stops,pars);
++#endif	
++	info->state->baud_base = baud;	
++	save_flags(flags); cli();
++	serial_out(info, UART_LCR_L_REG,divisor);
++	serial_out(info, UART_LCR_M_REG,divisor >> 8);
++	serial_out(info, UART_LCR_H_REG, (bits |stops | pars | UART_ENABLE_FIFO));
++	restore_flags(flags);
+ 
++}
+ /*
+  * This routine is called whenever a serial port is opened.  It
+  * enables interrupts for a serial port, linking in its async structure into
+@@ -630,7 +716,8 @@
+ 	unsigned long		page;
+ 
+ 	line = MINOR(tty->device) - tty->driver.minor_start;
+-//printk("rs_open 1 %s%d, \n", tty->driver.name, line);	
++//printk("rs_open 1 %s%d, \n", tty->driver.name, line);
++	
+ 	
+ 	
+ 	if ((line < 0) || (line >= NR_PORTS)) 
+@@ -648,8 +735,7 @@
+ 	info->tty = tty;
+ 
+ #ifdef SERIAL_DEBUG_OPEN
+-	printk("rs_open %s%d, count = %d\n", tty->driver.name, info->line,
+-	       info->state->count);
++	printk("rs_open %s%d, count = %d\n", tty->driver.name, info->line,info->state->count);
+ #endif
+ 	
+ 	info->tty->low_latency = (info->flags & ASYNC_LOW_LATENCY) ? 1 : 0;
+@@ -1069,7 +1155,8 @@
+ 
+ 	if ((new_serial.type != state->type) ||
+ 	    (new_serial.xmit_fifo_size <= 0))
+-		new_serial.xmit_fifo_size = 16;
++		new_serial.xmit_fifo_size =
++ 16;
+ //			uart_config[new_serial.type].dfl_xmit_fifo_size;
+ 
+ 	/* Make sure address is not already in use */
+@@ -1098,7 +1185,8 @@
+ 	state->close_delay = new_serial.close_delay * HZ/100;
+ 	state->closing_wait = new_serial.closing_wait * HZ/100;
+ 	info->tty->low_latency = (info->flags & ASYNC_LOW_LATENCY) ? 1 : 0;
+-	info->xmit_fifo_size = state->xmit_fifo_size = 16;
++	info->xmit_fifo_size = state->xmit_fifo_size =
++ 16;
+ //===		new_serial.xmit_fifo_size;
+ 
+ 	if ((state->type != PORT_UNKNOWN) && state->port) {
+@@ -1146,12 +1234,58 @@
+ 	}
+ 	return retval;
+ }
+-//#endif
++//
+ 
++static int set_modem_info(struct async_struct * info, unsigned int cmd,
++			  unsigned int *value)
++{
++	unsigned int arg;
++	unsigned long flags;
++
++	if (copy_from_user(&arg, value, sizeof(int)))
++		return -EFAULT;
++
++	switch (cmd) {
++	case TIOCMBIS: 
++		if (arg & TIOCM_RTS)
++			info->MCR |= UART_MCR_RTS;
++		if (arg & TIOCM_DTR)
++			info->MCR |= UART_MCR_DTR;
++		if (arg & TIOCM_LOOP)
++			info->MCR |= UART_MCR_LOOP;
++		break;
++	case TIOCMBIC:
++		if (arg & TIOCM_RTS)
++			info->MCR &= ~UART_MCR_RTS;
++		if (arg & TIOCM_DTR)
++			info->MCR &= ~UART_MCR_DTR;
++		if (arg & TIOCM_LOOP)
++			info->MCR &= ~UART_MCR_LOOP;
++		break;
++	case TIOCMSET:
++		info->MCR = ((info->MCR & ~(UART_MCR_RTS | UART_MCR_LOOP | UART_MCR_DTR)) 
++			     | ((arg & TIOCM_RTS) ? UART_MCR_RTS : 0)
++			     | ((arg & TIOCM_LOOP) ? UART_MCR_LOOP : 0)
++			     | ((arg & TIOCM_DTR) ? UART_MCR_DTR : 0));
++		break;
++	default:
++		return -EINVAL;
++	}
++	save_flags(flags); cli();
++	info->MCR |= ALPHA_KLUDGE_MCR; 		/* Don't ask */
++// in ADM5120 register not present
++//	serial_out(info, UART_MCR, info->MCR);
++	restore_flags(flags);
++#ifdef SERIAL_DEBUG_OPEN	
++	printk ("TIOCMSET emulator  OK \n");
++#endif	
++	return 0;
++}
+ 
+ static int rs_ioctl(struct tty_struct *tty, struct file * file,
+ 		    unsigned int cmd, unsigned long arg)
+ {
++
+ 	struct async_struct * info = (struct async_struct *)tty->driver_data;
+ 	struct async_icount cprev, cnow;	/* kernel counter temps */
+ 	struct serial_icounter_struct icount;
+@@ -1165,12 +1299,13 @@
+ 	}
+ 	
+ 	switch (cmd) {
+-		//case TIOCMGET:
+-		//	return get_modem_info(info, (unsigned int *) arg);
++		case TIOCMGET:
++			//	return get_modem_info(info, (unsigned int *) arg);
++			printk ("TIOCMGET ignored.\n");
+ 		case TIOCMBIS:
+ 		case TIOCMBIC:
+-		//case TIOCMSET:
+-		//	return set_modem_info(info, cmd, (unsigned int *) arg);
++		case TIOCMSET:
++			return set_modem_info(info, cmd, (unsigned int *) arg);
+ 		case TIOCGSERIAL:
+ 			return get_serial_info(info,
+ 					       (struct serial_struct *) arg);
+@@ -1297,13 +1432,15 @@
+ 	save_flags(flags); cli();
+ 	serial_out(info, UART_MCR, info->MCR);
+ 	restore_flags(flags);
+-#endif 
++#endif
++ 
+ }
+ 
+ 
+ static void rs_unthrottle(struct tty_struct * tty)
+ {
+-#if 0 
++#if 0
++ 
+ 	struct async_struct *info = (struct async_struct *)tty->driver_data;
+ 	unsigned long flags;
+ #ifdef SERIAL_DEBUG_THROTTLE
+@@ -1331,7 +1468,7 @@
+ 
+ static void rs_set_termios(struct tty_struct *tty, struct termios *old_termios)
+ {
+-#if 0
++
+ 	struct async_struct *info = (struct async_struct *)tty->driver_data;
+ 	unsigned long flags;
+ 	unsigned int cflag = tty->termios->c_cflag;
+@@ -1341,6 +1478,8 @@
+ 		== RELEVANT_IFLAG(old_termios->c_iflag)))
+ 	  return;
+ 
++	  change_speed(info, old_termios);
++#if 0	  
+ 	/* Handle transition to B0 status */
+ 	if ((old_termios->c_cflag & CBAUD) &&
+ 	    !(cflag & CBAUD)) {
+@@ -1484,7 +1623,8 @@
+  */
+ static void rs_wait_until_sent(struct tty_struct *tty, int timeout)
+ {
+-// #if 0 
++// #if 0
++ 
+ 	struct async_struct * info = (struct async_struct *)tty->driver_data;
+ 	unsigned long orig_jiffies, char_time;
+ 	int lsr;
+@@ -1539,10 +1679,11 @@
+ 	}
+ 	set_current_state(TASK_RUNNING);
+ #ifdef SERIAL_DEBUG_RS_WAIT_UNTIL_SENT
+-	printk("lsr = %d (jiff=%lu)...done\n", lsr, jiffies);
++	
+ #endif
+ 
+-// #endif 
++// #endif
++ 
+ }
+ 
+ /*
+@@ -1700,7 +1841,7 @@
+ 	dev_tty_driver.read_proc = rs_read_proc;
+ 
+ 	if (tty_register_driver(&dev_tty_driver))
+-		panic("Couldn't register /dev/ttyS0 driver\n");
++		panic("Couldn't register /dev/ttyS driver\n");
+ 
+ 	return 0;
+ }

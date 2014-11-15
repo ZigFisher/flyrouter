@@ -1,0 +1,85 @@
+choice
+
+	prompt "midge type"
+	default MIDGE_TYPE_TMPFS
+	depends BR2_LINUX_2_4_ADM5120
+	config MIDGE_TYPE_JFFS2
+		bool "jffs2"
+	config MIDGE_TYPE_TMPFS
+		bool "tmpfs"
+	config MIDGE_TYPE_USB
+		bool "usb (not supported)"
+
+endchoice
+
+
+config MIDGE_FLASH_SIZE
+	hex "Flash size"
+	default "0x200000"
+	depends BR2_LINUX_2_4_ADM5120
+	help
+		Flash Size in hex
+
+config MIDGE_BOOT_SIZE
+	hex "Size of boot sector"
+	default "0x08000"
+	depends BR2_LINUX_2_4_ADM5120
+	help
+		Size of boot sector (default 0x8000)
+
+config MIDGE_KERNEL_START
+	hex "Kernel entry point"
+	default "0x10000"
+	depends BR2_LINUX_2_4_ADM5120
+	help
+		Start position of kernel (default 0x10000)
+
+config MIDGE_KERNEL_BLOCKS
+	int "Size of kernel partition in 64k blocks"
+	default 10
+	depends BR2_LINUX_2_4_ADM5120  
+	help
+		Size of kernel partition
+
+config MIDGE_SQUASHFS_BLOCKS
+	int "Size of read-only partition in 64k blocks"
+	default 10
+	depends BR2_LINUX_2_4_ADM5120  
+	help
+		Size of kernel partition
+
+config BR2_PACKAGE_KMOD_ADM5120_SW
+	prompt "kmod-adm5120-sw   ADM5120 Switch Driver"
+	tristate
+	depends BR2_LINUX_2_4_ADM5120
+	default y
+	help
+	  Switch driver for adm5120 SoC
+
+config BR2_PACKAGE_KMOD_ADM5120_USB
+	prompt "kmod-usb-shci     ADM5120 USB Driver"
+	tristate
+	depends BR2_LINUX_2_4_ADM5120
+	default m
+	select BR2_PACKAGE_KMOD_USB_CONTROLLER
+	help
+		USB driver for ADM5120 (works fine USB storage and maybe USB printers)
+		USB-Webcams, USB-Serial and similar 'interrupt' devices is not supported
+
+config BR2_PACKAGE_KMOD_ADM5120_I2C
+	prompt "kmod-adm5120-i2c  ADM5120 I2C-Support Driver (GPIO)"
+	tristate
+	depends BR2_LINUX_2_4_ADM5120
+	default m
+	help
+	  Driver for I2C-Bus over GPIO or Switch-LED
+	  GPIO has number 0..7
+          LED has number 8..22
+	  GPIO 0 is reserved for Power-LED
+	  GPIO 2 is reserved for Reset-Switch
+          GPIO 1 and GPIO 3 are default, see kernel config
+          GPIO 3 is used for 4MB-Flash ! 
+          Load the driver with parameter scl=8 sda=9 for LED8/9
+          Load with "-o i2c-adm5120_x" for multiple i2c-buses 
+
+

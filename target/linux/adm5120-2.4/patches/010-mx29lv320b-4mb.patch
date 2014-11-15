@@ -1,0 +1,262 @@
+diff -urN linux-2.4.32/drivers/mtd/maps/Config.in linux-2.4.32-adm5120/drivers/mtd/maps/Config.in
+--- linux-2.4.32/drivers/mtd/maps/Config.in	2005-12-20 12:42:57.000000000 +0200
++++ linux-2.4.32-adm5120/drivers/mtd/maps/Config.in	2005-12-20 12:22:42.000000000 +0200
+@@ -113,6 +113,12 @@
+ 
+ if [ "$CONFIG_MIPS_AM5120" = "y" ]; then
+    dep_tristate '  MX29LV320B flash device mapped on ADM5120 board' CONFIG_MTD_MX29LV320B $CONFIG_MRD_CFI
++   if [ "$CONFIG_MTD_MX29LV320B" != "n" ]; then
++      bool '    4MB device' CONFIG_MTD_MX29LV320B_4MB n
++      if [ "$CONFIG_MTD_MX29LV320B_4MB" != "n" ]; then
++         int '      Use GPIO for A20' CONFIG_MTD_MX29LV320B_4MB_GPIO 3
++      fi
++   fi
+ fi   
+ 
+ # This needs CFI or JEDEC, depending on the cards found.
+diff -urN linux-2.4.32/drivers/mtd/maps/mx29lv320b.c linux-2.4.32-adm5120/drivers/mtd/maps/mx29lv320b.c
+--- linux-2.4.32/drivers/mtd/maps/mx29lv320b.c	2006-10-16 00:24:02.000000000 +0200
++++ linux-2.4.32-adm5120/drivers/mtd/maps/mx29lv320b.c	2006-10-18 00:17:38.000000000 +0200
+@@ -34,48 +34,201 @@
+ #include <asm/io.h>
+ #include <asm/am5120/mx29lv320b.h>
+ 
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++
++#include <asm/am5120/adm5120.h>
++
++#define FLASH_CS1_LIMIT 0x200000
++
++#ifndef CONFIG_MTD_MX29LV320B_4MB_GPIO
++#define CONFIG_MTD_MX29LV320B_4MB_GPIO 3
++#endif
++
++void flash_to_up_layer(void) {
++	int delayloop;
++	for (delayloop=0;delayloop<10000;delayloop++);
++	ADM5120_SW_REG(GPIO_conf0_REG) |= (0x01010000 << CONFIG_MTD_MX29LV320B_4MB_GPIO);
++	for (delayloop=0;delayloop<10000;delayloop++);
++}
++
++void flash_to_low_layer(void) {
++	int delayloop;
++	for (delayloop=0;delayloop<10000;delayloop++);
++	ADM5120_SW_REG(GPIO_conf0_REG) &= ~(0x01010000 << CONFIG_MTD_MX29LV320B_4MB_GPIO);
++	for (delayloop=0;delayloop<10000;delayloop++);
++}
++
++#endif /* CONFIG_MTD_MX29LV320B_4MB */
++
+ static struct mtd_info *mymtd;
+ 
+ 
+ __u8 mx29lv320b_read8( struct map_info *map, unsigned long ofs)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	__u8	readres;
++	if (ofs < FLASH_CS1_LIMIT) {
++	    readres = __raw_readb(map->map_priv_1 + ofs);
++	} else {
++	    flash_to_up_layer();
++	    readres = __raw_readb(map->map_priv_1 + ofs);
++	    flash_to_low_layer();
++	}
++	return readres;
++#else
+ 	return __raw_readb(map->map_priv_1 + ofs);
++#endif
+ }
+ 
+ __u16 mx29lv320b_read16( struct map_info *map, unsigned long ofs)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	__u16	readres;
++	if (ofs < FLASH_CS1_LIMIT - 1) {
++	    readres = __raw_readw(map->map_priv_1 + ofs);
++	} else {
++	    if (ofs >= FLASH_CS1_LIMIT) {
++		flash_to_up_layer();
++		readres = __raw_readw(map->map_priv_1 + ofs);
++		flash_to_low_layer();
++	    } else {
++		flash_to_up_layer();
++		readres = __raw_readb(map->map_priv_1 + ofs + 1)<<8;
++		flash_to_low_layer();
++		readres |= 0x00FF & __raw_readb(map->map_priv_1 + ofs);
++	    }
++	}
++	return readres;
++#else
+ 	return __raw_readw(map->map_priv_1 + ofs);
++#endif
+ }
+ 
+ __u32 mx29lv320b_read32( struct map_info *map, unsigned long ofs)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	__u32	readres;
++	if (ofs < FLASH_CS1_LIMIT - 3) {
++	    readres = __raw_readl(map->map_priv_1 + ofs);
++	} else {
++	    if (ofs >= FLASH_CS1_LIMIT) {
++		flash_to_up_layer();
++		readres = __raw_readl(map->map_priv_1 + ofs);
++		flash_to_low_layer();
++	    } else {
++		readres = mx29lv320b_read16(map,ofs) | mx29lv320b_read16(map,ofs+2)<<16;
++	    }
++	}
++	return readres;
++#else
+ 	return __raw_readl(map->map_priv_1 + ofs);
++#endif
+ }
+ //_raw_readll -> if 64
+ 
+ void mx29lv320b_write8( struct map_info *map, __u8 d, unsigned long adr)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	if (adr < FLASH_CS1_LIMIT) {
++	    __raw_writeb(d, map->map_priv_1 + adr);
++	} else {
++	    flash_to_up_layer();
++	    __raw_writeb(d, map->map_priv_1 + adr);
++	    flash_to_low_layer();
++	}
++#else
+ 	__raw_writeb(d, map->map_priv_1 + adr);
++#endif
+ }
+ 
+ void mx29lv320b_write16( struct map_info *map, __u16 d, unsigned long adr)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	if (adr < FLASH_CS1_LIMIT - 1) {
++	    __raw_writew(d, map->map_priv_1 + adr);
++	} else {
++	    if (adr >= FLASH_CS1_LIMIT) {
++		flash_to_up_layer();
++		__raw_writew(d, map->map_priv_1 + adr);
++		flash_to_low_layer();
++	    } else {
++		__raw_writeb( (__u8)d, map->map_priv_1 + adr);
++		flash_to_up_layer();
++		__raw_writeb( (__u8)d>>8, map->map_priv_1 + adr + 1);
++		flash_to_low_layer();		
++	    }
++	}
++#else
+ 	__raw_writew(d, map->map_priv_1 + adr);
++#endif
+ }
+ 
+ void mx29lv320b_write32( struct map_info *map, __u32 d, unsigned long adr)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	if (adr < FLASH_CS1_LIMIT - 3) {
++	    __raw_writel(d, map->map_priv_1 + adr);
++	} else {
++	    if (adr >= FLASH_CS1_LIMIT) {
++		flash_to_up_layer();
++		__raw_writel(d, map->map_priv_1 + adr);
++		flash_to_low_layer();
++	    } else {
++		mx29lv320b_write16(map,(__u16)d,adr);
++		flash_to_up_layer();
++		mx29lv320b_write16(map,(__u16)d>>16,adr+2);
++		flash_to_low_layer();
++	    }
++	}
++#else
+ 	__raw_writel(d, map->map_priv_1 + adr);
++#endif
+ }
+ 
+ void mx29lv320b_copy_to(struct map_info *map, unsigned long to, const void *from, ssize_t len)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	ssize_t toread;
++	
++	if (FLASH_CS1_LIMIT > to + len ) {
++	    memcpy_toio(map->map_priv_1 + to, from, len);
++	} else {
++	    if (0 < (toread = FLASH_CS1_LIMIT - to) ) {
++		memcpy_toio(map->map_priv_1 + to, from, toread);
++		len -= toread;
++		to += toread;
++		from += toread;
++	    }
++	    flash_to_up_layer();
++	    memcpy_toio(map->map_priv_1 + to, from, len);
++	    flash_to_low_layer();
++	}
++#else
+ 	memcpy_toio(map->map_priv_1 + to, from, len);
++#endif
+ }
+ 
+ void mx29lv320b_copy_from(struct map_info *map, void *to, unsigned long from, ssize_t len)
+ {
++#ifdef CONFIG_MTD_MX29LV320B_4MB
++	ssize_t toread;
++	
++	if (FLASH_CS1_LIMIT > from + len ) {
++	    memcpy_fromio(to, map->map_priv_1 + from, len);
++	} else {
++	    if (0 < (toread = FLASH_CS1_LIMIT - from) ) {
++		memcpy_fromio(to, map->map_priv_1 + from, toread);
++		len -= toread;
++		to += toread;
++		from += toread;
++	    }
++	    flash_to_up_layer();
++	    memcpy_fromio(to, map->map_priv_1 + from, len);
++	    flash_to_low_layer();
++	}
++#else
+ 	memcpy_fromio(to, map->map_priv_1 + from, len);
++#endif
+ }
+ 
+ struct map_info mx29lv320b_map = {
+@@ -111,10 +264,40 @@
+ 		mymtd->module = THIS_MODULE;
+ 		add_mtd_partitions(mymtd, mx29lv320b_parts, PARTITION_COUNT);
+ 		printk(KERN_NOTICE "MX29LV320B flash device initialized\n");
++
++//#define MX29LV320_4MB_DEBUG
++#ifdef MX29LV320_4MB_DEBUG
++
++		int i;
++		__u8 tempread;
++		__u16 tempread2;
++		__u32 tempread3;
++
++		printk("******************************* bytereads *******************************\n");
++		for (i=0;i<8;i++) {
++		    tempread = mx29lv320b_read8(&mx29lv320b_map, 0x200000-4+i);
++		    printk("* %08X: %02X\n",0x200000-4+i,tempread);
++		}
++	
++		printk("******************************* wordreads *******************************\n");
++		for (i=0;i<8;i++) {
++		    tempread2 = mx29lv320b_read16(&mx29lv320b_map, 0x200000-4+i);
++		    printk("* %08X: %04X\n",0x200000-4+i,tempread2);
++		}
++
++		printk("******************************* longreads *******************************\n");
++		for (i=0;i<8;i++) {
++		    tempread3 = mx29lv320b_read32(&mx29lv320b_map, 0x200000-4+i);
++		    printk("* %08X: %08X\n",0x200000-4+i,tempread3);
++		}
++#endif
++
+ 		return 0;
+ 	}
+ 
++	
+ 	iounmap((void *)mx29lv320b_map.map_priv_1);
++	
+ 	return -ENXIO;
+ }
+ 
