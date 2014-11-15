@@ -1,0 +1,70 @@
+diff -urN linux-2.4.17-zig/drivers/char/bcmboard/impl1/bcm63xx_flash.c linux-2.4.17/drivers/char/bcmboard/impl1/bcm63xx_flash.c
+--- linux-2.4.17-zig/drivers/char/bcmboard/impl1/bcm63xx_flash.c	2004-10-11 09:48:15.000000000 +0300
++++ linux-2.4.17/drivers/char/bcmboard/impl1/bcm63xx_flash.c	2009-11-12 22:13:45.000000000 +0200
+@@ -256,19 +256,19 @@
+     }
+ 
+ #if defined(DEBUG_FLASH)
+-    printk("fInfo.flash_scratch_pad_start_blk = %d\n", fInfo.flash_scratch_pad_start_blk);
+-    printk("fInfo.flash_scratch_pad_number_blk = %d\n", fInfo.flash_scratch_pad_number_blk);
+-    printk("fInfo.flash_scratch_pad_length = 0x%x\n", fInfo.flash_scratch_pad_length);
+-    printk("fInfo.flash_scratch_pad_blk_offset = 0x%x\n", (unsigned int)fInfo.flash_scratch_pad_blk_offset);
+-
+-    printk("fInfo.flash_nvram_start_blk = %d\n", fInfo.flash_nvram_start_blk);
+-    printk("fInfo.flash_nvram_blk_offset = 0x%x\n", (unsigned int)fInfo.flash_nvram_blk_offset);
+-    printk("fInfo.flash_nvram_number_blk = %d\n", fInfo.flash_nvram_number_blk);
+-
+-    printk("psi startAddr = %x\n", startAddr+FLASH_BASE_ADDR_REG);
+-    printk("fInfo.flash_persistent_start_blk = %d\n", fInfo.flash_persistent_start_blk);
+-    printk("fInfo.flash_persistent_blk_offset = 0x%x\n", (unsigned int)fInfo.flash_persistent_blk_offset);
+-    printk("fInfo.flash_persistent_number_blk = %d\n", fInfo.flash_persistent_number_blk);
++    printk("fInfo.flash_scratch_pad_start_blk           = %d\n", fInfo.flash_scratch_pad_start_blk);
++    printk("fInfo.flash_scratch_pad_number_blk          = %d\n", fInfo.flash_scratch_pad_number_blk);
++    printk("fInfo.flash_scratch_pad_length              = 0x%x\n", fInfo.flash_scratch_pad_length);
++    printk("fInfo.flash_scratch_pad_blk_offset          = 0x%x\n", (unsigned int)fInfo.flash_scratch_pad_blk_offset);
++
++    printk("fInfo.flash_nvram_start_blk                 = %d\n", fInfo.flash_nvram_start_blk);
++    printk("fInfo.flash_nvram_blk_offset                = 0x%x\n", (unsigned int)fInfo.flash_nvram_blk_offset);
++    printk("fInfo.flash_nvram_number_blk                = %d\n", fInfo.flash_nvram_number_blk);
++
++    printk("psi startAddr                               = %x\n", startAddr+FLASH_BASE_ADDR_REG);
++    printk("fInfo.flash_persistent_start_blk            = %d\n", fInfo.flash_persistent_start_blk);
++    printk("fInfo.flash_persistent_blk_offset           = 0x%x\n", (unsigned int)fInfo.flash_persistent_blk_offset);
++    printk("fInfo.flash_persistent_number_blk           = %d\n", fInfo.flash_persistent_number_blk);
+ #endif
+ 
+ }
+diff -urN linux-2.4.17-zig/drivers/char/bcmboard/impl1/board.c linux-2.4.17/drivers/char/bcmboard/impl1/board.c
+--- linux-2.4.17-zig/drivers/char/bcmboard/impl1/board.c	2004-10-11 09:48:15.000000000 +0300
++++ linux-2.4.17/drivers/char/bcmboard/impl1/board.c	2009-11-12 22:07:13.000000000 +0200
+@@ -157,7 +157,7 @@
+ 
+     int ret;
+         
+-    ret = register_chrdev(BOARD_DRV_MAJOR, "bcrmboard", &board_fops );
++    ret = register_chrdev(BOARD_DRV_MAJOR, "brcmboard", &board_fops );
+     if (ret < 0)
+         printk( "brcm_board_init(major %d): fail to register device.\n",BOARD_DRV_MAJOR);
+     else 
+@@ -580,7 +580,7 @@
+ 
+                     default:
+                         ret = -EINVAL;
+-                        printk("Not supported.  invalid command %d\n", ctrlParms.action);
++                        printk("Not supported.  invalid command\n");
+                         break;
+                 }
+                 ctrlParms.result = ret;
+diff -urN linux-2.4.17-zig/drivers/char/Makefile linux-2.4.17/drivers/char/Makefile
+diff -urN linux-2.4.17-zig/include/asm-mips/bcm963xx/board.h linux-2.4.17/include/asm-mips/bcm963xx/board.h
+--- linux-2.4.17-zig/include/asm-mips/bcm963xx/board.h	2004-10-11 09:49:49.000000000 +0300
++++ linux-2.4.17/include/asm-mips/bcm963xx/board.h	2009-11-12 22:05:08.000000000 +0200
+@@ -186,7 +186,7 @@
+ // for the action in BOARD_IOCTL_PARMS for flash operation
+ typedef enum 
+ {
+-    PERSISTENT,
++    PERSISTENT = 3,
+     NVRAM,
+     BCM_IMAGE_CFE,
+     BCM_IMAGE_FS,

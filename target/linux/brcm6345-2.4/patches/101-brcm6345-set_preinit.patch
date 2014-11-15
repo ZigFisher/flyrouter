@@ -1,0 +1,10 @@
+--- linux-2.4-brcm6345/init/main.c.orig	2009-10-23 16:50:51.000000000 +0300
++++ linux-2.4-brcm6345/init/main.c	2009-10-23 16:52:05.000000000 +0300
+@@ -851,6 +851,7 @@
+ 
+ 	if (execute_command)
+ 		execve(execute_command,argv_init,envp_init);
++	execve("/sbin/preinit",argv_init,envp_init);
+ 	execve("/sbin/init",argv_init,envp_init);
+ 	execve("/etc/init",argv_init,envp_init);
+ 	execve("/bin/init",argv_init,envp_init);

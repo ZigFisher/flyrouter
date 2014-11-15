@@ -1,0 +1,1 @@
+bcm_enet.o 23820 original   Broadcom BCM6345A0 Ethernet Network Device v0.1 Dec 15 2004 11:06:33 Internal PHY
