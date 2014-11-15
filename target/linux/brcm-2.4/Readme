@@ -1,0 +1,6 @@
+Old patches:
+ 002-wl_fix.patch
+ 007-sched_use_tsc.patch
+
+Disabled new patches:
+ 100-wl_config.patch
