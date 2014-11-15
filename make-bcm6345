@@ -95,13 +95,13 @@ build(){
 }
 
 upload_firmware() {
-	DESTINATION="/var/www/www.flyrouter.net/downloads/software"
+	DESTINATION="vu2049@hosting:~/htdocs/downloads/software"
 	mkdir -p $DESTINATION/sinus1054/upgrade/2011-testing/
 	cp ${INSTALL_DIR}/firmware-mips-sinus1054/sinus1054* $DESTINATION/sinus1054/upgrade/2011-testing/
 }
 
 upload_packages() {
-	DESTINATION="/var/www/www.flyrouter.net/downloads/software"
+	DESTINATION="vu2049@hosting:~/htdocs/downloads/software"
 	cp ${INSTALL_DIR}/packages-mips-sinus1054/* $DESTINATION/sinus1054/packages/
 }
 

@@ -61,12 +61,12 @@ build(){
 }
 
 upload_firmware() {
-       DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+       DESTINATION="vu2049@hosting:~/htdocs/downloads/software"
        scp ${INSTALL_DIR}/firmware-mipsel-skyrouter/*.trx $DESTINATION/skyrouter/upgrade/2010-current
 }
 
 upload_packages() {
-       DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+       DESTINATION="vu2049@hosting:~/htdocs/downloads/software"
        scp ${INSTALL_DIR}/packages-mipsel-skyrouter/* $DESTINATION/skyrouter/packages/
 }
 
