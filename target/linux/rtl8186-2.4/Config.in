@@ -1,0 +1,47 @@
+choice
+
+	prompt "midge type"
+	default MIDGE_TYPE_TMPFS
+	depends BR2_LINUX_2_4_RTL8186
+	config MIDGE_TYPE_JFFS2
+		bool "jffs2"
+	config MIDGE_TYPE_TMPFS
+		bool "tmpfs"
+
+endchoice
+
+
+config MIDGE_FLASH_SIZE
+	hex "Flash size"
+	depends BR2_LINUX_2_4_RTL8186
+	default "0x200000"
+	help
+		Flash Size in hex
+
+config MIDGE_BOOT_SIZE
+	hex "Size of boot sector"
+	default "0x08000"
+	depends BR2_LINUX_2_4_RTL8186
+	help
+		Size of boot sector (default 0x8000)
+
+config MIDGE_KERNEL_START
+	hex "Kernel entry point"
+	default "0x10000"
+	depends BR2_LINUX_2_4_RTL8186
+	help
+		Start position of kernel (default 0x10000)
+
+config MIDGE_KERNEL_BLOCKS
+	int "Size of kernel partition in 64k blocks"
+	default 10
+	depends BR2_LINUX_2_4_RTL8186
+	help
+		Size of kernel partition
+
+config MIDGE_SQUASHFS_BLOCKS
+	int "Size of read-only partition in 64k blocks"
+	default 10
+	depends BR2_LINUX_2_4_RTL8186
+	help
+		Size of kernel partition

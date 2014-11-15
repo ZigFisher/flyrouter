@@ -1,0 +1,19 @@
+--- linux-2.4.18/rtkload/Makefile	2008-12-06 15:18:40.000000000 +0200
++++ linux-2.4.18/rtkload/Makefile.up	2008-12-06 15:20:12.000000000 +0200
+@@ -1,6 +1,6 @@
+ # The kernel tree you do builds in.
+ 
+-CROSSPATH=
++CROSSPATH=trunk/staging_dir_mips_nofpu/bin/
+ 
+ ifdef EMULATOR
+ EMUOPTS = -DEMULATOR
+@@ -114,7 +114,7 @@
+ 
+ linux.bin: rtkrom
+ 	./cvimg linux rtkrom linux.bin $(LOAD_START_ADDR) 10000		#Erwin
+-	cp linux.bin ../../images/linux.bin					#Erwin
++	cp linux.bin trunk/build_mips_nofpu/linux-2.4-rtl8186/linux.bin
+ 	#@./size_chk vmlinux_img $(LOAD_START_ADDR)
+ 
+ target:	rtkrom $(BOOT_CODE) $(EXT2_IMG)

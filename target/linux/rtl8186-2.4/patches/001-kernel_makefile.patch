@@ -1,0 +1,16 @@
+--- linux-2.4.18/Makefile	2008-12-04 20:28:17.000000000 +0200
++++ linux-2.4.18/Makefile.up	2008-12-06 13:22:11.000000000 +0200
+@@ -16,11 +16,10 @@
+ FINDHPATH	= $(HPATH)/asm $(HPATH)/linux $(HPATH)/scsi $(HPATH)/net
+ 
+ WIVEROOT	= /opt/Wive
+-#CROSSPATH	= /usr/local/bin/
+-CROSSPATH	= /opt/toolchain_mips_lexra/bin/
++CROSSPATH	= 
+ HOSTCC  	= gcc
+ HOSTCFLAGS	= -Wstrict-prototypes -Os -fomit-frame-pointer
+-CROSS_COMPILE 	= mips-linux-
++CROSS_COMPILE	= mips-linux-uclibc-
+ OBJCOPY		= mips-uclibc-objcopy
+ STRIP		= mips-linux-strip
+ COPTS=-DNO_IPV6

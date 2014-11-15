@@ -19,4 +19,4 @@ script; if not, please visit http://www.gnu.org/copyleft/gpl.html for more infor
 Quick start
 ===========
 
-Run: .
+Run: make-DEVNAME
