@@ -1,0 +1,5 @@
+#!/bin/sh
+
+rm -rf build_mipsel/stamp/.webface-* build_mipsel/webface/
+make package/webface-install; (cd ./bin/packages; ../../staging_dir_mipsel/usr/bin/ipkg-make-index . > Packages)
+

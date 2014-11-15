@@ -1,0 +1,32 @@
+You have 2 interfaces:
+ - wifi0 - represents physical hardware
+ - ath0 - the 802.11 interface.
+
+Sequence to get continuous transmition working:
+ # being down ath0 interface
+ ifconfig ath0 down
+
+ # setup desired frequency, rate and txpower on ath0 interface
+ iwconfig ath0 channel 50
+ iwconfig ath0 rate 54M
+ iwconfig ath0 txpower 20
+
+ # load ath_txcont module
+ insmod ath_txcont
+ # if you have more than one wifi interface, you can specify it via device parameter
+ insmod ath_txcont.ko device=wifi2
+
+
+ # being up wifi0 interface
+ ifconfig wifi0 up
+
+ # Vualia, you have continuous xmit working.
+ # To stop ir - bring wifi0 interface down.
+ # and remove ath_txcont module
+ ifconfig wifi0 down
+ rmmod ath_txcont
+
+NOTES:
+ * depending on Your system, you may have not ath0, but let say ath5, or other ethX.
+ * Be sure, that NetworkManager is not configuring Your interfaces. Before 
+ starting continuous transmit - disable network manager to control wireless interfaces.

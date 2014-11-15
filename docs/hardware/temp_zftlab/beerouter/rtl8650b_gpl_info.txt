@@ -1,0 +1,31 @@
+BR6214K_rtl8650-GPL-05012007.tgz - закрытые исходники Ethernet
+WPNT834_1.0_51.tar.gz            - большое кол-во исходников в ядре по RTL86xB
+WRT54GX4_Eng_v1.00.20.tgz        -
+WRV200_1_0_8_GPL.tar.gz          - 
+
+ftp://downloads.netgear.com/files/GPL/
+
+
+ALL:
+belkin_f5d8230_v2-2.00
+br6214k_05012007
+di524up_1.6.chilli-hs
+di524up_revA2
+di604up
+di624s_gpl_source
+di624s_v100036
+di634m_revAx_en_030827
+dir100
+emlinux-rtl865xb
+ic1500_v1.19
+kr1_public_oct102006
+kwgr614_v1.0.1_10.17ww
+kwgr614_v1.1.2_01.10pr
+rp614v4_v1.0.6-06.05ru
+rp614v4_v1.0.7_07.02ko
+wl173_11292006
+wl566gm_1018
+wpnt834_1.0_51
+wrt54gx4_v1.00.20
+wrt54gx_v2.00.20
+wrv200_108_060103

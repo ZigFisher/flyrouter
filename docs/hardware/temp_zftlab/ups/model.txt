@@ -1,0 +1,6 @@
+APC Smart UPS 750
+  [American Power Conversion Smart-UPS 750 FW:651.13.I USB FW:7.3] idVendor=051d, idProduct=0002, SerialNumber: AS0745142730
+
+Eaton NV-1400H :
+  [Cypress Semiconductor USB to Serial] idVendor=0665, idProduct=5161
+
