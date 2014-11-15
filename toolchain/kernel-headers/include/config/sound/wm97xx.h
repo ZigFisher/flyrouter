@@ -1,0 +1,1 @@
+#undef  CONFIG_SOUND_WM97XX

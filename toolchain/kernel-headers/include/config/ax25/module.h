@@ -1,0 +1,1 @@
+#define CONFIG_AX25_MODULE 1

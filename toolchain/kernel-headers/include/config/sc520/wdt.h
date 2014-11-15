@@ -1,0 +1,1 @@
+#undef  CONFIG_SC520_WDT

@@ -1,0 +1,1 @@
+#undef  CONFIG_MTD_DB1X00

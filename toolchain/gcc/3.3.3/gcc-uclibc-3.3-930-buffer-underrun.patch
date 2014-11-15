@@ -1,0 +1,17 @@
+From MirBSD CVS:
+| revision 1.2
+| date: 2007-07-09 23:35:38 +0000;  author: tg;  state: Exp;  lines: +4 -0;  commitid: 1004692C6384B578404;
+| fix an out-of bounds malloc'd array access (buffer underrun) gcc relied on
+| to get a zero into the line and column variables, which was cought by bsd
+| malloc # odds are glibc 2.5/2.6 malloc will catch it too# STUPID IDIOTS!
+--- gcc/gcc/cpperror.c	21 Mar 2005 12:04:34 -0000	1.1
++++ gcc/gcc/cpperror.c	9 Jul 2007 23:35:38 -0000	1.2
+@@ -139,6 +141,8 @@
+ 	line = pfile->line;
+       column = 0;
+     }
++  else if (pfile->cur_token <= pfile->base_run.base)
++    line = column = 0;
+   else
+     {
+       line = pfile->cur_token[-1].line;

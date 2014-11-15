@@ -1,0 +1,1 @@
+#undef  CONFIG_ALIM7101_WDT

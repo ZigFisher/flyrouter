@@ -1,0 +1,1 @@
+#define CONFIG_XFS_FS_MODULE 1

@@ -1,0 +1,1 @@
+#define CONFIG_USB_UHCI_ALT_MODULE 1

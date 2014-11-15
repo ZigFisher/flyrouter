@@ -1,0 +1,40 @@
+diff -urN build-binutils-uclibc-2.14/gas/config/tc-mips.c build-binutils-uclibc-2.14-patched/gas/config/tc-mips.c
+--- build-binutils-uclibc-2.14/gas/config/tc-mips.c	Fri Jul  9 16:58:33 2004
++++ build-binutils-uclibc-2.14-patched/gas/config/tc-mips.c	Fri Jul  9 17:16:34 2004
+@@ -1541,6 +1541,20 @@
+   int nops = 0;
+   bfd_boolean force_new_frag = FALSE;
+ 
++#define BRCM_BMIPS3300_GAS
++#ifdef BRCM_BMIPS3300_GAS
++  char *brcm_env_p = NULL;
++  static int brcm_flags = 0;
++
++  /* This allows the BMIPS3300 fix to be turned off dynamically */
++  if(brcm_flags==0)
++  {
++	  brcm_env_p = getenv("BMIPS3300_GAS");
++	  if(brcm_env_p) brcm_flags = *brcm_env_p-'0';
++	  else brcm_flags = 1;
++  }
++#endif
++
+   /* Mark instruction labels in mips16 mode.  */
+   mips16_mark_labels ();
+ 
+@@ -1780,6 +1794,15 @@
+ 	      && ! (hilo_interlocks
+ 		    || (mips_tune == CPU_R3900 && (pinfo & INSN_MULT)))))
+ 	prev_prev_nop = 1;
++
++#ifdef BRCM_BMIPS3300_GAS
++    else if(! mips_opts.mips16 && brcm_flags==1 &&
++		((prev_prev_insn.insn_opcode&0xe0000000) == 0xa0000000) &&
++		   ((prev_insn.insn_opcode & 0xe0000000) == 0x80000000) &&
++		   ((ip->insn_opcode & 0xe0000000) == 0x80000000))
++				prev_prev_nop = 1;
++#endif
++
+       else
+ 	prev_prev_nop = 0;
+ 

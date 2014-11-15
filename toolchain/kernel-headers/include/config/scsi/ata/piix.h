@@ -1,0 +1,1 @@
+#undef  CONFIG_SCSI_ATA_PIIX

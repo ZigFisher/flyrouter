@@ -1,0 +1,1 @@
+#undef  CONFIG_LAN_SAA9730

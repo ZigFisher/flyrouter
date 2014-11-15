@@ -1,0 +1,1 @@
+#undef  CONFIG_USB_W9968CF

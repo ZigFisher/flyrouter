@@ -1,0 +1,1 @@
+#define CONFIG_USB_STORAGE_HP8200e 1

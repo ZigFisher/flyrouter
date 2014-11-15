@@ -1,0 +1,1 @@
+#define CONFIG_FAT_FS_MODULE 1

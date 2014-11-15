@@ -1,0 +1,1 @@
+#define CONFIG_USB_AUDIO_MODULE 1

@@ -1,0 +1,1 @@
+#define CONFIG_BLUEZ_HCIUART_H4 1

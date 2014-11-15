@@ -1,0 +1,1 @@
+#undef  CONFIG_IDEPCI_SHARE_IRQ

@@ -1,0 +1,1 @@
+#define CONFIG_PRINTER_MODULE 1

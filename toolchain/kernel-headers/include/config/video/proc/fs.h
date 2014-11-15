@@ -1,0 +1,1 @@
+#define CONFIG_VIDEO_PROC_FS 1

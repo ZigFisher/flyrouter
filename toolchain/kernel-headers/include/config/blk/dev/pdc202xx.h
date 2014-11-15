@@ -1,0 +1,1 @@
+#define CONFIG_BLK_DEV_PDC202XX 1

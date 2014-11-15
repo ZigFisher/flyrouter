@@ -1,0 +1,1 @@
+#undef  CONFIG_60XX_WDT

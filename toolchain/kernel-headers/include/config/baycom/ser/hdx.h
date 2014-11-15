@@ -1,0 +1,1 @@
+#undef  CONFIG_BAYCOM_SER_HDX

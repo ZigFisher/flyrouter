@@ -1,0 +1,20 @@
+--- ipkg-utils-1.7/ipkg.py.orig	2006-07-18 01:40:08.000000000 +0300
++++ ipkg-utils-1.7/ipkg.py	2006-07-18 10:23:27.000000000 +0300
+@@ -95,7 +95,7 @@
+             if self.isdeb:
+                 control = os.popen("ar p "+fn+" control.tar.gz | tar xfzO - '*control'","r")
+             else:
+-                control = os.popen("tar xfzO "+fn+" '*control.tar.gz' | tar xfzO - '*control'","r")
++                control = os.popen("tar xfzO "+fn+" --wildcards '*control.tar.gz' | tar xfzO - --wildcards '*control'","r")
+             line = control.readline()
+             while 1:
+                 if not line: break
+@@ -122,7 +122,7 @@
+             if self.isdeb:
+                 data = os.popen("ar p "+fn+" data.tar.gz | tar tfz -","r")
+             else:
+-                data = os.popen("tar xfzO "+fn+" '*data.tar.gz' | tar tfz -","r")
++                data = os.popen("tar xfzO "+fn+" --wildcards '*data.tar.gz' | tar tfz -","r")
+             while 1:
+                 line = data.readline()
+                 if not line: break

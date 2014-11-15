@@ -1,0 +1,10 @@
+--- gcc-3.4.1/intl/Makefile.in.orig	2004-08-15 00:25:20.000000000 -0500
++++ gcc-3.4.1/intl/Makefile.in	2004-08-15 00:25:23.000000000 -0500
+@@ -147,6 +147,7 @@
+ installdirs:
+ installcheck:
+ uninstall:
++install-info:
+ 
+ info dvi ps pdf html:
+ 

@@ -1,0 +1,1 @@
+#undef  CONFIG_COGENT_CSB250

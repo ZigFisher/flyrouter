@@ -1,0 +1,1 @@
+#undef  CONFIG_RADIO_GEMTEK_PCI

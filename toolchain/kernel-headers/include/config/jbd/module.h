@@ -1,0 +1,1 @@
+#define CONFIG_JBD_MODULE 1

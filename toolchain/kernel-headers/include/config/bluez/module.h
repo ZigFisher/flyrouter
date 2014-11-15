@@ -1,0 +1,1 @@
+#define CONFIG_BLUEZ_MODULE 1

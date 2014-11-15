@@ -1,0 +1,20 @@
+--- GNUmakefile.old	2005-03-19 02:48:29.000000000 +0200
++++ GNUmakefile	2009-10-14 10:46:25.000000000 +0300
+@@ -5,8 +5,7 @@
+ LDLIBS = -lz -lm -lstdc++
+ PROGS = mkcramfs cramfsck
+ 
+-#PROGS = mkcramfs cramfsck recompose decompose recomp
+-PROGS = cramfsck decompose recomp
++PROGS = mkcramfs cramfsck recompose decompose recomp
+ 
+ all: $(PROGS)
+ 
+@@ -22,6 +21,6 @@
+ decompose: decompose.o utils.o
+ 
+ distclean clean:
+-	rm -f $(PROGS)
++	rm -f $(PROGS) *.o lzma/*.o
+ 
+ .PHONY: all clean

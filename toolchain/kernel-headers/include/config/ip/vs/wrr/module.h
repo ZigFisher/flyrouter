@@ -1,0 +1,1 @@
+#define CONFIG_IP_VS_WRR_MODULE 1

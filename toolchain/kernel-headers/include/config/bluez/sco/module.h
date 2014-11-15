@@ -1,0 +1,1 @@
+#define CONFIG_BLUEZ_SCO_MODULE 1

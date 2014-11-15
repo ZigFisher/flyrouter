@@ -1,0 +1,1 @@
+#define CONFIG_MINIX_FS_MODULE 1

@@ -1,0 +1,1 @@
+#define CONFIG_IP_VS_WLC_MODULE 1

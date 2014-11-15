@@ -1,0 +1,1 @@
+#undef  CONFIG_ALIM1535_WDT

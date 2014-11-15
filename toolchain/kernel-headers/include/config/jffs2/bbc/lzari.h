@@ -1,0 +1,1 @@
+#define CONFIG_JFFS2_BBC_LZARI 1

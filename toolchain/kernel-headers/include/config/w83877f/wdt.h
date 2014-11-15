@@ -1,0 +1,1 @@
+#undef  CONFIG_W83877F_WDT

@@ -1,0 +1,1 @@
+#define CONFIG_SHAPER_MODULE 1

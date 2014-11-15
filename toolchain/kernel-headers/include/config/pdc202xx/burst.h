@@ -1,0 +1,1 @@
+#define CONFIG_PDC202XX_BURST 1

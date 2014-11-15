@@ -1,0 +1,292 @@
+# 1 "debug_net.h"
+# 1 "<built-in>"
+# 1 "<command line>"
+# 1 "debug_net.h"
+# 1 "/usr/include/linux/time.h" 1 3 4
+
+
+
+# 1 "/usr/include/linux/types.h" 1 3 4
+# 13 "/usr/include/linux/types.h" 3 4
+# 1 "/usr/include/linux/posix_types.h" 1 3 4
+
+
+
+# 1 "/usr/include/linux/stddef.h" 1 3 4
+
+
+
+# 1 "/usr/include/linux/compiler.h" 1 3 4
+# 5 "/usr/include/linux/stddef.h" 2 3 4
+# 5 "/usr/include/linux/posix_types.h" 2 3 4
+# 36 "/usr/include/linux/posix_types.h" 3 4
+typedef struct {
+        unsigned long fds_bits [(1024/(8 * sizeof(unsigned long)))];
+} __kernel_fd_set;
+
+
+typedef void (*__kernel_sighandler_t)(int);
+
+
+typedef int __kernel_key_t;
+typedef int __kernel_mqd_t;
+
+# 1 "/usr/include/asm/posix_types.h" 1 3 4
+# 10 "/usr/include/asm/posix_types.h" 3 4
+typedef unsigned long __kernel_ino_t;
+typedef unsigned short __kernel_mode_t;
+typedef unsigned short __kernel_nlink_t;
+typedef long __kernel_off_t;
+typedef int __kernel_pid_t;
+typedef unsigned short __kernel_ipc_pid_t;
+typedef unsigned short __kernel_uid_t;
+typedef unsigned short __kernel_gid_t;
+typedef unsigned int __kernel_size_t;
+typedef int __kernel_ssize_t;
+typedef int __kernel_ptrdiff_t;
+typedef long __kernel_time_t;
+typedef long __kernel_suseconds_t;
+typedef long __kernel_clock_t;
+typedef int __kernel_timer_t;
+typedef int __kernel_clockid_t;
+typedef int __kernel_daddr_t;
+typedef char * __kernel_caddr_t;
+typedef unsigned short __kernel_uid16_t;
+typedef unsigned short __kernel_gid16_t;
+typedef unsigned int __kernel_uid32_t;
+typedef unsigned int __kernel_gid32_t;
+
+typedef unsigned short __kernel_old_uid_t;
+typedef unsigned short __kernel_old_gid_t;
+typedef unsigned short __kernel_old_dev_t;
+
+
+typedef long long __kernel_loff_t;
+
+
+typedef struct {
+
+
+
+        int __val[2];
+
+} __kernel_fsid_t;
+# 48 "/usr/include/linux/posix_types.h" 2 3 4
+# 14 "/usr/include/linux/types.h" 2 3 4
+
+# 1 "/usr/include/asm/types.h" 1 3 4
+
+
+
+
+
+typedef unsigned short umode_t;
+
+
+
+
+
+
+typedef __signed__ char __s8;
+typedef unsigned char __u8;
+
+typedef __signed__ short __s16;
+typedef unsigned short __u16;
+
+typedef __signed__ int __s32;
+typedef unsigned int __u32;
+
+
+
+
+
+
+
+__extension__ typedef __signed__ long long __s64;
+__extension__ typedef unsigned long long __u64;
+# 16 "/usr/include/linux/types.h" 2 3 4
+
+
+
+typedef __u32 __kernel_dev_t;
+
+
+typedef __kernel_fd_set fd_set;
+
+
+typedef __kernel_dev_t dev_t;
+
+
+typedef __kernel_ino_t ino_t;
+
+
+typedef __kernel_mode_t mode_t;
+
+
+typedef __kernel_nlink_t nlink_t;
+
+
+typedef __kernel_off_t off_t;
+
+typedef __kernel_pid_t pid_t;
+typedef __kernel_daddr_t daddr_t;
+typedef __kernel_key_t key_t;
+typedef __kernel_suseconds_t suseconds_t;
+typedef __kernel_timer_t timer_t;
+typedef __kernel_clockid_t clockid_t;
+typedef __kernel_mqd_t mqd_t;
+# 65 "/usr/include/linux/types.h" 3 4
+typedef __kernel_uid_t uid_t;
+
+typedef __kernel_gid_t gid_t;
+
+
+
+
+typedef __kernel_loff_t loff_t;
+# 81 "/usr/include/linux/types.h" 3 4
+typedef __kernel_size_t size_t;
+
+
+
+
+typedef __kernel_ssize_t ssize_t;
+
+
+
+
+typedef __kernel_ptrdiff_t ptrdiff_t;
+
+
+
+
+typedef __kernel_time_t time_t;
+
+
+
+
+typedef __kernel_clock_t clock_t;
+
+
+
+
+typedef __kernel_caddr_t caddr_t;
+
+
+
+typedef unsigned char u_char;
+typedef unsigned short u_short;
+typedef unsigned int u_int;
+typedef unsigned long u_long;
+
+
+typedef unsigned char unchar;
+typedef unsigned short ushort;
+typedef unsigned int uint;
+typedef unsigned long ulong;
+
+
+
+
+typedef __u8 u_int8_t;
+typedef __s8 int8_t;
+typedef __u16 u_int16_t;
+typedef __s16 int16_t;
+typedef __u32 u_int32_t;
+typedef __s32 int32_t;
+
+
+
+typedef __u8 uint8_t;
+typedef __u16 uint16_t;
+typedef __u32 uint32_t;
+
+
+typedef __u64 uint64_t;
+typedef __u64 u_int64_t;
+typedef __s64 int64_t;
+# 149 "/usr/include/linux/types.h" 3 4
+typedef unsigned long sector_t;
+# 175 "/usr/include/linux/types.h" 3 4
+typedef __u16 __le16;
+typedef __u16 __be16;
+typedef __u32 __le32;
+typedef __u32 __be32;
+typedef __u64 __le64;
+typedef __u64 __be64;
+
+
+struct ustat {
+        __kernel_daddr_t f_tfree;
+        __kernel_ino_t f_tinode;
+        char f_fname[6];
+        char f_fpack[6];
+};
+# 5 "/usr/include/linux/time.h" 2 3 4
+# 14 "/usr/include/linux/time.h" 3 4
+struct timespec {
+        time_t tv_sec;
+        long tv_nsec;
+};
+
+
+
+
+struct timeval {
+        time_t tv_sec;
+        suseconds_t tv_usec;
+};
+
+
+struct timezone {
+        int tz_minuteswest;
+        int tz_dsttime;
+};
+# 153 "/usr/include/linux/time.h" 3 4
+struct itimerspec {
+        struct timespec it_interval;
+        struct timespec it_value;
+};
+
+
+
+struct itimerval {
+        struct timeval it_interval;
+        struct timeval it_value;
+};
+# 2 "debug_net.h" 2
+
+
+void count_delta(struct timeval *tv1,struct timeval tv2);
+void debug_print_tv(struct timeval *tv,char *str);
+void debug_div_tv(struct timeval *tv1,u32 z);
+void debug_sum_tv(struct timeval *tv1,struct timeval tv2);
+# 63 "debug_net.h"
+({int __ret; struct timeval tv1,tv2; do_gettimeofday(&tv1); __ret=NF_HOOK(a, b, c, d, e, f); do_gettimeofday(&tv2); debug_count_delta(&tv1,tv2); debug_sum_tv(&debug_ip_a,tv1); debug_ip_a_cnt+=1; __ret; });
+({ rez.tv_sec=counter_var.tv_sec; rez.tv_usec=counter_var.tv_usec; debug_div_tv(rez, counter_var_cnt ); });
+
+extern struct timeval debug_ip_arp;
+extern struct timeval debug_ip_igmp;
+extern struct timeval debug_ip_input;
+extern struct timeval debug_ip_output_1;
+extern struct timeval debug_ip_output_2;
+extern struct timeval debug_ip_output_3;
+extern struct timeval debug_ip_output_4;
+extern struct timeval debug_ip_output_5;
+extern struct timeval debug_ip_output_6;
+extern struct timeval debug_ip_ipmp;
+extern struct timeval debug_ip_vs_xmit;
+extern struct timeval debug_ip_ipt_REJECT;
+extern struct timeval debug_ip_raw;
+extern struct timeval debug_ip_xfrm4_input;
+extern struct timeval debug_ip_xfrm4_output;
+
+extern u32 debug_ip_arp_cnt;
+extern u32 debug_ip_igmp_cnt;
+extern u32 debug_ip_input_cnt;
+extern u32 debug_ip_output_1_cnt;
+extern u32 debug_ip_output_2_cnt;
+extern u32 debug_ip_output_3_cnt;
+extern u32 debug_ip_output_4_cnt;
+extern u32 debug_ip_output_5_cnt;
+extern u32 debug_ip_output_6_cnt;

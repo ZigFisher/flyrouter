@@ -1,0 +1,1 @@
+#undef  CONFIG_SCSI_NCR53C8XX

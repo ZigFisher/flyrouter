@@ -1,0 +1,1 @@
+#undef  CONFIG_ACQUIRE_WDT

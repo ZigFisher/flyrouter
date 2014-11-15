@@ -1,0 +1,1 @@
+#undef  CONFIG_IDEDMA_PCI_WIP

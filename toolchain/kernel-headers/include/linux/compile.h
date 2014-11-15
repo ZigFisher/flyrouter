@@ -1,0 +1,6 @@
+#define UTS_VERSION "#1 Mon Mar 13 18:56:31 CET 2006"
+#define LINUX_COMPILE_TIME "18:56:31"
+#define LINUX_COMPILE_BY "root"
+#define LINUX_COMPILE_HOST "ux-2y02"
+#define LINUX_COMPILE_DOMAIN "inf.fh-bonn-rhein-sieg.de"
+#define LINUX_COMPILER "gcc version 3.4.4 (ZFT Lab. and FlyRouter Team)"

@@ -1,0 +1,1 @@
+#define CONFIG_WAN_ROUTER_MODULE 1

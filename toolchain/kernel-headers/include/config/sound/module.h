@@ -1,0 +1,1 @@
+#define CONFIG_SOUND_MODULE 1

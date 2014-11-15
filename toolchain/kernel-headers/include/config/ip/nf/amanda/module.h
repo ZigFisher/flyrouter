@@ -1,0 +1,1 @@
+#define CONFIG_IP_NF_AMANDA_MODULE 1
