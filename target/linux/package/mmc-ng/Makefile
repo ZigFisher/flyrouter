@@ -9,7 +9,7 @@ PKG_RELEASE:=1
 PKG_MD5SUM:=
 
 #PKG_SOURCE_URL:=http://programmingstuff.free.fr/files/openwrt/whiterussian/mmc/src/
-PKG_SOURCE_URL:=http://builder.ci.ukrpack.net/sources/
+PKG_SOURCE_URL:=http://flyrouter.net/sources/
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_CAT:=zcat
 
