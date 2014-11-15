@@ -1,0 +1,13 @@
+--- linux/arch/mips/bcm947xx/time.c	2006-11-06 01:19:44.000000000 +0300
++++ linux.5354/arch/mips/bcm947xx/time.c	2007-09-29 01:14:42.000000000 +0400
+@@ -56,6 +56,10 @@
+ 	write_c0_count(0);
+ 	write_c0_compare(0xffff);
+ 
++	/* 5354 could run both on 200 & 240 Mhz -- use nvram setting */
++	if (sb_chip(sbh) == BCM5354_CHIP_ID && nvram_match("clkfreq", "200"))
++		hz = 200000000;
++	else
+ 	if (!(hz = sb_cpu_clock(sbh)))
+ 		hz = 100000000;
+ 

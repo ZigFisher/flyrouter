@@ -1,0 +1,12 @@
+--- linux-2.4.32-orig/arch/mips/bcm947xx/setup.c	2010-01-22 19:02:20.000000000 +0200
++++ linux-2.4.32-new/arch/mips/bcm947xx/setup-patched.c	2010-01-22 19:02:15.000000000 +0200
+@@ -238,8 +238,7 @@
+ 	static char s[32];
+ 
+ 	if (bcm947xx_sbh) {
+-		sprintf(s, "Broadcom BCM%X chip rev %d", sb_chip(bcm947xx_sbh),
+-			sb_chiprev(bcm947xx_sbh));
++		sprintf(s, "BCM%X", sb_chip(bcm947xx_sbh));
+ 		return s;
+ 	}
+ 	else

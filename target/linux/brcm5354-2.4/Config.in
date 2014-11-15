@@ -1,0 +1,32 @@
+choice
+	prompt "skyrouter device target"
+	default SKYROUTER_TARGET_WL520GU
+	depends BR2_LINUX_2_4_BRCM5354
+	config SKYROUTER_TARGET_DIR320
+		bool "DIR-320"
+	config SKYROUTER_TARGET_WL520GU
+		bool "WL-520GU"
+	config SKYROUTER_TARGET_WL520GC
+		bool "WL-520GC"
+
+endchoice
+
+choice
+	prompt "skyrouter protect firmware"
+	default SKYROUTER_PROTECT_FLYAVR
+	depends BR2_LINUX_2_4_BRCM5354
+	config SKYROUTER_PROTECT_FLYAVR
+		bool "FlyAVR"
+	config SKYROUTER_PROTECT_FLYMAC
+		bool "FlyMAC"
+
+endchoice
+
+config BR2_PACKAGE_KMOD_BRCM_WL
+	prompt "kmod-brcm-wl...................... Broadcom Wireless Network Driver"
+	tristate
+	depends BR2_LINUX_2_4_BRCM5354
+	default y
+	help
+	  Proprietary driver for Broadcom Wireless chipsets
+
