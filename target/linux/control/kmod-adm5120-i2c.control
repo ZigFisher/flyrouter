@@ -1,0 +1,6 @@
+Package: kmod-adm5120-i2c
+Priority: optional
+Section: sys
+Maintainer: Steve Tsai <steve@synso.com> & DL4HUF <dl4huf@web.de>
+Source: buildroot internal
+Description: Driver for I2C-Bus over GPIO                                                                                                          x  

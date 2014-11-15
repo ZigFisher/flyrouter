@@ -1,0 +1,4 @@
+Package: kmod-allmodules
+Priority: optional
+Section: sys
+Description: Full kernel modules package

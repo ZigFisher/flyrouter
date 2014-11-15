@@ -1,0 +1,6 @@
+Package: kmod-usb-serial-cp210x
+Priority: optional
+Section: sys
+Description: Kernel Support for Silicon Laboratories CP2101/CP2102/CP2103 USB-to-Serial converters
+ 
+

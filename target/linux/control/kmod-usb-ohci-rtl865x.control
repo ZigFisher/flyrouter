@@ -1,0 +1,4 @@
+Package: kmod-usb-ohci-rtl865x
+Priority: optional
+Section: sys
+Description: Kernel driver for RTL865xB OHCI USB 

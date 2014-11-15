@@ -1,0 +1,61 @@
+#!/bin/sh
+
+KERNEL_MAXSIZE=$((0x10000*$SG_KERNEL_BLOCKS))
+JFFS2_MAXSIZE=$((0x10000*$SG_FS_BLOCKS))
+
+# creating misc tempfiles
+TMPVMLINUX_BIN="vmlinux.bin-$$-`date +%N`"
+TMPVMLINUZ="vmlinuz-$$-`date +%N`"
+TMPROOT="root-$$-`date +%N`"
+VMLINUX=$2
+JFFS2=$1
+
+die(){
+    echo Error: $@; 
+    exit 1;
+}
+
+get_file_size(){
+    ls -la $1 | awk '{print $5}'
+}
+
+check_max_size(){
+    file=$1
+    max_size=$2
+    file_size="`get_file_size $file`"
+    if [ $file_size -gt $max_size ]; then 
+        die "$file has size $file_size what is bigger than max_size $max_size"
+    fi
+}
+
+echo "KERNEL_MAXSIZE=$KERNEL_MAXSIZE ($(($KERNEL_MAXSIZE/1024))k)"
+echo "JFFS2_MAXSIZE=$JFFS2_MAXSIZE ($(($JFFS2_MAXSIZE/1024))k)"
+
+#[ "$KERNEL_MAXSIZE" -gt 0 ] || die "Bad KERNEL_MAXSIZE"
+#[ "$JFFS2_MAXSIZE" -gt 0 ] || die "Bad JFFS2_MAXSIZE"
+#[ -x "$MKSYSHDR" ] || die "cannot find mksyshdr at '$MKSYSHDR'"
+#[ -x "$PADFILE" ] || die "cannot find padfile at '$PADFILE'"
+
+
+
+    # create firmware
+    cd ..
+    echo -n "Creating midge firmware..."
+    test -f $VMLINUZ || die "Unable to find $VMLINUZ"
+    test -f $JFFS2 || die "Unable to find $JFFS2"
+
+    ${CROSS_COMPILE}objcopy -O binary $VMLINUX $TMPVMLINUX_BIN
+    gzip -c $TMPVMLINUX_BIN > $TMPVMLINUZ
+
+    check_max_size $JFFS2 $JFFS2_MAXSIZE
+    check_max_size $TMPVMLINUZ $KERNEL_MAXSIZE
+    cp $JFFS2 $TMPROOT
+
+    $PADFILE $TMPVMLINUZ $KERNEL_MAXSIZE
+    # adding jffs2
+    cat $TMPROOT >>$TMPVMLINUZ
+    cat $TMPVMLINUZ > $IMG_NAME
+    rm $TMPVMLINUZ $TMPROOT $TMPVMLINUX_BIN 
+
+    echo " done."
+

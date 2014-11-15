@@ -1,0 +1,325 @@
+--- linux-2.6.16/drivers/net/adm5120sw.c.orig	2007-01-12 10:51:55.000000000 +0200
++++ linux-2.6.16/drivers/net/adm5120sw.c	2007-01-12 11:46:42.000000000 +0200
+@@ -53,10 +53,9 @@
+ #include <linux/in6.h>
+ 
+ #include <asm/checksum.h>
+-#define ADM5120_DEBUG
++//#define ADM5120_DEBUG
+ #define DEBUG_DEF 6
+ #include <asm/am5120/debug.h>
+-#include <linux/debug_net.h>
+ #include <linux/delay.h>
+ 
+ #include "adm5120sw.h"
+@@ -430,11 +429,11 @@
+     			PROC FS
+   ------------------------------------------------------*/
+ #define MAX_PROC_STR 256
+-#define PFS_ENTS  4
+ #define PFS_VLAN0 0
+ #define PFS_VLAN1 1
+ #define PFS_VLAN2 2
+ #define PFS_VLAN3 3
++#define PFS_STATUS 4
+ char adm5120_procdir[]="sys/net/adm5120sw";
+ struct proc_dir_entry *adm5120_entry;
+ struct proc_dir_entry *vlan_entry;
+@@ -451,14 +450,19 @@
+ static int
+ store_vlan2port(struct file *file,const char *buffer,unsigned long count,void *data);
+ 
++static int 
++read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data); 
+ 
+-static struct dev_entrie entries[PFS_ENTS]={
++static struct dev_entrie entries[]={
+         { "eth0", PFS_VLAN0, NULL, 400, NULL, store_vlan2port },
+ 	{ "eth1", PFS_VLAN1, NULL, 400, NULL, store_vlan2port },
+ 	{ "eth2", PFS_VLAN2, NULL, 400, NULL, store_vlan2port },
+ 	{ "eth3", PFS_VLAN3, NULL, 400, NULL, store_vlan2port },
++	{ "status", PFS_STATUS, NULL, 400, read_switch_status, NULL },
+ };
+ 
++#define PFS_ENTS  (sizeof(entries)/sizeof(struct dev_entrie))
++
+ static int init_adm5120_in_procfs(void);
+ static void del_adm5120_from_procfs(void);
+ 
+@@ -577,6 +581,33 @@
+ 	return count;
+ }
+ 
++static int 
++read_switch_status(char *buf, char **start, off_t offset, int count, int *eof, void *data) { 
++/* 
++ *      Original code by SVIt v1(a)t5.ru 
++ *      ported to kernel mode by Vlad Moskovets midge(a)vlad.org.ua 20061002 
++ * 
++ */ 
++	int len = 0, i, j; 
++	i = ADM5120_SW_REG(PHY_st_REG); 
++	for ( j=0; j < 5; j++ ) { 
++	        len += sprintf(buf + len, (j)?"Port%d\t":"WAN\t",j); 
++	        len += sprintf(buf + len, (i & (1<<j))?"up\t":"down\t"); 
++	        if (i & (1<<j)) { 
++	                len += sprintf(buf + len, (i & (256<<j)?"100M\t":"10M\t")); 
++	                len += sprintf(buf + len, (i & (65536<<j)?"full-duplex\t":"half-duplex\t")); 
++	        } else  
++	                len += sprintf(buf + len, "-\t-\t\t"); 
++
++                len += sprintf(buf + len, "%s\t", (sw_context->port[j].status == PORT_ENABLED)?"enabled":"disabled"); 
++                len += sprintf(buf + len, "vlanid=%d\t", (int) sw_context->port[j].vlanId); 
++                len += sprintf(buf + len, "unit=%d\t", (int) sw_context->port[j].ifUnit); 
++                len += sprintf(buf + len, "\n");  
++	} 
++
++        return len; 
++} 
++
+ /*
+ static int
+ store_vlan_sw(struct file *file,const char *buffer,unsigned long count,void *data)
+@@ -990,10 +1021,7 @@
+ 
+ 	memcpy((char *)&boardCfg, (char *)PA2VA(ADM5120SW_BOARD_CFG_ADDR), sizeof (boardCfg));
+ 	if (boardCfg.macmagic != MAC_MAGIC)
+-	{
+-	    printk("ADM5120 Config partition invalid, using default,");
+ 	    memmove(&boardCfg.mac[0][0], ADM5120SW_DEFAULT_MAC , 6);
+-	}
+ 	printk("ADM5120 MAC: %02X:%02X:%02X:%02X:%02X:%02X\n",
+ 		    boardCfg.mac[0][0],boardCfg.mac[0][1],
+ 		    boardCfg.mac[0][2],boardCfg.mac[0][3],
+@@ -1009,7 +1037,7 @@
+ 	    } else
+ 		device_present++;
+ 	}
+-        result = request_irq(SW_IRQ, swdrv_ProcessInt, SA_SHIRQ | SA_SAMPLE_RANDOM, "adm5120_sw",&sw_context);
++        result = request_irq(SW_IRQ, swdrv_ProcessInt,SA_SHIRQ,"adm5120_sw",&sw_context);
+         if (result)
+             return -ENODEV;
+ 								
+@@ -1040,222 +1068,3 @@
+ module_init(adm5120switch_init);
+ module_exit(adm5120switch_cleanup);
+ 
+-
+-/*----------------DEBUG------------------------------------------
+-
+-char adm5120_procdir[]="net/adm5120sw";
+-struct proc_dir_entry *adm5120_entry;
+-struct proc_dir_entry *sw_state,*phy_state,*nf_time;
+-static char *buffer=NULL;
+-
+-static int init_adm5120_in_procfs(void);
+-static void del_adm5120_from_procfs(void);
+-static int show_switch_state(char *,char **,off_t,int ,int *,void *);
+-static int show_switch_PHY_ctl4(char *,char **,off_t,int ,int *,void *);
+-
+-static int show_irq_num(char *,char **,off_t,int ,int *,void *);
+-static int clear_irq_num(struct file *file,const char *buffer,unsigned long count,void *data);
+-
+-static int show_nf_time(char *,char **,off_t,int ,int *,void *);
+-static int clear_nf_time(struct file *file,const char *buffer,unsigned long count,void *data);
+-
+-static int
+-set_entry(struct proc_dir_entry *ent,read_proc_t *fread,write_proc_t *fwrite)
+-{
+-    ent->owner=THIS_MODULE;
+-    ent->read_proc=fread;
+-    ent->write_proc=fwrite;
+-    return 0;
+-}
+-							
+-
+-static int
+-init_adm5120_in_procfs(void){
+-
+-    adm5120_entry=proc_mkdir(adm5120_procdir,NULL);
+-    if( adm5120_entry==NULL )
+-        return -ENOMEM;
+-    if( !(sw_state=create_proc_entry("switch_state",444,adm5120_entry) ) )
+-	return -ENOMEM;
+-    set_entry(sw_state,show_switch_state,NULL);
+-			
+-    if( !(phy_state=create_proc_entry("irq_num",444,adm5120_entry) ) )
+-	return -ENOMEM;
+-    if( set_entry(phy_state,show_irq_num,clear_irq_num) )
+-        return -ENOMEM;
+-
+-    if( !(nf_time=create_proc_entry("nf_time",444,adm5120_entry) ) )
+-	return -ENOMEM;
+-    if( set_entry(nf_time,show_nf_time,clear_nf_time) )
+-        return -ENOMEM;
+-
+-
+-    return 0;
+-}        
+-
+-static void
+-del_adm5120_from_procfs(void){
+-
+-    remove_proc_entry("switch_state",adm5120_entry);
+-    remove_proc_entry("irq_num",adm5120_entry);    
+-    remove_proc_entry("nf_time",adm5120_entry);    
+-    remove_proc_entry("",adm5120_entry);    
+-
+-    if( buffer!=NULL )
+-	kfree(buffer);
+-}        
+-
+-		
+-char *get_switch_status(int *len)
+-{
+-    char *buf=kmalloc(2*PAGE_SIZE,GFP_KERNEL);
+-    PRXDESC_T RxDesc=sw_context->rxL.hwDesc;
+-    PTXDESC_T TxDesc=sw_context->txL.hwDesc;
+- 
+-    PTX_DRV_DESC_T tdrvDesc=sw_context->txL.drvDesc;
+-    PRX_DRV_DESC_T rdrvDesc=sw_context->rxL.drvDesc;
+-
+-    
+-    int ind=0;
+-    int i;
+-    ind+=sprintf(buf+ind,"PHY_ST:%08x\n",(unsigned int)ADM5120_SW_REG(PHY_st_REG));
+-    ind+=sprintf(buf+ind,"Port_conf2:%08x\n",(unsigned int)ADM5120_SW_REG(Port_conf2_REG));
+-    ind+=sprintf(buf+ind,"PHY_ctl2:%08x\n",(unsigned int)ADM5120_SW_REG(PHY_cntl1_REG));    
+-    ind+=sprintf(buf+ind,"PHY_ctl3:%08x\n",(unsigned int)ADM5120_SW_REG(PHY_cntl3_REG));        
+-
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-//    ind+=sprintf("PHY_ST:%08x ",ADM5120_SW_REG(PHY_st_REG));    
+-
+-    ind+=sprintf(buf+ind,"TX_DESC:\n");
+-    for(i=0;i<NUM_TX_L_DESC;i++)
+-	ind+=sprintf(buf+ind,"%d: %08x %08x skb=%08x\n",i,(unsigned int)(TxDesc+i)->buf1cntl,
+-		    (unsigned int)(TxDesc+i)->pktcntl,(unsigned int)(tdrvDesc+i)->skb );
+-
+-    ind+=sprintf(buf+ind,"RX_DESC:\n");
+-    for(i=0;i<NUM_RX_L_DESC;i++)
+-	ind+=sprintf(buf+ind,"%d: %08x skb=%08x, skb->data=%08x\n",i,
+-		    (unsigned int)(RxDesc+i)->buf1cntl,
+-		    (unsigned int)(rdrvDesc+i)->skb,(unsigned int)(rdrvDesc+i)->skb->data );
+-    *len=ind;
+-    return buf;
+-}		    				
+-      
+-
+-
+-static int show_switch_state(char* page, char** start, off_t off, int count, int* eof, void* data)
+-{
+-
+-    static int buff_index=0,buff_len=0;
+-    int i,j;
+-
+-    PDEBUG(5,"page=%08x,offset=%d,count=%d",(u32)page,off,count);    
+-    if( buffer==NULL ){
+-	buffer=get_switch_status(&buff_len);
+-	buffer[buff_len]=0;
+-	PDEBUG(5,"get string: len=%d",buff_len);    
+-    }
+-    
+-    j=buff_index;
+-    for(i=0;i<count && buff_index<=buff_len;i++,buff_index++)
+-	page[off+i]=buffer[buff_index];
+-
+-    PDEBUG(5,"ind before: %d,ind after: %d",j,buff_index);    	        
+-    j=buff_index-j;
+-    if( buff_index>buff_len){
+-	buff_index=0;
+-	buff_len=0;
+-	kfree(buffer);
+-	buffer=NULL;
+-	PDEBUG(5,"Read all buffer:");    	
+-	*eof=1;
+-    }
+-    return j;
+-}
+-
+-
+-static int
+-show_irq_num(char* page, char** start, off_t off, int count, int* eof, void* data)
+-{
+-    int len;
+-    len=snprintf(page,count,"tx_int=%d,tx_req=%d\nrx_int=%d\n",tx_int,tx_req,
+-		    rx_int);
+-
+-    len+=snprintf(page+len,count,"cpuh_int=%d sde_int=%d rde_int=%d\n",
+-		cpuh_int,sde_int, rde_int);
+-
+-    len+=snprintf(page+len,count,"p0qf_int=%d p1qf_int=%d p2qf_int=%d\np3qf_int=%d p4qf_int=%d p5qf_int=%d\n",
+-		    p0qf_int,p1qf_int,p2qf_int,p3qf_int,p4qf_int,p5qf_int);
+-
+-    len+=snprintf(page+len,count,"cpup_int=%d\n",
+-		    cpup_int);
+-    *eof=1;
+-    return len;
+-}
+-
+-static int
+-clear_irq_num(struct file *file,const char *buffer,unsigned long count,void *data)
+-{
+-    tx_int=rx_int=tx_req=0;
+-    cpuh_int=sde_int=rde_int=0;
+-    p0qf_int=p1qf_int=p2qf_int=0;
+-    p3qf_int=p4qf_int=p5qf_int=0;
+-    cpup_int=0;
+-    
+-    return count;
+-}
+-
+-
+-static int
+-show_nf_time(char* page, char** start, off_t off, int count, int* eof, void* data)
+-{
+-    int len=0;
+-    struct timeval tv;
+-    char str[255];
+-
+-
+-    DEBUG_NET_OUTPUT(arp,str);
+-    len+=snprintf(page+len,count,"ip_arp:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(igmp,str);    
+-    len+=snprintf(page+len,count,"ip_igmp:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(input,str);    
+-    len+=snprintf(page+len,count,"ip_input:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(output,str);    
+-    len+=snprintf(page+len,count,"ip_output:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(ipmr,str);    
+-    len+=snprintf(page+len,count,"ip_ipmr:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(forward,str);    
+-    len+=snprintf(page+len,count,"ip_forward:\t%s\n",str);    
+-
+-    DEBUG_NET_OUTPUT(hook,str);    
+-    len+=snprintf(page+len,count,"ip_hook:\t%s\n",str);    
+-
+-    *eof=1;
+-    return len;
+-}
+-
+-static int
+-clear_nf_time(struct file *file,const char *buffer,unsigned long count,void *data)
+-{
+-    return count;
+-}
+-
+-
+-
+-
+-
+-/*
+-static int show_switch_PHY_ctl4(char *,char **,off_t,int ,int *,void *){
+-
+-}
+-*/
+-
+-/*----------------DEBUG------------------------------------------*/

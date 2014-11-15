@@ -1,0 +1,95 @@
+#!/bin/sh -x
+
+set -e 
+
+while getopts k:s:o: Option; do
+	case $Option in
+	h)	MAKECSYS=true
+		;;
+	k)	VMLINUZ=$OPTARG
+		;;
+	s)	SQUASHFS=$OPTARG
+		;;
+	o)	MIDGE_IMAGE=$OPTARG
+		;;
+	esac
+done
+
+KERNEL_MAXSIZE=$((0x10000*$MIDGE_KERNEL_BLOCKS)) 
+SQUASHFS_MAXSIZE=$((0x10000*$MIDGE_SQUASHFS_BLOCKS))
+DATAFS_MAXSIZE=$((0x10000*$MIDGE_DATAFS_BLOCKS))
+
+die(){
+    echo Error: $@; 
+    exit 1;
+}
+
+get_file_size(){
+    ls -la $1 | awk '{print $5}'
+}
+
+check_max_size(){
+    file=$1
+    max_size=$2
+    file_size="`get_file_size $file`"
+    if [ $file_size -gt $max_size ]; then 
+        die "$file has size $file_size what is bigger than max_size $max_size"
+    fi
+}
+
+echo "KERNEL_MAXSIZE=$KERNEL_MAXSIZE ($(($KERNEL_MAXSIZE/1024))k)"
+echo "SQUASHFS_MAXSIZE=$SQUASHFS_MAXSIZE ($(($SQUASHFS_MAXSIZE/1024))k)"
+
+[ "$KERNEL_MAXSIZE" -gt 0 ] || die "Bad KERNEL_MAXSIZE"
+[ "$SQUASHFS_MAXSIZE" -gt 0 ] || die "Bad SQUASHFS_MAXSIZE"
+[ -x "$MKSYSHDR" ] || die "cannot find mksyshdr at '$MKSYSHDR'"
+[ -x "$PADFILE" ] || die "cannot find padfile at '$PADFILE'"
+
+
+
+    # creating misc tempfiles
+    TMPVMLINUZ="/tmp/vmlinuz-$$-`date +%N`"
+    TMPROOT="/tmp/root-$$-`date +%N`"
+    TMPCSYS="/tmp/csys-$$-`date +%N`"
+
+    # create firmware
+    echo -n "Creating midge firmware..."
+    test -f $VMLINUZ || die "Unable to find $VMLINUZ"
+    test -f $SQUASHFS || die "Unable to find $SQUASHFS"
+    check_max_size $SQUASHFS $SQUASHFS_MAXSIZE
+    check_max_size $VMLINUZ $KERNEL_MAXSIZE
+    cp $VMLINUZ $TMPVMLINUZ
+    cp $SQUASHFS $TMPROOT
+
+	if [ "$MAKECSYS" = "yes" ]; then
+		$PADFILE $TMPVMLINUZ $(($KERNEL_MAXSIZE-12))
+		$PADFILE $TMPROOT $SQUASHFS_MAXSIZE
+		# adding squashfs
+		cat $TMPROOT >>$TMPVMLINUZ
+		# adding zero datafs
+		dd if=/dev/zero bs=1024 count=1 >>$TMPVMLINUZ
+		$MKSYSHDR $TMPCSYS $TMPVMLINUZ 
+		cat $TMPCSYS $TMPVMLINUZ >${MIDGE_IMAGE}
+		rm $TMPVMLINUZ $TMPROOT $TMPCSYS
+	else
+		$PADFILE $TMPVMLINUZ $KERNEL_MAXSIZE
+		$PADFILE $TMPROOT $SQUASHFS_MAXSIZE
+		# adding squashfs
+		cat $TMPROOT >>$TMPVMLINUZ
+		# adding zero datafs
+		dd if=/dev/zero bs=1024 count=1 >>$TMPVMLINUZ
+		cat $TMPVMLINUZ > ${MIDGE_IMAGE}
+		rm $TMPVMLINUZ $TMPROOT
+	fi
+
+    echo " done."
+    
+
+#    cp $VMLINUZ $TMPVMLINUZ
+#    cp $SQUASHFS $TMPROOT
+#    $PADFILE $TMPVMLINUZ $KERNEL_MAXSIZE
+#    $PADFILE $TMPROOT $SQUASHFS_MAXSIZE
+#    cat $TMPROOT >>$TMPVMLINUZ
+#    cp $TMPVMLINUZ ${FIRMWARE_BASE}.bin
+#    rm $TMPVMLINUZ $TMPROOT 
+

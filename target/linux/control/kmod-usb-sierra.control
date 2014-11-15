@@ -1,0 +1,4 @@
+Package: kmod-usb-sierra
+Priority: optional
+Section: sys
+Description: Kernel Support for USB Sierra modems and dongles

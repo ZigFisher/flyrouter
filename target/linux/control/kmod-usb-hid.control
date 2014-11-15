@@ -1,0 +1,4 @@
+Package: kmod-usb-hid
+Priority: optional
+Section: sys
+Description: Kernel driver for USB HID devices

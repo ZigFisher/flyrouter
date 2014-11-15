@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+
+# Creates midge.conf at buildtime
+
+set -e
+
+tmp="/tmp/midge.conf.$$-`date +%N`"
+cat >$tmp <<EOF
+#!/bin/sh
+MIDGE_VERSION_MAJOR=$MIDGE_VERSION_MAJOR
+MIDGE_VERSION_MINOR=$MIDGE_VERSION_MINOR
+MIDGE_TYPE=$MIDGE_TYPE
+MIDGE_BUILD_DATE="`date +%Y%m%d`"
+MIDGE_BUILD_TIME="`date +%H:%M:%S`"
+# MTD Partitions 
+KERNEL_PARTITION=/dev/mtdblock/1
+KERNEL_PARTITION_SIZE=$(($MIDGE_KERNEL_BLOCKS*0x10000))
+INITFS_PARTITION=/dev/mtdblock/2
+INITFS_PARTITION_SIZE=$(($MIDGE_SQUASHFS_BLOCKS*0x10000))
+DATAFS_PARTITION=/dev/mtdblock/3 # jffs2 or raw partition depending on MIDGE_TYPE
+DATAFS_PARTITION_SIZE=$(($MIDGE_DATAFS_BLOCKS*0x10000))
+#SD_MOUNT=yes
+#SD_SYMLINK=yes
+#SD_OPTIONS=ro
+#SD_FSTYPE=ext2
+#SD_DIR=/mnt/usb
+#SD_DEV=/dev/scsi/host0/bus0/target0/lun0/part1
+EOF
+
+if [ "$MIDGE_TYPE" = "tmpfs" ]; then
+	cat >>$tmp <<EOF
+SAVE_LIST=/etc/midge.save
+DATAFS_DECOMPRESSOR=zcat
+DATAFS_COMMPRESSOR=gzip
+EOF
+
+fi
+
+while [ -n "$1" ];
+do 
+  cat $tmp >$1
+  shift
+done
+
+rm $tmp
+

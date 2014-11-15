@@ -1,0 +1,32 @@
+#
+
+choice
+
+        prompt "fs type"
+        default SG_FSTYPE_JFFS2
+        depends BR2_LINUX_2_6_ADM5120 || BR2_LINUX_2_6_SIGRAND5120
+	
+	config SG_FSTYPE_JFFS2
+    		bool 
+		prompt "jffs2"
+	config SG_FSTYPE_TMPFS
+    		bool 
+		prompt "tmpfs"
+
+endchoice
+						
+
+
+config SG_KERNEL_BLOCKS
+	int "Size of kernel partition in 64k blocks"
+	default 20
+	depends BR2_LINUX_2_6_ADM5120 || BR2_LINUX_2_6_SIGRAND5120
+	help
+		Size of kernel partition
+
+config SG_FS_BLOCKS
+	int "Size of read-only partition in 64k blocks"
+	default 490
+	depends BR2_LINUX_2_6_ADM5120 || BR2_LINUX_2_6_SIGRAND5120
+	help
+		Size of kernel partition

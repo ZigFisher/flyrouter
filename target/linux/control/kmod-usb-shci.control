@@ -1,0 +1,6 @@
+Package: kmod-usb-shci
+Priority: optional
+Section: sys
+Maintainer: Vladislav Moskovets <adm5120@vlad.org.ua>
+Source: buildroot internal
+Description: Driver for ADM5120 USB subsystem
