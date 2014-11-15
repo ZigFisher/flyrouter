@@ -1,0 +1,4 @@
+Package: alsa-lib
+Priority: optional
+Section: multimedia
+Description: ALSA (Advanced Linux Sound Architecture) library

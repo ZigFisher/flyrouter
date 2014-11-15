@@ -1,0 +1,10 @@
+config BR2_PACKAGE_ALSA-LIB
+	prompt "alsa-lib.......................... ALSA (Advanced Linux Sound Architecture) library"
+	tristate
+	default m if CONFIG_DEVEL
+	help
+	  ALSA (Advanced Linux Sound Architecture) library
+	  This is the library package for alsa, needed by some userspace programs.
+	  You must have enabled the ALSA support in the kernel.
+	  
+	  http://www.alsa-project.org/

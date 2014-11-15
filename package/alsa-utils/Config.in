@@ -1,0 +1,39 @@
+menu "alsa-utils........................ ALSA (Advanced Linux Sound Architecture) utilities"
+
+config BR2_COMPILE_ALSA-UTILS
+	tristate
+	default n
+	depends BR2_PACKAGE_APLAY || BR2_PACKAGE_AMIXER || BR2_PACKAGE_ALSAMIXER
+	select BR2_PACKAGE_ALSA-LIB
+	
+config BR2_PACKAGE_APLAY
+	prompt "aplay............................. aplay"
+	tristate
+	default n
+	select BR2_COMPILE_ALSA-UTILS
+	help
+	  ALSA (Advanced Linux Sound Architecture) utilities
+	  
+	  http://www.alsa-project.org/
+
+config BR2_PACKAGE_AMIXER
+	prompt "amixer............................ amixer"
+	tristate
+	default n
+	select BR2_COMPILE_ALSA-UTILS
+	help
+	  ALSA (Advanced Linux Sound Architecture) utilities
+	  
+	  http://www.alsa-project.org/
+
+config BR2_PACKAGE_ALSAMIXER
+	prompt "alsamixer......................... alsamixer"
+	tristate
+	default n
+	select BR2_COMPILE_ALSA-UTILS
+	help
+	  ALSA (Advanced Linux Sound Architecture) utilities
+	  
+	  http://www.alsa-project.org/
+
+endmenu

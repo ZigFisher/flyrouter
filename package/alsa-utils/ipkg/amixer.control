@@ -1,0 +1,5 @@
+Package: amixer
+Priority: optional
+Section: multimedia
+Description: ALSA (Advanced Linux Sound Architecture) utilities
+Depends: alsa-lib
