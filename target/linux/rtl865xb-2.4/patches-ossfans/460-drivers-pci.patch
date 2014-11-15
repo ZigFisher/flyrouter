@@ -1,0 +1,27 @@
+Index: linux-2.4.27/drivers/pci/pci.ids
+===================================================================
+--- linux-2.4.27.orig/drivers/pci/pci.ids	2004-08-08 03:26:05.000000000 +0400
++++ linux-2.4.27/drivers/pci/pci.ids	2008-03-21 14:37:48.000000000 +0300
+@@ -6109,6 +6109,8 @@
+ 1681  Hercules
+ 16ab  Global Sun Technology Inc
+ 	1102  PCMCIA-to-PCI Wireless Network Bridge
++16ae  Safenet Inc
++	1141  SafeXcel-1141
+ 16be  Creatix Polymedia GmbH
+ 16ca  CENATEK Inc
+ 	0001  Rocket Drive DL
+Index: linux-2.4.27/drivers/pci/setup-bus.c
+===================================================================
+--- linux-2.4.27.orig/drivers/pci/setup-bus.c	2003-06-13 18:51:35.000000000 +0400
++++ linux-2.4.27/drivers/pci/setup-bus.c	2008-03-21 14:37:48.000000000 +0300
+@@ -58,7 +58,8 @@
+ 		if (class == PCI_CLASS_DISPLAY_VGA
+ 				|| class == PCI_CLASS_NOT_DEFINED_VGA)
+ 			found_vga = 1;
+-		else if (class >> 8 != PCI_BASE_CLASS_BRIDGE) {
++		else if (class >> 8 != PCI_BASE_CLASS_BRIDGE &&
++			 class >> 8 != PCI_BASE_CLASS_PROCESSOR) {
+ 			pci_read_config_word(dev, PCI_COMMAND, &cmd);
+ 			cmd &= ~(PCI_COMMAND_IO | PCI_COMMAND_MEMORY
+ 						| PCI_COMMAND_MASTER);

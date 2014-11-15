@@ -1,0 +1,13 @@
+--- linux/Makefile.orig	2009-01-22 13:47:11.000000000 +0200
++++ linux/Makefile	2009-01-22 14:10:26.000000000 +0200
+@@ -353,6 +353,10 @@
+ 		--end-group \
+ 		-o $(LINUX)
+ 	$(NM) $(LINUX) | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | sort > System.map
++# Add inflater by ZFT Lab.
++	$(MAKE) 7_zimage -C arch/$(ARCH)/inflater
++	
++	
+ 
+ endif
+ symlinks:

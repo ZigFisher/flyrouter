@@ -1,0 +1,25 @@
+Index: linux-2.4.27/drivers/usb/ov511.c
+===================================================================
+--- linux-2.4.27.orig/drivers/usb/ov511.c	2003-06-13 18:51:36.000000000 +0400
++++ linux-2.4.27/drivers/usb/ov511.c	2008-03-21 14:37:48.000000000 +0300
+@@ -6472,10 +6472,20 @@
+ 
+ 	ov->buf_state = BUF_NOT_ALLOCATED;
+ 
++//+++Modify by shiang 2004/11/10 
++	//Our usb-ohci-rtl865x.c host controller driver didn't assign ohci->bus->bus_name, so we must do it ourself.
++#ifndef CONFIG_USB_OHCI_RTL865XB
+ 	if (usb_make_path(dev, ov->usb_path, OV511_USB_PATH_LEN) < 0) {
+ 		err("usb_make_path error");
+ 		goto error_dealloc;
+ 	}
++#else
++	if (snprintf (ov->usb_path, OV511_USB_PATH_LEN,"usb-alpha-%s", dev->devpath) < 0) {
++		err("usb_make_path error");
++		goto error_dealloc;
++	}
++#endif
++//---Modify by shiang 2004/11/10 
+ 
+ 	/* Allocate control transfer buffer. */
+ 	/* Must be kmalloc()'ed, for DMA compatibility */

@@ -1,0 +1,10 @@
+--- linux-2.4.26-rp614v4v106/net/sched/sch_generic.c	2009-01-22 22:32:49.000000000 +0200
++++ linux-2.4.26-rp614v4v106/net/sched/sch_generic_.c	2009-01-22 22:33:41.000000000 +0200
+@@ -29,6 +29,7 @@
+ #include <linux/skbuff.h>
+ #include <linux/rtnetlink.h>
+ #include <linux/init.h>
++#include <linux/list.h>
+ #include <net/sock.h>
+ #include <net/pkt_sched.h>
+ 

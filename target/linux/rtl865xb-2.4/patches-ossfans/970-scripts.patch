@@ -1,0 +1,182 @@
+diff --git a/scripts/Menuconfig b/scripts/Menuconfig
+index 25cdcf9..64eb94d 100644
+--- a/scripts/Menuconfig
++++ b/scripts/Menuconfig
+@@ -714,7 +714,7 @@ BEGIN {
+ 
+ function parser(ifile,menu) {
+ 
+-	while (getline <ifile) {
++	while ((getline <ifile) > 0) {
+ 		if ($1 == "mainmenu_option") {
+ 			comment_is_option = "1"
+ 		}
+@@ -761,7 +761,7 @@ BEGIN {
+ 
+ function parser(ifile,menu) {
+ 
+-	while (getline <ifile) {
++	while ((getline <ifile) > 0) {
+ 		if ($0 ~ /^#|$MAKE|mainmenu_name/) {
+ 			printf("") >>menu
+ 		}
+diff --git a/scripts/lxdialog/.gitignore b/scripts/lxdialog/.gitignore
+new file mode 100644
+index 0000000..405824d
+--- /dev/null
++++ b/scripts/lxdialog/.gitignore
+@@ -0,0 +1,2 @@
++lxdialog
++*.o
+diff --git a/scripts/mkdep.c b/scripts/mkdep.c
+index 71ea864..99f6197 100644
+--- a/scripts/mkdep.c
++++ b/scripts/mkdep.c
+@@ -523,7 +523,9 @@ cee_CONFIG_word:
+ void do_depend(const char * filename, const char * command)
+ {
+ 	int mapsize;
++#ifndef __CYGWIN__
+ 	int pagesizem1 = getpagesize()-1;
++#endif
+ 	int fd;
+ 	struct stat st;
+ 	char * map;
+@@ -542,7 +544,9 @@ void do_depend(const char * filename, const char * command)
+ 	}
+ 
+ 	mapsize = st.st_size;
++#ifndef __CYGWIN__
+ 	mapsize = (mapsize+pagesizem1) & ~pagesizem1;
++#endif
+ 	map = mmap(NULL, mapsize, PROT_READ, MAP_PRIVATE, fd, 0);
+ 	if ((long) map == -1) {
+ 		perror("mkdep: mmap");
+diff --git a/scripts/pathdown.sh b/scripts/pathdown.sh
+index 16c17b2..97424c2 100644
+--- a/scripts/pathdown.sh
++++ b/scripts/pathdown.sh
+@@ -3,6 +3,10 @@ UP=
+ DN=${PWD:?}
+ TP=${TOPDIR:?}
+ 
++if [ "$VIRTUAL_TOPDIR" ]; then
++TP=${VIRTUAL_TOPDIR:?}
++fi
++
+ while [ ! $TP/$UP/. -ef $DN ] ;do
+ 	UP=`basename $PWD`/$UP
+ 	cd ..
+diff --git a/scripts/tkgen.c b/scripts/tkgen.c
+index 9a499e7..235141e 100644
+--- a/scripts/tkgen.c
++++ b/scripts/tkgen.c
+@@ -545,9 +545,7 @@ void generate_if( struct kconfig * cfg, struct condition * ocond,
+ 		printf( "\n\t" );
+ 	    printf( "set %s [expr $%s&15]",
+ 		vartable[cfg->nameindex].name, vartable[cfg->nameindex].name );
+-	    printf( "} else {");
+-	    printf( "set %s [expr $%s|16]}\n",
+-		vartable[cfg->nameindex].name, vartable[cfg->nameindex].name );
++		printf( "}\n");
+ 	    break;
+ 
+ 	case token_choice_header:
+@@ -607,13 +605,7 @@ void generate_if( struct kconfig * cfg, struct condition * ocond,
+ 	 */
+ 	    printf( "set %s [expr $%s&15]",
+ 		vartable[cfg->nameindex].name, vartable[cfg->nameindex].name );
+-	    printf( "} else {" );
+-
+-	/*
+-	 * Clear the disable bit to enable the correct radiobutton.
+-	 */
+-	    printf( "set %s [expr $%s|16]}\n",
+-		vartable[cfg->nameindex].name, vartable[cfg->nameindex].name );
++	    printf( "}\n" );
+ 	    break;
+ 
+ 	case token_hex:
+@@ -903,6 +895,29 @@ static void generate_update_var( struct kconfig * scfg, int menu_num )
+ 	}
+     }
+ 
++/*
++ *	set all conditional bool/tristates to off unless changed later
++ */
++    for ( cfg = scfg; cfg != NULL; cfg = cfg->next ) {
++		if (cfg->menu_number != menu_num)
++			continue;
++		if (!cfg->cond)
++			continue;
++		switch (cfg->token) {
++		case token_bool:
++		case token_tristate:
++			if (! vartable[cfg->nameindex].global_written) {
++				vartable[cfg->nameindex].global_written = 1;
++				global(vartable[cfg->nameindex].name);
++			}
++			printf("set %s [expr $%s|16]\n", vartable[cfg->nameindex].name,
++					vartable[cfg->nameindex].name);
++			break;
++		default:
++			break;
++		}
++	}
++
+     for ( cfg = scfg; cfg != NULL; cfg = cfg->next )
+     {
+ 	char tmp[20];
+diff --git a/scripts/tkparse.c b/scripts/tkparse.c
+index dbede13..502d090 100644
+--- a/scripts/tkparse.c
++++ b/scripts/tkparse.c
+@@ -71,6 +71,11 @@ static void syntax_error( const char * msg )
+     exit( 1 );
+ }
+ 
++static void syntax_warning( const char * msg )
++{
++    fprintf( stderr, "%s: %d: %s\n", current_file, lineno, msg );
++}
++
+ 
+ 
+ /*
+@@ -135,7 +140,7 @@ static const char * get_string( const char * pnt, char ** label )
+ static const char * get_qstring( const char * pnt, char ** label )
+ {
+     char quote_char;
+-    char newlabel [2048];
++    char newlabel [16384];
+     char * pnt1;
+ 
+     /* advance to the open quote */
+@@ -637,7 +642,7 @@ static void tokenize_line( const char * pnt )
+ 	 * Create a conditional for this object's dependencies.
+ 	 */
+ 	{
+-	    char fake_if [1024];
++	    char fake_if [8192];
+ 	    struct dependency * dep;
+ 	    struct condition ** cond_ptr;
+ 	    int first = 1;
+@@ -746,7 +751,7 @@ static void tokenize_line( const char * pnt )
+  */
+ static void do_source( const char * filename )
+ {
+-    char buffer [2048];
++    char buffer [16384];
+     FILE * infile;
+     const char * old_file;
+     int old_lineno;
+@@ -768,7 +773,8 @@ static void do_source( const char * filename )
+     if ( infile == NULL )
+     {
+ 	sprintf( buffer, "unable to open %s", filename );
+-	syntax_error( buffer );
++	syntax_warning( buffer );
++        return;
+     }
+ 
+     /* push the new file name and line number */

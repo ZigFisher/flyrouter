@@ -1,0 +1,28 @@
+--- Makefile	2010-01-30 11:46:49.000000000 +0200
++++ Makefile.my	2010-01-30 11:29:14.000000000 +0200
+@@ -9,11 +9,11 @@
+ #	the License, or (at your option) any later version.
+ #
+ 
+-CC=gcc
++CC=/home/builder/trunk/staging_dir_mipsel/bin/mipsel-linux-uclibc-gcc
+ 
+-KERNEL_VERSION = $(shell uname -r)
++KERNEL_VERSION = 2.4.32
+ 
+-KERNEL_SRC = /lib/modules/$(KERNEL_VERSION)/build
++KERNEL_SRC = /home/builder/trunk/build_mipsel/linux-2.4-brcm5354/linux-2.4.32
+ KERNEL_HEADERS = $(KERNEL_SRC)/include
+ FW_DL=
+ 
+@@ -98,7 +98,9 @@
+ 	-I$(KERNEL_HEADERS)
+ CFLAGS = -O2 -Wall -Wstrict-prototypes -pipe -fno-strict-aliasing \
+ 	 $(FW_DL) \
+-         -fno-common -Wno-sign-compare -Wno-unused
++         -fno-common -Wno-sign-compare -Wno-unused \
++         -mno-abicalls -fno-pic -fomit-frame-pointer -G 0 -finline-limit=100000 -mabi=32 -march=mips32 -Wa,-32 -Wa,-march=mips32 \
++         -Wa,-mips32 -Wa,--trap -Wstrict-prototypes -Wno-trigraphs -mlong-calls -I. -I linux-2.4 -nostdinc -iwithprefix include
+ 
+ MODVER = $(shell if cat $(KERNEL_HEADERS)/linux/autoconf.h 2>/dev/null | \
+ grep -q '^[[:space:]]*\#define[[:space:]]*CONFIG_MODVERSIONS[[:space:]]*1'; \

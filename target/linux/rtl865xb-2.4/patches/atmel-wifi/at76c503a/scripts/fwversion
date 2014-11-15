@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# fwversion <fwfile.h>
+#
+# Report the version of an Atmel firmware image contained in <fwfile.h> (header
+# file must be in the form produced by fwconvert)
+
+hdrfile="$1"
+
+define=`grep '#define FW_.*_INTERNAL' $hdrfile | sed -e 's/.* \(FW_[^ ]*_INTERNAL\).*/\1/'`
+
+tmpdir=`mktemp -d /usr/tmp/fwversion.XXXXXX || exit 1`
+
+tmp_c_file="$tmpdir/fwv.c"
+tmp_x_file="$tmpdir/fwv"
+
+cat > $tmp_c_file <<EOF
+#include <stdio.h>
+
+#include <${hdrfile}>
+unsigned char fw[] = ${define};
+
+unsigned char tag[] = "ATMEL_AP";
+#define TAG_LEN 8
+
+int main(int argc, char *argv[]) {
+	int i;
+	int major, minor, sub, build;
+
+	for (i=0; i<sizeof(fw)-TAG_LEN-0x38; i++) {
+		if (!memcmp(&fw[i], tag, TAG_LEN)) {
+			major = fw[i+0x34];
+			minor = fw[i+0x35];
+			sub   = fw[i+0x36];
+			build = fw[i+0x37];
+			printf("%d.%d.%d #%d\n", major, minor, sub, build);
+			return 0;
+		}
+	}
+	return 1;
+}
+EOF
+
+gcc -I . -o "$tmp_x_file" "$tmp_c_file" && $tmp_x_file
+
+rm -rf "$tmpdir"

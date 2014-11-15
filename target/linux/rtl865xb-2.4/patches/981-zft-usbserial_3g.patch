@@ -1,0 +1,61 @@
+--- linux/drivers/usb/serial/usbserial.c	2005-12-21 04:30:29.000000000 +0200
++++ linux/drivers/usb/serial/usbserial-new.c	2009-01-14 19:08:30.000000000 +0200
+@@ -335,7 +335,7 @@
+ static __u16	product	= 0xffff;
+ 
+ #if 1
+-static struct usb_device_id generic_device_ids[7]; /* Initially all zeroes. */
++static struct usb_device_id generic_device_ids[18]; /* Initially all zeroes. */
+ #else
+ static struct usb_device_id generic_device_ids[2]; /* Initially all zeroes. */
+ #endif
+@@ -1559,6 +1559,49 @@
+ 	generic_device_ids[6].idVendor = 0x1410; 
+ 	generic_device_ids[6].idProduct = 0x1110; 
+ 	generic_device_ids[6].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++
++	/* Add more USB devices support by ZFT Lab */
++
++	/* Option 3G/UMTS 'Colt' */
++	generic_device_ids[7].idVendor = 0x0af0;
++	generic_device_ids[7].idProduct = 0x5000;
++	generic_device_ids[7].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Option 3G/UMTS 'Fusion' */
++	generic_device_ids[8].idVendor = 0x0af0;
++	generic_device_ids[8].idProduct = 0x6000;
++	generic_device_ids[8].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Option 3G/UMTS 'Fusion2' */
++	generic_device_ids[9].idVendor = 0x0af0;
++	generic_device_ids[9].idProduct = 0x6300;
++	generic_device_ids[9].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Huawei E600 & Huawei E220 */
++	generic_device_ids[10].idVendor = 0x12d1;
++	generic_device_ids[10].idProduct = 0x1001;
++	generic_device_ids[10].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Audiovox Aircard */
++	generic_device_ids[11].idVendor = 0x0f3d;
++	generic_device_ids[11].idProduct = 0x0112;
++	generic_device_ids[12].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Sierra Wireless AirCard 875 */
++	generic_device_ids[13].idVendor = 0x1199;
++	generic_device_ids[13].idProduct = 0x6820;
++	generic_device_ids[13].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Novatel/Merlin U720 */
++	generic_device_ids[14].idVendor = 0x1410;
++	generic_device_ids[14].idProduct = 0x2110;
++	generic_device_ids[14].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Add me - EDGE/GPRS USB Modem */
++	generic_device_ids[15].idVendor = 0x12d1;
++	generic_device_ids[15].idProduct = 0x1010;
++	generic_device_ids[15].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Huawei E219 & Huawei E220 - EDGE/GPRS USB Modem */
++	generic_device_ids[16].idVendor = 0x12d1;
++	generic_device_ids[16].idProduct = 0x1003;
++	generic_device_ids[16].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* ZTE AC8700 - CDMA USB modem */
++	generic_device_ids[17].idVendor = 0x19d2;
++	generic_device_ids[17].idProduct = 0xfffe;
++	generic_device_ids[17].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
+ 	
+ #endif
+ 	/* register our generic driver with ourselves */

@@ -1,0 +1,57 @@
+diff --git a/fs/fat/inode.c b/fs/fat/inode.c
+index f3b6639..842d3e1 100644
+--- a/fs/fat/inode.c
++++ b/fs/fat/inode.c
+@@ -657,6 +657,12 @@ fat_read_super(struct super_block *sb, void *data, int silent,
+ 
+ 		/* Must be FAT32 */
+ 		fat32 = 1;
++		
++		//+++ fix by siyou 2005/11/28 11:44¤U¤È
++		// FAT32 max file size is 4GB. not 2GB.
++		sb->s_maxbytes = ((1ULL<<32) - 1); 
++		//--- fix by siyou 2005/11/28 11:44¤U¤È
++		
+ 		sbi->fat_length = CF_LE_L(b->fat32_length);
+ 		sbi->root_cluster = CF_LE_L(b->root_cluster);
+ 
+@@ -721,11 +727,39 @@ fat_read_super(struct super_block *sb, void *data, int silent,
+ 			 (sbi->clusters > MSDOS_FAT12 ? 16 : 12));
+ 		fat_clusters =
+ 			sbi->fat_length * logical_sector_size * 8 / sbi->fat_bits;
++//+++Modify by shiang for FAT16 bug 2005/07/01
++/*	In some flash disk with FAT16 format, it will check failed when do mount due to the following operation
++	"sbi->clusters + 2 > fat_clusters + MSDOS_MAX_EXTRA" return 1 and error bit is set!
++	I fix this by merge partial of  the kernel 2.6.5 sourc ode into here to avoild it!
++*/
++#if 0
+ 		error = !sbi->fats || (sbi->dir_entries & (sbi->dir_per_block - 1))
+ 			|| sbi->clusters + 2 > fat_clusters + MSDOS_MAX_EXTRA
+ 			|| logical_sector_size < 512
+ 			|| PAGE_CACHE_SIZE < logical_sector_size
+ 			|| !b->secs_track || !b->heads;
++#else
++#define MAX_FAT12	0xFF4
++#define MAX_FAT16	0xFFF4
++#define MAX_FAT32	0x0FFFFFF6
++#define MAX_FAT(s)	(MSDOS_SB(s)->fat_bits == 32 ? MAX_FAT32 : \
++					MSDOS_SB(s)->fat_bits == 16 ? MAX_FAT16 : MAX_FAT12)
++
++
++	sbi->clusters = min(sbi->clusters, fat_clusters - 2);
++	if (sbi->clusters > MAX_FAT(sb)) {
++		if (!silent)
++			printk(KERN_ERR "FAT: count of clusters too big (%u)\n", sbi->clusters);
++		brelse(bh);
++		goto out_invalid;
++	}
++	
++        error = !sbi->fats || (sbi->dir_entries & (sbi->dir_per_block - 1))
++			|| logical_sector_size < 512
++			|| PAGE_CACHE_SIZE < logical_sector_size
++			|| !b->secs_track || !b->heads;
++#endif
++//---Modify by shiang for FAT16 bug 2005/07/01
+ 	}
+ 	brelse(bh);
+ 

@@ -1,0 +1,1644 @@
+diff --git a/include/net/sock.h b/include/net/sock.h
+index f1054bf..b072920 100644
+--- a/include/net/sock.h
++++ b/include/net/sock.h
+@@ -256,6 +256,12 @@ struct tcp_sack_block {
+ 	__u32	end_seq;
+ };
+ 
++#if 1
++struct udp_opt {
++	__u32 esp_in_udp;
++};
++#endif
++
+ struct tcp_opt {
+ 	int	tcp_header_len;	/* Bytes of tcp header to send		*/
+ 
+@@ -614,6 +620,9 @@ struct sock {
+ #if defined(CONFIG_SPX) || defined (CONFIG_SPX_MODULE)
+ 		struct spx_opt		af_spx;
+ #endif /* CONFIG_SPX */
++#if 1
++		struct udp_opt 		af_udp;
++#endif
+ 
+ 	} tp_pinfo;
+ 
+diff --git a/include/net/tcp.h b/include/net/tcp.h
+index 301be37..69923cd 100644
+--- a/include/net/tcp.h
++++ b/include/net/tcp.h
+@@ -909,8 +909,14 @@ static __inline__ unsigned int tcp_current_mss(struct sock *sk)
+ 	struct dst_entry *dst = __sk_dst_get(sk);
+ 	int mss_now = tp->mss_cache; 
+ 
++#ifdef CONFIG_RTL865XB_SW_LSO
++	if (65535 != tp->pmtu_cookie)
++		mss_now = tcp_sync_mss(sk, 65535);
++#else
+ 	if (dst && dst->pmtu != tp->pmtu_cookie)
+ 		mss_now = tcp_sync_mss(sk, dst->pmtu);
++#endif	
++
+ 
+ 	if (tp->eff_sacks)
+ 		mss_now -= (TCPOLEN_SACK_BASE_ALIGNED +
+diff --git a/include/asm-mips/io.h b/include/asm-mips/io.h
+index 5b4377f..1347090 100644
+--- a/include/asm-mips/io.h
++++ b/include/asm-mips/io.h
+@@ -47,9 +47,13 @@ extern unsigned long bus_to_baddr[256];
+  * machines a bit saner.
+  */
+ #if defined(CONFIG_SWAP_IO_SPACE_W) && defined(__MIPSEB__)
++#define __ioswab8(x) (x)
+ #define __ioswab16(x) swab16(x)
++#define __ioswab32(x) swab32(x)
+ #else
++#define __ioswab8(x) (x)
+ #define __ioswab16(x) (x)
++#define __ioswab32(x) (x)
+ #endif
+ #if defined(CONFIG_SWAP_IO_SPACE_L) && defined(__MIPSEB__)
+ #define __ioswab32(x) swab32(x)
+@@ -118,18 +122,106 @@ extern void iounmap(void *addr);
+  * 24-31 on SNI.
+  * XXX more SNI hacks.
+  */
++
++#ifdef CONFIG_RTL865X
++
++//These are defined in mipsnommu/rtl865x/pci.c
++u8 rtl865x_pci_ioread8(u32 addr);
++u16 rtl865x_pci_ioread16(u32 addr);
++u32 rtl865x_pci_ioread32(u32 addr);
++void rtl865x_pci_iowrite8(u32 addr, u8 val);
++void rtl865x_pci_iowrite16(u32 addr, u16 val);
++void rtl865x_pci_iowrite32(u32 addr, u32 val);
++
++static __inline__ u8 rtl865x_ioread8(u32 addr)
++{
++	//printk("rtl865x_ioread8 0x%08x...\n", addr);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_ioread8(addr);
++	else
++#endif	
++	return (*(volatile unsigned char *)(addr));
++}
++static __inline__ u16 rtl865x_ioread16(u32 addr)
++{
++	//printk("rtl865x_ioread16 0x%08x...\n", addr);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_ioread16(addr);
++	else
++#endif	
++	return __ioswab16((*(volatile unsigned short *)(addr)));
++}
++
++static __inline__ u32 rtl865x_ioread32(u32 addr)
++{
++	//printk("rtl865x_ioread32 0x%08x...\n", addr);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_ioread32(addr);
++	else
++#endif	
++	return __ioswab32((*(volatile unsigned int *)(addr)));
++}
++
++
++static __inline__ void rtl865x_iowrite8(u32 addr, u8 val){
++	//printk("rtl865x_iowrite8 0x%08x=0x%02x...\n", addr,val);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_iowrite8(addr,val);
++	else
++#endif	
++		(*(volatile unsigned char *)(addr)) = __ioswab8(val);
++}
++
++static __inline__ void rtl865x_iowrite16(u32 addr, u16 val){
++	//printk("rtl865x_iowrite16 0x%08x=0x%04x...\n", addr,val);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_iowrite16(addr,val);
++	else
++#endif	
++		(*(volatile unsigned short *)(addr)) = __ioswab16(val);
++}
++
++static __inline__ void rtl865x_iowrite32(u32 addr, u32 val){
++	//printk("rtl865x_iowrite32 0x%08x=0x%08x...\n", addr, val);
++#ifdef CONFIG_PCI
++	if((addr&0x1be00000)==0x1be00000)
++		return rtl865x_pci_iowrite32(addr,val);
++	else
++#endif	
++		(*(volatile unsigned long *)(addr)) = __ioswab32(val);
++}
++#endif /*CONFIG_RTL865X*/
++
++
++#ifdef CONFIG_RTL865X
++#define readb(addr) (rtl865x_ioread8((u32)addr))
++#define readw(addr) (rtl865x_ioread16((u32)addr))
++#define readl(addr) (rtl865x_ioread32((u32)addr))
++#define writeb(val,addr) (rtl865x_iowrite8((u32)addr,val))
++#define writew(val,addr) (rtl865x_iowrite16((u32)addr,val))
++#define writel(val,addr) (rtl865x_iowrite32((u32)addr,val))
++
++#else
++
+ #define readb(addr)		(*(volatile unsigned char *)(addr))
+ #define readw(addr)		__ioswab16((*(volatile unsigned short *)(addr)))
+ #define readl(addr)		__ioswab32((*(volatile unsigned int *)(addr)))
+ 
++#define writeb(b,addr) ((*(volatile unsigned char *)(addr)) = (__ioswab8(b)))
++#define writew(b,addr) ((*(volatile unsigned short *)(addr)) = (__ioswab16(b)))
++#define writel(b,addr) ((*(volatile unsigned int *)(addr)) = (__ioswab32(b)))
++
++#endif
++
+ #define __raw_readb(addr)	(*(volatile unsigned char *)(addr))
+ #define __raw_readw(addr)	(*(volatile unsigned short *)(addr))
+ #define __raw_readl(addr)	(*(volatile unsigned int *)(addr))
+ 
+-#define writeb(b,addr) ((*(volatile unsigned char *)(addr)) = (b))
+-#define writew(b,addr) ((*(volatile unsigned short *)(addr)) = (__ioswab16(b)))
+-#define writel(b,addr) ((*(volatile unsigned int *)(addr)) = (__ioswab32(b)))
+-
+ #define __raw_writeb(b,addr)	((*(volatile unsigned char *)(addr)) = (b))
+ #define __raw_writew(w,addr)	((*(volatile unsigned short *)(addr)) = (w))
+ #define __raw_writel(l,addr)	((*(volatile unsigned int *)(addr)) = (l))
+@@ -312,23 +404,25 @@ extern const unsigned long mips_io_port_base;
+ 
+ #define outb(val,port)							\
+ do {									\
+-	*(volatile u8 *)(mips_io_port_base + (port)) = (val);		\
++	/*printk("outw(port=0x%08x)=0x%02x\n", mips_io_port_base + (port), __ioswab8(val));*/\
++	*(volatile u8 *)( (port)) = (val);	\
+ } while(0)
+ 
+ #define outw(val,port)							\
+ do {									\
+-	*(volatile u16 *)(mips_io_port_base + __swizzle_addr_w(port)) =	\
+-		__ioswab16(val);					\
++	/*printk("outw(port=0x%08x)=0x%04x\n", mips_io_port_base + __swizzle_addr_w(port), __ioswab16(val));*/\
++	*(volatile u16 *)((port))= (val);					\
+ } while(0)
+ 
+ #define outl(val,port)							\
+ do {									\
+-	*(volatile u32 *)(mips_io_port_base + (port)) = __ioswab32(val);\
++	/*printk("outw(port=0x%08x)=0x%08x\n", mips_io_port_base + (port), __ioswab32(val));*/\
++	*(volatile u32 *)( (port)) = (val);\
+ } while(0)
+ 
+ #define outb_p(val,port)						\
+ do {									\
+-	*(volatile u8 *)(mips_io_port_base + (port)) = (val);		\
++	*(volatile u8 *)(mips_io_port_base + (port)) = __ioswab8(val);	\
+ 	SLOW_DOWN_IO;							\
+ } while(0)
+ 
+@@ -345,21 +439,49 @@ do {									\
+ 	SLOW_DOWN_IO;							\
+ } while(0)
+ 
+-static inline unsigned char inb(unsigned long port)
++static inline unsigned char inb(unsigned long addr)
+ {
+-	return *(volatile u8 *)(mips_io_port_base + port);
++	unsigned char b;
++	unsigned long diff;
++	diff=addr&0x3;
++	switch (diff)
++	{
++		case 0: diff=3;break;
++		case 1: diff=2;break;
++		case 2: diff=1;break;
++		case 3: diff=0 ;break;
++	}
++	addr=addr&(~0x3);
++	//printk("inb(0x%08x)", mips_io_port_base + port);
++	b =(*(volatile u8 *)(addr+diff));
++	//printk("=%02x\n", b);
++	return b;
++	//return *(volatile u8 *)(mips_io_port_base + port);
+ }
+ 
+ static inline unsigned short inw(unsigned long port)
+ {
+-	port = __swizzle_addr_w(port);
+-
+-	return __ioswab16(*(volatile u16 *)(mips_io_port_base + port));
++	unsigned short w;
++	unsigned long addr;
++
++	if (port & 0x2)
++		addr = port & (~0x2);
++	else
++		addr = port |0x2;
++//	printk("inw(0x%08x)\n",(unsigned int) addr);
++	w = *(volatile u16 *)addr;
++	//printk("=%04x\n", w);
++	return w;
++	//return __ioswab16(*(volatile u16 *)(mips_io_port_base + port));
+ }
+ 
+ static inline unsigned int inl(unsigned long port)
+ {
+-	return __ioswab32(*(volatile u32 *)(mips_io_port_base + port));
++	unsigned int l;
++	//printk("inw(0x%08x)", mips_io_port_base + port);
++	l = (*(volatile u32 *)(port));
++	//printk("=%08x\n", l);
++	return l;
+ }
+ 
+ static inline unsigned char inb_p(unsigned long port)
+@@ -369,7 +491,7 @@ static inline unsigned char inb_p(unsigned long port)
+ 	__val = *(volatile u8 *)(mips_io_port_base + port);
+ 	SLOW_DOWN_IO;
+ 
+-	return __val;
++	return __ioswab8(__val);
+ }
+ 
+ static inline unsigned short inw_p(unsigned long port)
+diff --git a/include/asm-mips/rtl865x/interrupt.h b/include/asm-mips/rtl865x/interrupt.h
+new file mode 100644
+index 0000000..4f64b2d
+--- /dev/null
++++ b/include/asm-mips/rtl865x/interrupt.h
+@@ -0,0 +1,12 @@
++#define CPU_CLOCK_RATE	96000000	/* CPU clock @ 14 MHz */
++#define ICU_TMR		0
++#define ICU_USB		1	
++#define ICU_PCMCIA 	2
++#define ICU_UART0	4
++#define ICU_UART1 	3	
++#define ICU_PCI		5
++#define ICU_NIC		6
++#define ICU_GPIO	7
++#define ICU_EXT		8
++#define ICU_LBCT	10
++
+diff --git a/include/asm-mips/rtl865x/re865x.h b/include/asm-mips/rtl865x/re865x.h
+new file mode 100644
+index 0000000..576c18f
+--- /dev/null
++++ b/include/asm-mips/rtl865x/re865x.h
+@@ -0,0 +1,542 @@
++/*
++ * Copyright c                Realtek Semiconductor Corporation, 2003
++ * All rights reserved.                                                    
++ * 
++ * $Header: /cvs/RealTek865x_062/linux-2.4.x/include/asm-mips/rtl865x/re865x.h,v 1.17 2006/03/06 03:07:48 r04882 Exp $
++ *
++ * $Author: r04882 $
++ *
++ * Abstract:
++ *
++ *   re865x.h  -- ioctl symbol definitions
++ *
++ * $Log: re865x.h,v $
++ * Revision 1.17  2006/03/06 03:07:48  r04882
++ * add nat 4 type
++ *
++ * Revision 1.16  2006/02/22 10:08:43  r05457
++ * Modify by shiang for wlan multicast Rate control support.
++ *
++ * Revision 1.15  2006/01/25 04:24:38  r05457
++ * Modify by shiang for wlan partition support.
++ *
++ * Revision 1.14  2005/10/05 08:59:32  r04882
++ * tcp session timeout
++ *
++ * Revision 1.13  2005/09/22 02:43:41  r04882
++ * domain route
++ *
++ * Revision 1.12  2005/08/17 07:24:30  r04882
++ * corega
++ *
++ * Revision 1.11  2005/08/16 10:24:23  r04882
++ * corega
++ *
++ * Revision 1.10  2005/07/12 08:39:25  r04882
++ * url home feature
++ *
++ * Revision 1.9  2005/05/04 06:59:35  r04882
++ * LSO to let ftp samba hi performance
++ *
++ * Revision 1.8  2005/03/30 11:55:36  r05457
++ * Modify by shiang for QoS support
++ *
++ * Revision 1.7  2005/03/14 15:03:05  r04882
++ * add napt entry info
++ *
++ * Revision 1.6  2005/02/03 10:16:51  r04882
++ * rome34
++ *
++ * Revision 1.5  2004/12/03 05:37:41  r04882
++ * rome3.3
++ *
++ * Revision 1.4  2004/11/22 05:20:10  r04882
++ * get napt session count ioctl
++ *
++ * Revision 1.3  2004/10/27 06:19:31  r04882
++ * dnsrelay status let rome know to correctly trigger wan
++ *
++ * Revision 1.2  2004/08/24 08:53:47  r04882
++ * merge 058
++ *
++ * Revision 1.1.1.1  2004/08/20 11:33:45  r04482
++ * no message
++ *
++ * Revision 1.13  2004/07/27 10:48:52  cfliu
++ * *: Fix all compile warnings
++ *
++ * Revision 1.12  2004/07/27 03:06:16  chenyl
++ * +: Add DoS ignore type setting ioctl items
++ *
++ * Revision 1.11  2004/07/19 02:12:26  chhuang
++ * *: modify M-N-1 queue
++ *
++ * Revision 1.10  2004/07/14 13:55:59  chenyl
++ * +: web page for MN queue
++ *
++ * Revision 1.9  2004/07/12 04:25:36  chenyl
++ * *: extend existing port scan mechanism
++ *
++ * Revision 1.8  2004/07/08 10:58:40  tony
++ * +: add new ioctl api.
++ *
++ * Revision 1.7  2004/07/06 07:22:13  chhuang
++ * +: add rate limit
++ *
++ * Revision 1.6  2004/06/29 07:37:13  chenyl
++ * +: igmp-proxy filter
++ *
++ * Revision 1.5  2004/06/21 03:49:17  chhuang
++ * +: define RTL8651_IOCTL_NETMTU
++ *
++ * Revision 1.4  2004/06/16 04:43:11  tony
++ * *: support reboot and get loader version for MMU.
++ *
++ * Revision 1.3  2004/06/14 09:05:40  rupert
++ * *: serial definition
++ *
++ * Revision 1.58  2004/06/11 11:07:17  cfliu
++ * +: Add Cable meter and Interface counter webpage
++ *
++ * Revision 1.57  2004/05/31 14:41:04  jzchen
++ * Add Counter setting IO control definition
++ *
++ * Revision 1.56  2004/05/28 06:11:51  yjlou
++ * +: add IOCTL for rtl8651_addProtocolBasedNAT() and rtl8651_delProtocolBasedNAT()
++ *
++ * Revision 1.55  2004/05/27 05:14:18  cfliu
++ * Remove INIT_HARDWARE
++ *
++ * Revision 1.54  2004/05/20 08:45:49  chhuang
++ * add Web Page for QoS
++ *
++ * Revision 1.53  2004/05/19 08:49:22  orlando
++ * add RTL8651_IOCTL_DIAG_LED
++ *
++ * Revision 1.52  2004/05/17 07:22:16  tony
++ * fix pppoe silent timeout bug and make PPTP/L2TP support silent timeout.
++ *
++ * Revision 1.51  2004/05/14 10:18:15  orlando
++ * add RTL8651_IOCTL_DIAG_LED
++ *
++ * Revision 1.50  2004/05/12 07:20:15  chenyl
++ * +: source ip blocking
++ * *: modify dos mechanism
++ *
++ * Revision 1.49  2004/05/10 05:53:45  chhuang
++ * add new IOCTL: RTL8651_IOCTL_ADDURLFILTER
++ *
++ * Revision 1.48  2004/05/05 08:27:07  tony
++ * new features: add remote management spec
++ *
++ * Revision 1.47  2004/04/29 05:47:52  chhuang
++ * add new ioctl for rtl8651_addNaptMappingExt()
++ *
++ * Revision 1.46  2004/04/27 07:05:02  chenyl
++ * +: ioctl number: RTL8651_IOCTL_SETDEFAULTIGMPUPSTREAM
++ *
++ * Revision 1.45  2004/04/19 13:45:18  tony
++ * add resetPptpProprity and resetL2tpProprity IOCTL.
++ *
++ * Revision 1.44  2004/04/14 02:45:50  tony
++ * add ioctl RTL8651_IOCTL_SETLOOPBACKPORTPHY
++ *
++ * Revision 1.43  2004/04/13 08:15:53  tony
++ * fix bug: make PPTP/L2TP run stably.
++ *
++ * Revision 1.42  2004/04/09 02:26:12  tony
++ * remove rtl8651_specifyNetworkIntfLinkLayerType_1 IOCTL.
++ *
++ * Revision 1.41  2004/04/08 13:18:12  tony
++ * add PPTP/L2TP routine for MII lookback port.
++ *
++ * Revision 1.40  2004/04/08 12:25:42  cfliu
++ * Add del ACL ioctl()
++ *
++ * Revision 1.39  2004/02/24 05:12:33  cfliu
++ * Add symbols required for WLAN HW acceleration code
++ *
++ * Revision 1.38  2004/02/10 13:00:34  orlando
++ * add lanType field in pppoeCfg_t
++ *
++ * Revision 1.37  2004/02/09 09:18:00  tony
++ * add function: user is able to add protocol stack Server used TCP ports by
++ * rtl8651_addProtoStackServerUsedTcpPort(incoming_src_port); and flush the
++ * table by rtl8651_flushProtoStackServerUsedTcpPort();
++ *
++ * Revision 1.36  2004/02/04 06:24:19  rupert
++ * Add UDP IOCTL
++ *
++ * Revision 1.35  2004/01/29 09:38:02  tony
++ * add case RTL8651_IOCTL_ADDNAPTSERVERPORTRANGE ,RTL8651_IOCTL_DELNAPTSERVERPORTRANGE
++ *
++ * Revision 1.34  2004/01/29 02:03:34  orlando
++ * correct duplicate conflicts
++ *
++ * Revision 1.33  2004/01/27 02:03:04  tony
++ * add RTL8651_IOCTL_FLUSHNAPTSERVERPORTBYEXTIP
++ *
++ * Revision 1.32  2004/01/12 12:32:23  orlando
++ * add RTL8651_IOCTL_SETPPPOEDEFAULTDIALSESSIONID
++ *
++ * Revision 1.31  2003/12/12 02:40:44  tony
++ * add rtl8651_setMtu() function.
++ *
++ * Revision 1.30  2003/12/10 03:08:58  tony
++ * make logging function support time zone in kernel space.
++ *
++ * Revision 1.29  2003/12/08 13:53:25  orlando
++ * add RTL8651_IOCTL_ENABLELOGGING
++ *
++ * Revision 1.28  2003/12/04 10:39:02  hiwu
++ * add RTL8651_ADDNAPTUPNPPORTMAPPING
++ * add RTL8651_DELNAPTUPNPPORTMAPPING
++ *
++ * Revision 1.27  2003/12/03 14:29:07  cfliu
++ * comment out old debug commands when CLE is enabled.
++ *
++ * Revision 1.26  2003/12/02 10:24:47  tony
++ * Add Routine: support DoS is able to set threshold by user(Webs GUI).
++ *
++ * Revision 1.25  2003/12/01 12:35:52  tony
++ * make ALG is able to be configured by users(Web GUI).
++ *
++ * Revision 1.24  2003/11/28 01:38:17  rupert
++ * add PPPOEUP_CFG PPPOEDOWN_CFG BATCH IOCTL
++ *
++ * Revision 1.23  2003/11/21 01:56:47  tony
++ * add function: user is able to add protocol stack used UDP ports by
++ * rtl8651_addProtoStackUsedUdpPort(incoming_src_port);
++ *
++ * Revision 1.22  2003/11/18 13:28:28  rupert
++ * add ioctl for dial demand and timeout
++ *
++ * Revision 1.21  2003/11/18 09:04:47  tony
++ * add routine: support mtu configure by user in pppoe.
++ *
++ * Revision 1.20  2003/11/06 12:15:56  rupert
++ * add delete policy route  ioctl
++ *
++ * Revision 1.19  2003/10/30 10:20:49  orlando
++ * add definitions for command "addflow"
++ *
++ * Revision 1.18  2003/10/28 09:58:35  rupert
++ * add policy route
++ *
++ * Revision 1.17  2003/10/28 08:32:36  orlando
++ * add RTL8651_IOCOL_ENABLENAPTAUTOADD
++ *
++ * Revision 1.16  2003/10/24 13:37:42  orlando
++ * add debug command "dhs","dftcp","dficmp"
++ *
++ * Revision 1.15  2003/10/24 10:25:58  tony
++ * add DoS attack interactive webpage,
++ * FwdEngine is able to get WAN status by rtl8651_wanStatus(0:disconnect,1:connect)
++ *
++ * Revision 1.14  2003/10/20 10:13:08  orlando
++ * add define for debug command "dl2","dgidx","dfwd"
++ *
++ * Revision 1.13  2003/10/20 04:52:11  orlando
++ * add _RTL_LOGGING related stuff
++ *
++ * Revision 1.12  2003/10/09 13:23:44  tony
++ * TRIGGER_PORT: add function rtl8651_flushTriggerPortRules,rtl8651_addTriggerPortRule
++ *
++ * Revision 1.11  2003/10/01 09:43:12  orlando
++ * add RTL8651_IOCTL_SETPPPOESESSIONHANGUP
++ *
++ * Revision 1.10  2003/10/01 06:17:57  orlando
++ * add cvs file header
++ *
++ */
++
++#ifndef _LINUX_IF_RE865X_H
++#define _LINUX_IF_RE865X_H
++
++#include <linux/types.h>
++#include <linux/config.h>
++#define RE865X_VERSION 1
++
++#define GET_VERSION         0
++#define ADD_VLAN            2
++#define DEL_VLAN            3
++#define ADD_IF              5
++#define SET_VLAN_IP         6
++#define SET_NET_PARA        7
++#define ADD_GW	            8
++#define GET_IF              9
++#define CON_IFF             10
++#define GET_MAC             11
++#define SET_EXT_INTERFACE	12 
++#define GET_VLAN_STAT	    13
++#define DEL_VLAN_IP	        14
++#define SET_VLAN_TYPE       15
++#define GET_IP	            16
++#define SET_VLAN_PPPOE_PARA 17
++#define SET_DNS_GW          18
++#define GET_PPPOE_STATUS	19
++#define DEL_PPPOE	        20
++#define SET_PPPOE_STATUS	21
++#define SET_PPPOE_IP		22
++#define SET_PPPD_IDLE_TIME	23
++#define GET_PPPD_IDLE_TIME	24
++
++#define RTL8651_FLUSHACLRULE             50
++#define RTL8651_SETDEFAULTACL            51
++#define RTL8651_ADDACL                   52
++#define RTL8651_ADDNAPTSERVERPORTMAPPING 53
++#define RTL8651_DELNAPTSERVERPORTMAPPING 54
++#define SET_SOFTPPPD_IDLE_TIME		 55
++#define ADD_SIGNAL_RECEIVE_PROCESS	 56
++#define ADD_DEMAND_ROUTE		 57
++#define PPPOEDOWN_CFG			58
++#define PPPOEUP_CFG			59
++#define RTL8651_ADDNAPTUPNPPORTMAPPING 60
++#define RTL8651_DELNAPTUPNPPORTMAPPING 61
++#define RTL8651_DELACL                   62
++#define RTL8651_IOCTL_DIAG_LED  63
++
++
++/* start new naming conventions 2003/09/16 */
++#define RTL8651_IOCTL_SETPPPOESESSIONPROPERTY     2000
++#define RTL8651_IOCTL_RESETPPPOESESSIONPROPERTY   2001
++#define RTL8651_IOCTL_BINDPPPOESESSION            2002
++#define RTL8651_IOCTL_ADDPPPOESESSION             2003
++#define RTL8651_IOCTL_DELPPPOESESSION             2004
++#define RTL8651_IOCTL_ADDIPINTF                   2005
++#define RTL8651_IOCTL_DELIPINTF                   2006
++#define RTL8651_IOCTL_ADDNAPTMAPPING              2007
++#define RTL8651_IOCTL_DELNAPTMAPPING              2008
++#define RTL8651_IOCTL_ADDEXTNETWORKINTERFACE      2009
++#define RTL8651_IOCTL_ADDROUTE                    2010
++#define RTL8651_IOCTL_DELROUTE                    2011
++#define RTL8651_IOCTL_ADDNATMAPPING               2014
++#define RTL8651_IOCTL_DELNATMAPPING               2015
++#define RTL8651_IOCTL_ADDNATMAPPING               2014
++#define RTL8651_IOCTL_DELNATMAPPING               2015
++#define RTL8651_IOCTL_ADDNETWORKINTF              2016
++#define RTL8651_IOCTL_DELNETWORKINTF              2017
++#define RTL8651_IOCTL_SPECIFYNETWORKINTFLINKLAYERTYPE 2018
++#define RTL8651_IOCTL_SETASICNAPTAUTOADDDELETE    2019
++#define RTL8651_IOCTL_ADDIPUNNUMBERED             2020
++#define RTL8651_IOCTL_DELIPUNNUMBERED             2021
++#define RTL8651_IOCTL_SETLANSIDEEXTERNALIPINTERFACE 2022
++#define RTL8651_IOCTL_ADDDMZHOST		            2023
++#define RTL8651_IOCTL_DELDMZHOST	              2024
++#define RTL8651_IOCTL_ADDURLFILTERSTRING		  2025
++#define RTL8651_IOCTL_DELURLFILTERSTRING		  2026
++#define RTL8651_IOCTL_SETPPPOESESSIONHANGUP		  2027
++#define RTL8651_IOCTL_FLUSHTRIGGERPORTRULES		  2028
++#define RTL8651_IOCTL_ADDTRIGGERPORTRULE		  2029
++#define RTL8651_IOCTL_INSTALLLOGGINGFUNCTION      2030
++#define RTL8651_IOCTL_SETWANSTATUS	              2031
++#define RTL8651_IOCTL_SETDOSSTATUS	              2032
++#define RTL8651_IOCTL_ENABLENAPTAUTOADD           2033
++#define RTL8651_IOCTL_ADDNAPTCONNECTION           2034
++#define RTL8651_IOCTL_ADDPOLICYROUTE	          2035
++#define RTL8651_IOCTL_FLUSHPOLICYROUTE	          2036
++#define RTL8651_IOCTL_SETPPPOEMTU	              2037
++#define RTL8651_IOCTL_ADDDEMANDROUTE	          2038
++#define RTL8651_IOCTL_FLUSHDEMANDROUTE	          2039
++#define RTL8651_IOCTL_FLUSHPROTOSTACKUSEDUDPPORTS 2040
++#define RTL8651_IOCTL_ADDPROTOSTACKUSEDUDPPORT	  2041
++#define RTL8651_IOCTL_SETALGSTATUS                2042
++#define RTL8651_IOCTL_SETDOSTHRESHOLD	          2043
++#define RTL8651_IOCTL_ENABLELOGGING  	          2044
++#define RTL8651_IOCTL_SETTIMEZONE				  2045
++#define RTL8651_IOCTL_SETMTU	                  2046
++#define RTL8651_IOCTL_SETPPPOEDEFAULTDIALSESSIONID 2047
++#define RTL8651_IOCTL_FLUSHNAPTSERVERPORTBYEXTIP  2048
++#define RTL8651_IOCTL_ADDNAPTSERVERPORTRANGE      2049
++#define RTL8651_IOCTL_DELNAPTSERVERPORTRANGE      2050
++#define RTL8651_IOCTL_SETUDPSIZETHRESH            2051
++#define RTL8651_IOCTL_FLUSHPROTOSTACKSERVERUSEDTCPPORTS 2052
++#define RTL8651_IOCTL_ADDPROTOSTACKSERVERUSEDTCPPORT 2053
++#define RTL8651_IOCTL_SETLOOPBACKPORT				2054
++#define RTL8651_IOCTL_ADDSESSION					2055
++#define RTL8651_IOCTL_DELSESSION					2056
++#define RTL8651_IOCTL_BINDSESSION					2057
++#define RTL8651_IOCTL_SETPPTPPROPERTY				2059
++#define RTL8651_IOCTL_SETL2TPPROPERTY				2060
++#define RTL8651_IOCTL_SETLOOPBACKPORTPHY			2061
++#define RTL8651_IOCTL_SETDEFAULTIGMPUPSTREAM		2062
++#define RTL8651_IOCTL_RESETPPTPPROPERTY				2063
++#define RTL8651_IOCTL_RESETL2TPPROPERTY				2064
++#define RTL8651_IOCTL_ADDNAPTMAPPINGEXT				2065
++#define RTL8651_IOCTL_FLUSHPROTOSTACKACTIONS		2066
++#define RTL8651_IOCTL_ADDPROTOSTACKACTIONS			2067
++#define RTL8651_IOCTL_DELURLFILTER				2068
++#define RTL8651_IOCTL_ADDURLFILTER				2069
++#define RTL8651_IOCTL_SETPERSRCDOSTHRESHOLD			2070
++#define RTL8651_IOCTL_SETSOUCEIPBLOCKTIMEOUT			2071
++#define RTL8651_IOCTL_FREEBLOCKEDSOURCEIP			2072
++#define RTL8651_IOCTL_ENABLESOURCEIPBLOCK			2073
++#define RTL8651_IOCTL_FLUSHABQOS					2704
++#define RTL8651_IOCTL_ADDPOLICYBASEDQOS			2705
++#define RTL8651_IOCTL_SETFLOWCTRL					2706
++#define RTL8651_IOCTL_SETPRIORITYQUEUE				2707
++#define RTL8651_IOCTL_SETBANDWIDTHCTRL			2708
++#define RTL8651_IOCTL_ADDPBNAT						2709
++#define RTL8651_IOCTL_DELPBNAT						2710
++#define RTL8651_IOCTL_CFGCONTER					2711
++#define RTL8651_IOCTL_GETLINKSTATUS				2712
++#define RTL8651_IOCTL_GETCOUNTER				2713
++#define RTL8651_IOCTL_GETLDVER					2714
++#define RTL8651_IOCTL_REBOOT					2715
++#define RTL8651_IOCTL_SETNETMTU					2716
++#define RTL8651_IOCTL_ADDMULTICASTFILTER			2717
++#define RTL8651_IOCTL_DELMULITCASTFILTER			2718
++#define RTL8651_IOCTL_ADDRATELIMITGROUP			2719
++#define RTL8651_IOCTL_ADDRATELIMIT					2720
++#define RTL8651_IOCTL_FLUSHRATELIMITGROUP			2721
++#define RTL8651_IOCTL_REMOVENETWORKINTFLINKLAYERTYPE 2722
++#define RTL8651_IOCTL_DELEXTNETWORKINTERFACE 2723
++#define RTL8651_IOCTL_SETDOSSCANTRACKINGPARA		2724
++#define RTL8651_IOCTL_SETMNQUEUEUPSTREAMBW			2725
++#define RTL8651_IOCTL_ADDUNLIMITEDQUEUE				2726
++#define RTL8651_IOCTL_ADDLIMITEDQUEUE				2727
++#define RTL8651_IOCTL_ADDDOSIGNORETYPE				2728
++#define RTL8651_IOCTL_DELDOSIGNORETYPE				2729
++#define RTL8651_IOCTL_WEAKNAPTCTL						2730
++#define RTL8651_IOCTL_LOOSEUDPCTL						2731
++#define RTL8651_IOCTL_TCPNAPTSTATICPORTMAPPINGCTL	2732
++#define RTL8651_IOCTL_UDPNAPTSTATICPORTMAPPINGCTL	2733
++//+++rome33 use
++#define RTL8651_IOCTL_NAPTREDIRECT_REGISTER_RULE	2734
++#define RTL8651_IOCTL_NAPTREDIRECT_UNREGISTER_RULE	2735
++#define RTL8651_IOCTL_NAPTREDIRECT_QUERY_FLOW		2736
++#define RTL8651_IOCTL_ADDSUBVLAN						2737
++#define RTL8651_IOCTL_DELSUBVLAN						2738
++#define RTL8651_IOCTL_ADDEXTMCASTPORT				2739
++#define RTL8651_IOCTL_DELEXTMCASTPORT				2740
++#define RTL8651_IOCTL_SET_DHCPC_PID					2741
++#define RTL8651_IOCTL_ENABLE_PPPOE_PASSTHRU			2742
++#define RTL8651_IOCTL_ENABLE_IPV6_PASSTHRU			2743
++#define RTL8651_IOCTL_ENABLE_IPMULTICAST				2744
++#define RTL8651_IOCTL_ENABLE_DROP_UNKNOWN_PPPOE_DROP 2745
++#define RTL8651_IOCTL_SETDMZHOSTL4FWD				2746
++#define RTL8651_IOCTL_SETDMZHOSTICMPFWD				2747
++#define RTL8651_IOCTL_ADDPROTOSTACKSERVERPORTRANGE			2748
++//--rome33
++//+++rome34
++#define RTL8651_IOCTL_ENABLE_IPX_PASSTHRU				2749
++#define RTL8651_IOCTL_ENABLE_NETBIOS_PASSTHRU			2750
++#define RTL8651_IOCTL_RTL8651_SETALGQOSQUEUEID			2751
++#define RTL8651_IOCTL_DELRATELIMITGROUP				2752
++#define RTL8651_IOCTL_GETMNQUEUEENTRY				2753
++#define RTL8651_IOCTL_DELRATELIMITRULE				2754
++#define RTL8651_IOCTL_QUERYUPNPMAPTIMEAGE			2755
++#define RTL8651_IOCTL_DELFLOWFROMMNQUEUE			2756
++#define RTL8651_IOCTL_SETDSCPTOMNQUEUE				2757
++//---rome34
++#define RTL8651_IOCTL_GETNATTYPE		2758
++#define RTL8651_IOCTL_SETNATTYPE		2759
++
++/* +++ siyou added */
++#define RTL8651_IOCTL_GETSWITCHPORT					4000
++#define RTL8651_IOCTL_SETSWITCHPORT 				4001
++/* --- siyou added */
++/* +++ joel added for blocking */
++#define ALPHA_RTL8651_IOCTL_ADDDOMAINBLOCK 			4002
++#define ALPHA_RTL8651_IOCTL_FLUSHDOMAINBLOCK		4003
++#define ALPHA_RTL8651_IOCTL_SETRULEDOMAINBLOCK		4004
++#define ALPHA_RTL8651_IOCTL_WEB_REMOTE_ACCESS		4005
++#define ALPHA_RTL8651_IOCTL_GETCABLETEST    		4006
++#define ALPHA_RTL8651_IOCTL_WATCH_DOG        		4007
++#define ALPHA_RTL8651_IOCTL_DNSRELAYENABLE     		4008
++#define ALPHA_RTL8651_IOCTL_GETNAPTSESSIONCOUNT     4009
++#define ALPHA_RTL8651_IOCTL_GETNAPTENTRY            4010
++#define ALPHA_RTL8651_IOCTL_ADD_PS_FASTPATH         4013
++#define ALPHA_RTL8651_IOCTL_DEL_PS_FASTPATH         4014
++#define ALPHA_RTL8651_IOCTL_URL_HOME         		4015
++#define ALPHA_RTL8651_IOCTL_TRIGGER_POLICY_ROUTE	4016
++#define ALPHA_RTL8651_FLUSH_URLFILTER_RULE          4017
++#define RTL8651_IOCTL_DELPOLICYROUTE                4018
++#define RTL8651_IOCTL_NAPT_TCPTIMEOUT               4019
++#ifdef ALPHA_WLAN_PARTITION 
++#define ALPHA_RTL8651_IOCTL_WLAN_PARTITION		4020  //shiang add for wlan partition support.
++#endif
++#ifdef ALPHA_WLAN_MCAST_RATECTRL
++#define ALPHA_RTL8651_IOCTL_WLAN_MCAST_RATECTRL 4021  //shiang add for wlan multicast rate control
++#endif
++/* --- joel added for blocking */
++
++//+++Add by shiang for IP Range QoS support! We add this due to the "isIPRange_" field of ""
++#define ALPHA_IOCTL_ADDUNLIMITEDQUEUE_WITH_IPRANGE 4011
++#define ALPHA_IOCTL_ADDLIMITEDQUEUE_WITH_IPRANGE      4012
++enum PORT_BITS
++{
++	CPU_PORT = 1 << 6,
++	PORTMII = 1<<5,		
++	PORT5	 = 1 << 4,
++	PORT4    = 1 << 3,
++	PORT3	 = 1 << 2,
++	PORT2	 = 1 << 1,
++	PORT1 	 = 1 << 0,
++};
++#define EXTERNAL_INTERFACE	1
++#define RTL8651_LL_VLAN				0x01
++#define RTL8651_LL_PPPOE			0x02
++#define LL_VLAN		RTL8651_LL_VLAN
++#define LL_PPPOE	RTL8651_LL_PPPOE
++#define LL_PPTP		RTL8651_LL_PPTP
++#define LL_L2TP		RTL8651_LL_L2TP
++
++/* Debug Command */
++#ifndef CONFIG_RTL865X_CLE
++#define DUMP_PPPOE	3000
++#define DUMP_VLAN	3001
++#define DUMP_L3		3002
++#define DUMP_TCP	3003
++#define DUMP_ICMP	3004
++#define DUMP_ALG	3005
++#define DUMP_IP		3006
++#define DUMP_PVID	3007
++#define DUMP_TRAP	3008
++#define DUMP_ARP	3009
++#define DUMP_ACL	3011
++#define DUMP_SEVERPORT	3012
++#define DUMP_GIDX	3013
++#define DUMP_FWD	3014
++#define DUMP_L2     3015
++#define DUMP_HS     3016
++#define DUMP_FTCP   3017
++#define DUMP_FICMP  3018
++#define ADDSTATICNAPTFLOW  3019
++#endif /*CONFIG_RTL865X_CLE*/
++
++typedef struct 
++{
++	unsigned char			defaultSession;   	/* default pppoe session  */
++	unsigned short			sessionId;	   /* pppoe session id */
++	unsigned int			silentTimeout; /* in seconds */	
++	unsigned char           ipAddr[4];	   /* ip address, for multiple pppoe only */
++	unsigned char           ipMask[4];	   /* network mask, for multiple pppoe only */
++	unsigned char           gwAddr[4];     /* default gateway address, for multiple pppoe only */
++	unsigned char           svrMac[6];     /* pppoe server mac address */
++	unsigned int          lanType;
++} pppoeCfg_t;
++
++/* +++ add by ALPHA siyou 2004.4 */
++struct SwitchPort
++{
++	unsigned char	portId;
++	unsigned char	linkUp;
++	unsigned char	fullDuplex;
++	unsigned char	autoNeg;
++	unsigned short	speed;
++};
++/* --- add by ALPHA siyou 2004.4 */
++//+++joel
++//for web get napt info
++typedef struct _webnaptinfo_
++{
++	unsigned int sip;
++	unsigned int dip;
++	unsigned short sport;
++	unsigned short dport;
++	unsigned short age;
++	unsigned char istcp;
++}webnaptinfo_t;
++//---joel
++#endif
+diff --git a/include/asm-mips/rtl865x/re865x_other.h b/include/asm-mips/rtl865x/re865x_other.h
+new file mode 100644
+index 0000000..2f8f5c6
+--- /dev/null
++++ b/include/asm-mips/rtl865x/re865x_other.h
+@@ -0,0 +1,537 @@
++/*
++ * Copyright c                Realtek Semiconductor Corporation, 2003
++ * All rights reserved.                                                    
++ * 
++ * $Header: /home/bcm_cvsroot/WRT54GX_ALL_Realtek/linux-2.4.x/include/asm-mips/rtl865x/re865x.h,v 1.4 2006/01/16 05:43:06 shixiang Exp $
++ *
++ * $Author: shixiang $
++ *
++ * Abstract:
++ *
++ *   re865x.h  -- ioctl symbol definitions
++ *
++ * $Log: re865x.h,v $
++ * Revision 1.4  2006/01/16 05:43:06  shixiang
++ * ken, add url-flush function
++ *
++ * Revision 1.3  2005/10/31 02:58:51  shixiang
++ * led off after reinit
++ *
++ * Revision 1.2  2005/10/12 01:58:33  shixiang
++ * fixed block myself ,url filter by mac issue
++ *
++ * Revision 1.1.1.1  2005/09/30 07:32:43  shixiang
++ * Ken, for All in one
++ *
++ * Revision 1.1.1.1  2005/07/15 04:13:24  kevin
++ * Kevin, for merge 2x2&2x3
++ *
++ * Revision 1.1.1.1  2005/07/01 11:59:37  kevin
++ * For merge code
++ *
++ * Revision 1.3  2005/03/23 03:37:31  kevin
++ * URL filter
++ *
++ * Revision 1.2  2005/03/04 06:06:08  kevin
++ * kevin, for ACL ip range filter
++ *
++ * Revision 1.1.1.1  2005/01/28 04:02:44  kevin
++ * Base on realtek SDK064
++ *
++ * Revision 1.30  2005/01/18 13:33:37  ghhuang
++ * *: Replace Diffserv API
++ *
++ * Revision 1.29  2005/01/18 08:50:22  ghhuang
++ * +: Diffserv (DSCP) remarking support
++ *
++ * Revision 1.28  2005/01/11 03:22:55  ghhuang
++ * *:MNQ bug fix - Correct ACL undeletion
++ *
++ * Revision 1.27  2005/01/03 02:52:22  tony
++ * +: add API: rtl8651_queryUpnpMapTimeAge
++ *
++ * Revision 1.26  2004/12/22 08:41:49  tony
++ * *: support for alg qos
++ *
++ * Revision 1.25  2004/12/02 03:08:37  yjlou
++ * +: support IPX/Netbios Passthru function
++ *
++ * Revision 1.24  2004/11/01 08:22:21  tony
++ * *: support for rtl8651_addProtoStackServerPortRange
++ *
++ * Revision 1.23  2004/10/21 11:48:39  chenyl
++ * +: web-based icmp/l4 protocol DMZ forwarding
++ *
++ * Revision 1.22  2004/10/11 05:20:27  yjlou
++ * +: add RTL8651_IOCTL_ENABLE_DROP_UNKNOWN_PPPOE_DROP
++ *
++ * Revision 1.21  2004/10/05 09:20:42  chenyl
++ * +: web page to turn ON/OFF ip-multicast system
++ *
++ * Revision 1.20  2004/10/01 08:37:32  yjlou
++ * +: RTL8651_IOCTL_ENABLE_PPPOE_PASSTHRU and RTL8651_IOCTL_ENABLE_IPV6_PASSTHRU
++ *
++ * Revision 1.19  2004/09/23 08:29:33  tony
++ * new features: when wan port's link is changed, the DHCPC will auto renew.
++ *
++ * Revision 1.18  2004/09/15 14:52:19  chenyl
++ * *: enable multicast upload cache
++ * *: modify PPTP's default MTU
++ *
++ * Revision 1.17  2004/09/03 03:00:09  chhuang
++ * +: add new feature: pseudo VLAN
++ *
++ * Revision 1.16  2004/09/02 06:15:38  chenyl
++ * *: multicast :
++ * 	- when turning-on ip-multicast, periodic query will be sent immediately
++ * +: tbldrv
++ * 	- add options when run addNaptConnection
++ * 		- PURE_SW: pure software entry
++ * 		- DONT_CHECK_INTIP: ignore internal IP checking
++ * 		- TO_PROTOCOL_STACK: this napt packet must be trapped to protocol stack
++ * +: forwarding engine:
++ * 	- protocol stack TCP/UDP flow cache
++ * 	- napt redirect register/unregister/query
++ *
++ * Revision 1.15  2004/08/20 12:29:17  cfliu
++ * +: Add loose UDP ctrl item
++ *
++ * Revision 1.14  2004/08/18 05:39:59  chenyl
++ * +: napt special option web-based setting
++ *
++ * Revision 1.13  2004/07/27 10:48:52  cfliu
++ * *: Fix all compile warnings
++ *
++ * Revision 1.12  2004/07/27 03:06:16  chenyl
++ * +: Add DoS ignore type setting ioctl items
++ *
++ * Revision 1.11  2004/07/19 02:12:26  chhuang
++ * *: modify M-N-1 queue
++ *
++ * Revision 1.10  2004/07/14 13:55:59  chenyl
++ * +: web page for MN queue
++ *
++ * Revision 1.9  2004/07/12 04:25:36  chenyl
++ * *: extend existing port scan mechanism
++ *
++ * Revision 1.8  2004/07/08 10:58:40  tony
++ * +: add new ioctl api.
++ *
++ * Revision 1.7  2004/07/06 07:22:13  chhuang
++ * +: add rate limit
++ *
++ * Revision 1.6  2004/06/29 07:37:13  chenyl
++ * +: igmp-proxy filter
++ *
++ * Revision 1.5  2004/06/21 03:49:17  chhuang
++ * +: define RTL8651_IOCTL_NETMTU
++ *
++ * Revision 1.4  2004/06/16 04:43:11  tony
++ * *: support reboot and get loader version for MMU.
++ *
++ * Revision 1.3  2004/06/14 09:05:40  rupert
++ * *: serial definition
++ *
++ * Revision 1.58  2004/06/11 11:07:17  cfliu
++ * +: Add Cable meter and Interface counter webpage
++ *
++ * Revision 1.57  2004/05/31 14:41:04  jzchen
++ * Add Counter setting IO control definition
++ *
++ * Revision 1.56  2004/05/28 06:11:51  yjlou
++ * +: add IOCTL for rtl8651_addProtocolBasedNAT() and rtl8651_delProtocolBasedNAT()
++ *
++ * Revision 1.55  2004/05/27 05:14:18  cfliu
++ * Remove INIT_HARDWARE
++ *
++ * Revision 1.54  2004/05/20 08:45:49  chhuang
++ * add Web Page for QoS
++ *
++ * Revision 1.53  2004/05/19 08:49:22  orlando
++ * add RTL8651_IOCTL_DIAG_LED
++ *
++ * Revision 1.52  2004/05/17 07:22:16  tony
++ * fix pppoe silent timeout bug and make PPTP/L2TP support silent timeout.
++ *
++ * Revision 1.51  2004/05/14 10:18:15  orlando
++ * add RTL8651_IOCTL_DIAG_LED
++ *
++ * Revision 1.50  2004/05/12 07:20:15  chenyl
++ * +: source ip blocking
++ * *: modify dos mechanism
++ *
++ * Revision 1.49  2004/05/10 05:53:45  chhuang
++ * add new IOCTL: RTL8651_IOCTL_ADDURLFILTER
++ *
++ * Revision 1.48  2004/05/05 08:27:07  tony
++ * new features: add remote management spec
++ *
++ * Revision 1.47  2004/04/29 05:47:52  chhuang
++ * add new ioctl for rtl8651_addNaptMappingExt()
++ *
++ * Revision 1.46  2004/04/27 07:05:02  chenyl
++ * +: ioctl number: RTL8651_IOCTL_SETDEFAULTIGMPUPSTREAM
++ *
++ * Revision 1.45  2004/04/19 13:45:18  tony
++ * add resetPptpProprity and resetL2tpProprity IOCTL.
++ *
++ * Revision 1.44  2004/04/14 02:45:50  tony
++ * add ioctl RTL8651_IOCTL_SETLOOPBACKPORTPHY
++ *
++ * Revision 1.43  2004/04/13 08:15:53  tony
++ * fix bug: make PPTP/L2TP run stably.
++ *
++ * Revision 1.42  2004/04/09 02:26:12  tony
++ * remove rtl8651_specifyNetworkIntfLinkLayerType_1 IOCTL.
++ *
++ * Revision 1.41  2004/04/08 13:18:12  tony
++ * add PPTP/L2TP routine for MII lookback port.
++ *
++ * Revision 1.40  2004/04/08 12:25:42  cfliu
++ * Add del ACL ioctl()
++ *
++ * Revision 1.39  2004/02/24 05:12:33  cfliu
++ * Add symbols required for WLAN HW acceleration code
++ *
++ * Revision 1.38  2004/02/10 13:00:34  orlando
++ * add lanType field in pppoeCfg_t
++ *
++ * Revision 1.37  2004/02/09 09:18:00  tony
++ * add function: user is able to add protocol stack Server used TCP ports by
++ * rtl8651_addProtoStackServerUsedTcpPort(incoming_src_port); and flush the
++ * table by rtl8651_flushProtoStackServerUsedTcpPort();
++ *
++ * Revision 1.36  2004/02/04 06:24:19  rupert
++ * Add UDP IOCTL
++ *
++ * Revision 1.35  2004/01/29 09:38:02  tony
++ * add case RTL8651_IOCTL_ADDNAPTSERVERPORTRANGE ,RTL8651_IOCTL_DELNAPTSERVERPORTRANGE
++ *
++ * Revision 1.34  2004/01/29 02:03:34  orlando
++ * correct duplicate conflicts
++ *
++ * Revision 1.33  2004/01/27 02:03:04  tony
++ * add RTL8651_IOCTL_FLUSHNAPTSERVERPORTBYEXTIP
++ *
++ * Revision 1.32  2004/01/12 12:32:23  orlando
++ * add RTL8651_IOCTL_SETPPPOEDEFAULTDIALSESSIONID
++ *
++ * Revision 1.31  2003/12/12 02:40:44  tony
++ * add rtl8651_setMtu() function.
++ *
++ * Revision 1.30  2003/12/10 03:08:58  tony
++ * make logging function support time zone in kernel space.
++ *
++ * Revision 1.29  2003/12/08 13:53:25  orlando
++ * add RTL8651_IOCTL_ENABLELOGGING
++ *
++ * Revision 1.28  2003/12/04 10:39:02  hiwu
++ * add RTL8651_ADDNAPTUPNPPORTMAPPING
++ * add RTL8651_DELNAPTUPNPPORTMAPPING
++ *
++ * Revision 1.27  2003/12/03 14:29:07  cfliu
++ * comment out old debug commands when CLE is enabled.
++ *
++ * Revision 1.26  2003/12/02 10:24:47  tony
++ * Add Routine: support DoS is able to set threshold by user(Webs GUI).
++ *
++ * Revision 1.25  2003/12/01 12:35:52  tony
++ * make ALG is able to be configured by users(Web GUI).
++ *
++ * Revision 1.24  2003/11/28 01:38:17  rupert
++ * add PPPOEUP_CFG PPPOEDOWN_CFG BATCH IOCTL
++ *
++ * Revision 1.23  2003/11/21 01:56:47  tony
++ * add function: user is able to add protocol stack used UDP ports by
++ * rtl8651_addProtoStackUsedUdpPort(incoming_src_port);
++ *
++ * Revision 1.22  2003/11/18 13:28:28  rupert
++ * add ioctl for dial demand and timeout
++ *
++ * Revision 1.21  2003/11/18 09:04:47  tony
++ * add routine: support mtu configure by user in pppoe.
++ *
++ * Revision 1.20  2003/11/06 12:15:56  rupert
++ * add delete policy route  ioctl
++ *
++ * Revision 1.19  2003/10/30 10:20:49  orlando
++ * add definitions for command "addflow"
++ *
++ * Revision 1.18  2003/10/28 09:58:35  rupert
++ * add policy route
++ *
++ * Revision 1.17  2003/10/28 08:32:36  orlando
++ * add RTL8651_IOCOL_ENABLENAPTAUTOADD
++ *
++ * Revision 1.16  2003/10/24 13:37:42  orlando
++ * add debug command "dhs","dftcp","dficmp"
++ *
++ * Revision 1.15  2003/10/24 10:25:58  tony
++ * add DoS attack interactive webpage,
++ * FwdEngine is able to get WAN status by rtl8651_wanStatus(0:disconnect,1:connect)
++ *
++ * Revision 1.14  2003/10/20 10:13:08  orlando
++ * add define for debug command "dl2","dgidx","dfwd"
++ *
++ * Revision 1.13  2003/10/20 04:52:11  orlando
++ * add _RTL_LOGGING related stuff
++ *
++ * Revision 1.12  2003/10/09 13:23:44  tony
++ * TRIGGER_PORT: add function rtl8651_flushTriggerPortRules,rtl8651_addTriggerPortRule
++ *
++ * Revision 1.11  2003/10/01 09:43:12  orlando
++ * add RTL8651_IOCTL_SETPPPOESESSIONHANGUP
++ *
++ * Revision 1.10  2003/10/01 06:17:57  orlando
++ * add cvs file header
++ *
++ */
++
++#ifndef _LINUX_IF_RE865X_H
++#define _LINUX_IF_RE865X_H
++
++#include <linux/types.h>
++#include <linux/config.h>
++#define RE865X_VERSION 1
++
++#define GET_VERSION         0
++#define ADD_VLAN            2
++#define DEL_VLAN            3
++#define ADD_IF              5
++#define SET_VLAN_IP         6
++#define SET_NET_PARA        7
++#define ADD_GW	            8
++#define GET_IF              9
++#define CON_IFF             10
++#define GET_MAC             11
++#define SET_EXT_INTERFACE	12 
++#define GET_VLAN_STAT	    13
++#define DEL_VLAN_IP	        14
++#define SET_VLAN_TYPE       15
++#define GET_IP	            16
++#define SET_VLAN_PPPOE_PARA 17
++#define SET_DNS_GW          18
++#define GET_PPPOE_STATUS	19
++#define DEL_PPPOE	        20
++#define SET_PPPOE_STATUS	21
++#define SET_PPPOE_IP		22
++#define SET_PPPD_IDLE_TIME	23
++#define GET_PPPD_IDLE_TIME	24
++
++#define RTL8651_FLUSHACLRULE             50
++#define RTL8651_SETDEFAULTACL            51
++#define RTL8651_ADDACL                   52
++#define RTL8651_ADDNAPTSERVERPORTMAPPING 53
++#define RTL8651_DELNAPTSERVERPORTMAPPING 54
++#define SET_SOFTPPPD_IDLE_TIME		 55
++#define ADD_SIGNAL_RECEIVE_PROCESS	 56
++#define ADD_DEMAND_ROUTE		 57
++#define PPPOEDOWN_CFG			58
++#define PPPOEUP_CFG			59
++#define RTL8651_ADDNAPTUPNPPORTMAPPING 60
++#define RTL8651_DELNAPTUPNPPORTMAPPING 61
++#define RTL8651_DELACL                   62
++#define RTL8651_IOCTL_DIAG_LED  63
++
++
++/* start new naming conventions 2003/09/16 */
++#define RTL8651_IOCTL_SETPPPOESESSIONPROPERTY     2000
++#define RTL8651_IOCTL_RESETPPPOESESSIONPROPERTY   2001
++#define RTL8651_IOCTL_BINDPPPOESESSION            2002
++#define RTL8651_IOCTL_ADDPPPOESESSION             2003
++#define RTL8651_IOCTL_DELPPPOESESSION             2004
++#define RTL8651_IOCTL_ADDIPINTF                   2005
++#define RTL8651_IOCTL_DELIPINTF                   2006
++#define RTL8651_IOCTL_ADDNAPTMAPPING              2007
++#define RTL8651_IOCTL_DELNAPTMAPPING              2008
++#define RTL8651_IOCTL_ADDEXTNETWORKINTERFACE      2009
++#define RTL8651_IOCTL_ADDROUTE                    2010
++#define RTL8651_IOCTL_DELROUTE                    2011
++#define RTL8651_IOCTL_ADDNATMAPPING               2014
++#define RTL8651_IOCTL_DELNATMAPPING               2015
++#define RTL8651_IOCTL_ADDNATMAPPING               2014
++#define RTL8651_IOCTL_DELNATMAPPING               2015
++#define RTL8651_IOCTL_ADDNETWORKINTF              2016
++#define RTL8651_IOCTL_DELNETWORKINTF              2017
++#define RTL8651_IOCTL_SPECIFYNETWORKINTFLINKLAYERTYPE 2018
++#define RTL8651_IOCTL_SETASICNAPTAUTOADDDELETE    2019
++#define RTL8651_IOCTL_ADDIPUNNUMBERED             2020
++#define RTL8651_IOCTL_DELIPUNNUMBERED             2021
++#define RTL8651_IOCTL_SETLANSIDEEXTERNALIPINTERFACE 2022
++#define RTL8651_IOCTL_ADDDMZHOST		            2023
++#define RTL8651_IOCTL_DELDMZHOST	              2024
++#define RTL8651_IOCTL_ADDURLFILTERSTRING		  2025
++#define RTL8651_IOCTL_DELURLFILTERSTRING		  2026
++#define RTL8651_IOCTL_SETPPPOESESSIONHANGUP		  2027
++#define RTL8651_IOCTL_FLUSHTRIGGERPORTRULES		  2028
++#define RTL8651_IOCTL_ADDTRIGGERPORTRULE		  2029
++#define RTL8651_IOCTL_INSTALLLOGGINGFUNCTION      2030
++#define RTL8651_IOCTL_SETWANSTATUS	              2031
++#define RTL8651_IOCTL_SETDOSSTATUS	              2032
++#define RTL8651_IOCTL_ENABLENAPTAUTOADD           2033
++#define RTL8651_IOCTL_ADDNAPTCONNECTION           2034
++#define RTL8651_IOCTL_ADDPOLICYROUTE	          2035
++#define RTL8651_IOCTL_FLUSHPOLICYROUTE	          2036
++#define RTL8651_IOCTL_SETPPPOEMTU	              2037
++#define RTL8651_IOCTL_ADDDEMANDROUTE	          2038
++#define RTL8651_IOCTL_FLUSHDEMANDROUTE	          2039
++#define RTL8651_IOCTL_FLUSHPROTOSTACKUSEDUDPPORTS 2040
++#define RTL8651_IOCTL_ADDPROTOSTACKUSEDUDPPORT	  2041
++#define RTL8651_IOCTL_SETALGSTATUS                2042
++#define RTL8651_IOCTL_SETDOSTHRESHOLD	          2043
++#define RTL8651_IOCTL_ENABLELOGGING  	          2044
++#define RTL8651_IOCTL_SETTIMEZONE				  2045
++#define RTL8651_IOCTL_SETMTU	                  2046
++#define RTL8651_IOCTL_SETPPPOEDEFAULTDIALSESSIONID 2047
++#define RTL8651_IOCTL_FLUSHNAPTSERVERPORTBYEXTIP  2048
++#define RTL8651_IOCTL_ADDNAPTSERVERPORTRANGE      2049
++#define RTL8651_IOCTL_DELNAPTSERVERPORTRANGE      2050
++#define RTL8651_IOCTL_SETUDPSIZETHRESH            2051
++#define RTL8651_IOCTL_FLUSHPROTOSTACKSERVERUSEDTCPPORTS 2052
++#define RTL8651_IOCTL_ADDPROTOSTACKSERVERUSEDTCPPORT 2053
++#define RTL8651_IOCTL_SETLOOPBACKPORT				2054
++#define RTL8651_IOCTL_ADDSESSION					2055
++#define RTL8651_IOCTL_DELSESSION					2056
++#define RTL8651_IOCTL_BINDSESSION					2057
++#define RTL8651_IOCTL_SETPPTPPROPERTY				2059
++#define RTL8651_IOCTL_SETL2TPPROPERTY				2060
++#define RTL8651_IOCTL_SETLOOPBACKPORTPHY			2061
++#define RTL8651_IOCTL_SETDEFAULTIGMPUPSTREAM		2062
++#define RTL8651_IOCTL_RESETPPTPPROPERTY				2063
++#define RTL8651_IOCTL_RESETL2TPPROPERTY				2064
++#define RTL8651_IOCTL_ADDNAPTMAPPINGEXT				2065
++#define RTL8651_IOCTL_FLUSHPROTOSTACKACTIONS		2066
++#define RTL8651_IOCTL_ADDPROTOSTACKACTIONS			2067
++#define RTL8651_IOCTL_DELURLFILTER				2068
++#define RTL8651_IOCTL_ADDURLFILTER				2069
++#define RTL8651_IOCTL_SETPERSRCDOSTHRESHOLD			2070
++#define RTL8651_IOCTL_SETSOUCEIPBLOCKTIMEOUT			2071
++#define RTL8651_IOCTL_FREEBLOCKEDSOURCEIP			2072
++#define RTL8651_IOCTL_ENABLESOURCEIPBLOCK			2073
++#define RTL8651_IOCTL_FLUSHABQOS					2704
++#define RTL8651_IOCTL_ADDPOLICYBASEDQOS			2705
++#define RTL8651_IOCTL_SETFLOWCTRL					2706
++#define RTL8651_IOCTL_SETPRIORITYQUEUE				2707
++#define RTL8651_IOCTL_SETBANDWIDTHCTRL			2708
++#define RTL8651_IOCTL_ADDPBNAT						2709
++#define RTL8651_IOCTL_DELPBNAT						2710
++#define RTL8651_IOCTL_CFGCONTER					2711
++#define RTL8651_IOCTL_GETLINKSTATUS				2712
++#define RTL8651_IOCTL_GETCOUNTER				2713
++#define RTL8651_IOCTL_GETLDVER					2714
++#define RTL8651_IOCTL_REBOOT					2715
++#define RTL8651_IOCTL_SETNETMTU					2716
++#define RTL8651_IOCTL_ADDMULTICASTFILTER			2717
++#define RTL8651_IOCTL_DELMULITCASTFILTER			2718
++#define RTL8651_IOCTL_ADDRATELIMITGROUP			2719
++#define RTL8651_IOCTL_ADDRATELIMIT					2720
++#define RTL8651_IOCTL_FLUSHRATELIMITGROUP			2721
++#define RTL8651_IOCTL_REMOVENETWORKINTFLINKLAYERTYPE 2722
++#define RTL8651_IOCTL_DELEXTNETWORKINTERFACE 2723
++#define RTL8651_IOCTL_SETDOSSCANTRACKINGPARA		2724
++#define RTL8651_IOCTL_SETMNQUEUEUPSTREAMBW			2725
++#define RTL8651_IOCTL_ADDUNLIMITEDQUEUE				2726
++#define RTL8651_IOCTL_ADDLIMITEDQUEUE				2727
++#define RTL8651_IOCTL_ADDDOSIGNORETYPE				2728
++#define RTL8651_IOCTL_DELDOSIGNORETYPE				2729
++#define RTL8651_IOCTL_WEAKNAPTCTL						2730
++#define RTL8651_IOCTL_LOOSEUDPCTL						2731
++#define RTL8651_IOCTL_TCPNAPTSTATICPORTMAPPINGCTL	2732
++#define RTL8651_IOCTL_UDPNAPTSTATICPORTMAPPINGCTL	2733
++#define RTL8651_IOCTL_NAPTREDIRECT_REGISTER_RULE	2734
++#define RTL8651_IOCTL_NAPTREDIRECT_UNREGISTER_RULE	2735
++#define RTL8651_IOCTL_NAPTREDIRECT_QUERY_FLOW		2736
++#define RTL8651_IOCTL_ADDSUBVLAN						2737
++#define RTL8651_IOCTL_DELSUBVLAN						2738
++#define RTL8651_IOCTL_ADDEXTMCASTPORT				2739
++#define RTL8651_IOCTL_DELEXTMCASTPORT				2740
++#define RTL8651_IOCTL_SET_DHCPC_PID					2741
++#define RTL8651_IOCTL_ENABLE_PPPOE_PASSTHRU			2742
++#define RTL8651_IOCTL_ENABLE_IPV6_PASSTHRU			2743
++#define RTL8651_IOCTL_ENABLE_IPMULTICAST				2744
++#define RTL8651_IOCTL_ENABLE_DROP_UNKNOWN_PPPOE_DROP 2745
++#define RTL8651_IOCTL_SETDMZHOSTL4FWD				2746
++#define RTL8651_IOCTL_SETDMZHOSTICMPFWD				2747
++#define RTL8651_IOCTL_ADDPROTOSTACKSERVERPORTRANGE		2748
++#define RTL8651_IOCTL_ENABLE_IPX_PASSTHRU				2749
++#define RTL8651_IOCTL_ENABLE_NETBIOS_PASSTHRU			2750
++#define RTL8651_IOCTL_RTL8651_SETALGQOSQUEUEID			2751
++#define RTL8651_IOCTL_DELRATELIMITGROUP				2752
++#define RTL8651_IOCTL_GETMNQUEUEENTRY				2753
++#define RTL8651_IOCTL_DELRATELIMITRULE				2754
++#define RTL8651_IOCTL_QUERYUPNPMAPTIMEAGE			2755
++#define RTL8651_IOCTL_DELFLOWFROMMNQUEUE			2756
++#define RTL8651_IOCTL_SETDSCPTOMNQUEUE				2757
++#define RTL8651_IOCTL_ADDACLEXT					2758
++#define RTL8651_IOCTL_DELACLEXT					2759
++#define RTL8651_IOCTL_ADDEXACTLYURLFILTER			2761
++#define RTL8651_IOCTL_DELEXACTLYURLFILTER			2762
++#define RTL8651_IOCTL_TBLDRVREINIT                                              2763
++#define RTL8651_IOCTL_FWDENGREINIT                                      2764
++#define RTL8651_IOCTL_FWDENGDROPPKTCASE                         2765
++#define RTL8651_IOCTL_ADDARP                                                    2766
++#define RTL8651_IOCTL_ADDDRIVERNAPTMAPPING                      2767
++//ken add
++#define RTL8651_ADDMACACCESSCONTROL 2768
++#define RTL8651_IOCTL_ENABLEMACACCESSCONTROL 2769
++#define RTL8651_IOCTL_ENABLEMACACCESSCONTROLDEFAULTPERMIT 2770
++#define RTL8651_IOCTL_FLUSHMACACCESSCONTROL 2771
++#define RTL8651_IOCTL_ADDGENURLFILTERRULE 2772
++#define RTL8651_IOCTL_DELGENURLFILTERRULE 2773
++#define RTL8651_IOCTL_REPROBE 2774
++#define RTL8651_IOCTL_FLUSHURFILTERDB 2775
++//end of add
++enum PORT_BITS
++{
++	CPU_PORT = 1 << 6,
++	PORTMII = 1<<5,		
++	PORT5	 = 1 << 4,
++	PORT4    = 1 << 3,
++	PORT3	 = 1 << 2,
++	PORT2	 = 1 << 1,
++	PORT1 	 = 1 << 0,
++};
++#define EXTERNAL_INTERFACE	1
++#define RTL8651_LL_VLAN				0x01
++#define RTL8651_LL_PPPOE			0x02
++#define LL_VLAN		RTL8651_LL_VLAN
++#define LL_PPPOE	RTL8651_LL_PPPOE
++#define LL_PPTP		RTL8651_LL_PPTP
++#define LL_L2TP		RTL8651_LL_L2TP
++
++/* Debug Command */
++#ifndef CONFIG_RTL865X_CLE
++#define DUMP_PPPOE	3000
++#define DUMP_VLAN	3001
++#define DUMP_L3		3002
++#define DUMP_TCP	3003
++#define DUMP_ICMP	3004
++#define DUMP_ALG	3005
++#define DUMP_IP		3006
++#define DUMP_PVID	3007
++#define DUMP_TRAP	3008
++#define DUMP_ARP	3009
++#define DUMP_ACL	3011
++#define DUMP_SEVERPORT	3012
++#define DUMP_GIDX	3013
++#define DUMP_FWD	3014
++#define DUMP_L2     3015
++#define DUMP_HS     3016
++#define DUMP_FTCP   3017
++#define DUMP_FICMP  3018
++#define ADDSTATICNAPTFLOW  3019
++#endif /*CONFIG_RTL865X_CLE*/
++
++typedef struct 
++{
++	unsigned char			defaultSession;   	/* default pppoe session  */
++	unsigned short			sessionId;	   /* pppoe session id */
++	unsigned int			silentTimeout; /* in seconds */	
++	unsigned char           ipAddr[4];	   /* ip address, for multiple pppoe only */
++	unsigned char           ipMask[4];	   /* network mask, for multiple pppoe only */
++	unsigned char           gwAddr[4];     /* default gateway address, for multiple pppoe only */
++	unsigned char           svrMac[6];     /* pppoe server mac address */
++	unsigned int          lanType;
++} pppoeCfg_t;
++
++#endif
+diff --git a/include/asm-mips/rtl865x/sys.h b/include/asm-mips/rtl865x/sys.h
+new file mode 100644
+index 0000000..19b519f
+--- /dev/null
++++ b/include/asm-mips/rtl865x/sys.h
+@@ -0,0 +1,43 @@
++struct rtl_pool {	/* the pool */
++	struct list_head	page_list;
++	spinlock_t		lock;
++	size_t			blocks_per_page;
++	size_t			size;
++	int			flags;
++	size_t			allocation;
++	char			name [32];
++	wait_queue_head_t	waitq;
++};
++
++struct rtl_page {	/* cacheable header for 'allocation' bytes */
++	struct list_head	page_list;
++	void			*vaddr;
++	dma_addr_t		dma;
++	unsigned long		bitmap [0];
++};
++
++#define	POOL_TIMEOUT_JIFFIES	((100 /* msec */ * HZ) / 1000)
++#define	POOL_POISON_BYTE	0xa7
++
++
++#undef DEBUG
++
++#ifdef DEBUG
++#define DBG(x...) printk(x)
++#else
++#define DBG(x...)
++#endif
++
++
++
++#define	POOL_TIMEOUT_JIFFIES	((100 /* msec */ * HZ) / 1000)
++#define	POOL_POISON_BYTE	0xa7
++#define CONFIG_RTLPOOL_DEBUG
++void rtl_free_consistent(size_t size, void *vaddr, dma_addr_t handle);
++void *consistent_alloc(int gfp, size_t size, dma_addr_t *dma_handle);
++void *rtl_alloc_consistent(size_t size, dma_addr_t *handle);
++struct rtl_pool* rtl_pool_create(const char *, size_t, size_t ,size_t,int);
++void rtl_pool_destroy (struct rtl_pool *pool);
++void *rtl_pool_alloc (struct rtl_pool *, int, dma_addr_t *);
++void rtl_pool_free (struct rtl_pool *pool, void *vaddr, dma_addr_t dma);
++		
+diff --git a/include/asm-mips/serial.h b/include/asm-mips/serial.h
+index f03fc8a..d81194f 100644
+--- a/include/asm-mips/serial.h
++++ b/include/asm-mips/serial.h
+@@ -107,6 +107,7 @@
+ #define COBALT_SERIAL_PORT_DEFNS
+ #endif
+ 
++
+ /*
+  * Both Galileo boards have the same UART mappings.
+  */
+@@ -410,6 +411,50 @@
+ #define DDB5477_SERIAL_PORT_DEFNS
+ #endif
+ 
++#if defined(CONFIG_RTL865X)
++#include <asm/rtl865x/interrupt.h>
++#define R8650_UART_REGS_BASE    (u8*)(0xbd011100)
++#define R8650_UART1_REGS_BASE   (u8*)(0xbd011000)
++#define UART_REGS_BASE    	(0xbd011100)
++#define	UART_BASE_BAUD  38400
++#define R8650_BASE_BAUD_RATE (  CPU_CLOCK_RATE/ 16 ) 
++#define	RTL865X_SERIAL_PORT_DEFNS	\
++	{\
++	.baud_base= R8650_BASE_BAUD_RATE,\
++	.irq=ICU_UART0,\
++	.flags= STD_COM_FLAGS,\
++	.iomem_base= R8650_UART_REGS_BASE,\
++	.iomem_reg_shift=2,\
++	.io_type= SERIAL_IO_MEM,\
++	.type=PORT_16550},\
++	{\
++	.baud_base= R8650_BASE_BAUD_RATE,\
++	.irq=ICU_UART1,\
++	.flags= STD_COM_FLAGS,\
++	.iomem_base=R8650_UART1_REGS_BASE,\
++	.iomem_reg_shift=2,\
++	.io_type=SERIAL_IO_MEM,\
++	.type=PORT_16550},
++
++		
++#else
++#define RTL8650_SERIAL_PORT_DEFNS
++#endif
++
++#if 0
++
++#define RTL865X_UART0_REGS_BASE    (0xbd011000)
++#define UART_REGS_BASE    	(0xbd011000)
++#define RTL865X_BASE_BAUD ( 100000000/16) 
++#define UART_BASE_BAUD 38400
++#define ICU_UART0 3
++#define	RTL865X_SERIAL_PORT_DEFNS	\
++	{ .baud_base = RTL865X_BASE_BAUD, .irq = ICU_UART0, .flags = STD_COM_FLAGS,	\
++	  .iomem_base = (u8 *) RTL865X_UART0_REGS_BASE, .iomem_reg_shift = 2,			\
++	  .io_type = SERIAL_IO_MEM,.type=0x3 }
++#endif
++
++
+ #define SERIAL_PORT_DFNS			\
+ 	ATLAS_SERIAL_PORT_DEFNS			\
+ 	AU1000_SERIAL_PORT_DEFNS		\
+@@ -428,6 +473,7 @@
+ 	SEAD_SERIAL_PORT_DEFNS			\
+ 	STD_SERIAL_PORT_DEFNS			\
+ 	TITAN_SERIAL_PORT_DEFNS			\
++	RTL865X_SERIAL_PORT_DEFNS\
+ 	TXX927_SERIAL_PORT_DEFNS
+ 
+ #endif /* _ASM_SERIAL_H */
+diff --git a/include/asm-mips/unaligned.h b/include/asm-mips/unaligned.h
+index 3bd9d41..db43f4c 100644
+--- a/include/asm-mips/unaligned.h
++++ b/include/asm-mips/unaligned.h
+@@ -99,6 +99,7 @@ static inline void __stw_u(unsigned long __val, unsigned short * __addr)
+  *
+  * Note that unaligned accesses can be very expensive on some architectures.
+  */
++#if 0
+ #define get_unaligned(ptr)						\
+ ({									\
+ 	__typeof__(*(ptr)) __val;					\
+@@ -155,5 +156,116 @@ do {									\
+ 		break;							\
+ 	}								\
+ } while(0)
++#else
++//int __bug_unaligned_x(void *ptr){}
++/*
++ * What is the most efficient way of loading/storing an unaligned value?
++ *
++ * That is the subject of this file.  Efficiency here is defined as
++ * minimum code size with minimum register usage for the common cases.
++ * It is currently not believed that long longs are common, so we
++ * trade efficiency for the chars, shorts and longs against the long
++ * longs.
++ *
++ * Current stats with gcc 2.7.2.2 for these functions:
++ *
++ *	ptrsize	get:	code	regs	put:	code	regs
++ *	1		1	1		1	2
++ *	2		3	2		3	2
++ *	4		7	3		7	3
++ *	8		20	6		16	6
++ *
++ * gcc 2.95.1 seems to code differently:
++ *
++ *	ptrsize	get:	code	regs	put:	code	regs
++ *	1		1	1		1	2
++ *	2		3	2		3	2
++ *	4		7	4		7	4
++ *	8		19	8		15	6
++ *
++ * which may or may not be more efficient (depending upon whether
++ * you can afford the extra registers).  Hopefully the gcc 2.95
++ * is inteligent enough to decide if it is better to use the
++ * extra register, but evidence so far seems to suggest otherwise.
++ *
++ * Unfortunately, gcc is not able to optimise the high word
++ * out of long long >> 32, or the low word from long long << 32
++ */
++
++#define __get_unaligned_2(__p)					\
++	(__p[0] << 8 | __p[1] )
++
++#define __get_unaligned_4(__p)					\
++	(__p[0] <<24 | __p[1] <<16 | __p[2] << 8 | __p[3] )
++
++#define get_unaligned(ptr)					\
++	({							\
++		__typeof__(*(ptr)) __v;				\
++		__u8 *__p = (__u8 *)(ptr);			\
++		switch (sizeof(*(ptr))) {			\
++		case 1:	__v = *(ptr);			break;	\
++		case 2: __v = __get_unaligned_2(__p);	break;	\
++		case 4: __v = __get_unaligned_4(__p);	break;	\
++		case 8: {					\
++				unsigned int __v1, __v2;	\
++				__v2 = __get_unaligned_4((__p)); \
++				__v1 = __get_unaligned_4((__p+4));	\
++				__v = ((unsigned long long)__v2 << 32 | __v1);	\
++			}					\
++			break;					\
++		default:					\
++			__get_unaligned_bad_length();		\
++			break;					\
++		}						\
++		__v;						\
++	})
++
++
++static inline void __put_unaligned_2(__u32 __v, register __u8 *__p)
++{
++	*__p++ = __v>>8;
++	*__p++ = __v;
++}
++
++static inline void __put_unaligned_4(__u32 __v, register __u8 *__p)
++{
++	__put_unaligned_2(__v >>16, __p );
++	__put_unaligned_2(__v , __p +2);
++}
++
++static inline void __put_unaligned_8(const unsigned long long __v, register __u8 *__p)
++{
++	/*
++	 * tradeoff: 8 bytes of stack for all unaligned puts (2
++	 * instructions), or an extra register in the long long
++	 * case - go for the extra register.
++	 */
++	__put_unaligned_4(__v >> 32, __p);
++	__put_unaligned_4(__v, __p+4);
++}
++
++/*
++ * Try to store an unaligned value as efficiently as possible.
++ */
++#define put_unaligned(val,ptr)					\
++	({							\
++		switch (sizeof(*(ptr))) {			\
++		case 1:						\
++			*(ptr) = (val);				\
++			break;					\
++		case 2: __put_unaligned_2((val),(__u8 *)(ptr));	\
++			break;					\
++		case 4:	__put_unaligned_4((val),(__u8 *)(ptr));	\
++			break;					\
++		case 8:	__put_unaligned_8((val),(__u8 *)(ptr)); \
++			break;					\
++		default:						\
++			 __put_unaligned_bad_length();		\
++			break;					\
++		}						\
++		(void) 0;					\
++	})
++
+ 
++#endif
+ #endif /* _ASM_UNALIGNED_H */
+diff --git a/include/linux/if_packet.h b/include/linux/if_packet.h
+index b925585..08ca0b5 100644
+--- a/include/linux/if_packet.h
++++ b/include/linux/if_packet.h
+@@ -29,7 +29,9 @@ struct sockaddr_ll
+ /* These ones are invisible by user level */
+ #define PACKET_LOOPBACK		5		/* MC/BRD frame looped back */
+ #define PACKET_FASTROUTE	6		/* Fastrouted frame	*/
+-
++//+++Add by shiang for Airgo wireless 2005/10/31
++#define PACKET_AIRGO	    0x81
++//---Add by shiang for Airgo wireless 2005/10/31
+ /* Packet socket options */
+ 
+ #define PACKET_ADD_MEMBERSHIP		1

@@ -1,0 +1,34 @@
+--- linux-2.4.26-rp614v4v106/Makefile	2009-02-08 21:54:15.000000000 +0200
++++ linux-2.4.26-rp614v4v106_pppppppp/Makefile	2009-02-08 21:53:33.000000000 +0200
+@@ -115,18 +115,11 @@
+ CPPFLAGS += $(KERNEL_EXTRA_CFLAGS)
+ 
+ #CONFIG_FULLDEBUG := y
+-ifndef CONFIG_FULLDEBUG
+-CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O2 \
+-	  -fno-strict-aliasing -fno-common
+-#CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O1\
+-	  -gstabs+  -finhibit-lt -finhibit-st  -fno-strict-aliasing -fno-common
+-else
+-CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O1\
+-	  -gstabs+  -finhibit-lt -finhibit-st  -fno-strict-aliasing -fno-common
++CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O1 \
++	  -fno-strict-aliasing -fno-common  -mabi=32  -mips1 -Wa,-32 -Wa,-march=r3000 -Wa,-mips1
+ #CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O1 \
+           -gdwarf-2 -fno-strict-aliasing -fno-common
+ #CONFIG_FRAME_POINTER := y
+-endif
+ ifndef CONFIG_FRAME_POINTER
+ CFLAGS += -fomit-frame-pointer
+ endif
+--- linux-2.4.26-rp614v4v106/arch/mips/inflater/Makefile	2009-02-11 22:51:55.000000000 +0200
++++ linux-2.4.26-rp614v4v106____q/arch/mips/inflater/Makefile	2009-02-11 22:45:29.000000000 +0200
+@@ -17,6 +17,8 @@
+ OBJ_FILES	= inflate.o Decoder.o
+ COMPRESSED_ZIMAGE	= zimage.7z
+ 
++CFLAGS += -gdwarf-2
++
+ # Files =============
+ inflate.o:	inflate.c lzma_decoder.h Decoder.o Makefile
+ 	$(CC) $(CFLAGS) $(CFLAGS_KERNEL) $(PROFILING) -DKBUILD_BASENAME=$(subst $(comma),_,$(subst -,_,$(*F))) -c -o $@ $<

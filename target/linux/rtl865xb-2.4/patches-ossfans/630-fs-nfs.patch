@@ -1,0 +1,47 @@
+diff --git a/fs/nfs/nfs2xdr.c b/fs/nfs/nfs2xdr.c
+index 19f2f28..91006ef 100644
+--- a/fs/nfs/nfs2xdr.c
++++ b/fs/nfs/nfs2xdr.c
+@@ -454,6 +454,8 @@ err_unmap:
+ u32 *
+ nfs_decode_dirent(u32 *p, struct nfs_entry *entry, int plus)
+ {
++	volatile u64 tmp; /* bug in m68k-elf requires this tmp : DAVIDM */
++
+ 	if (!*p++) {
+ 		if (!*p)
+ 			return ERR_PTR(-EAGAIN);
+@@ -466,7 +468,8 @@ nfs_decode_dirent(u32 *p, struct nfs_entry *entry, int plus)
+ 	entry->name	  = (const char *) p;
+ 	p		 += XDR_QUADLEN(entry->len);
+ 	entry->prev_cookie	  = entry->cookie;
+-	entry->cookie	  = ntohl(*p++);
++	tmp		  = ntohl(*p++); /* m68k-elf bug avoidance : DAVIDM */
++	entry->cookie	  = tmp;
+ 	entry->eof	  = !p[0] && p[1];
+ 
+ 	return p;
+diff --git a/init/do_mounts.c b/init/do_mounts.c
+index cbdee28..d670793 100644
+--- a/init/do_mounts.c
++++ b/init/do_mounts.c
+@@ -88,7 +87,7 @@ static struct dev_name_struct {
+ 	const char *name;
+ 	const int num;
+ } root_dev_names[] __initdata = {
+-	{ "nfs",     MKDEV(NFS_MAJOR, NFS_MINOR) },
++	{ "nfs",     0x00ff },
+ 	{ "hda",     0x0300 },
+ 	{ "hdb",     0x0340 },
+ 	{ "loop",    0x0700 },
+@@ -760,8 +728,8 @@ static void __init devfs_make_root(char *name)
+ static void __init mount_root(void)
+ {
+ #ifdef CONFIG_ROOT_NFS
+-       if (MAJOR(ROOT_DEV) == NFS_MAJOR
+-           && MINOR(ROOT_DEV) == NFS_MINOR) {
++	if (MAJOR(ROOT_DEV) == UNNAMED_MAJOR) 
++	{
+ 		if (mount_nfs_root()) {
+ 			sys_chdir("/root");
+ 			ROOT_DEV = current->fs->pwdmnt->mnt_sb->s_dev;

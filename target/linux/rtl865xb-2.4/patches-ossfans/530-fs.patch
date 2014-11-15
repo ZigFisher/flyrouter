@@ -1,0 +1,44 @@
+diff --git a/fs/partitions/check.c b/fs/partitions/check.c
+index 3235723..9bd5bbd 100644
+--- a/fs/partitions/check.c
++++ b/fs/partitions/check.c
+@@ -124,6 +124,8 @@ char *disk_name (struct gendisk *hd, int minor, char *buf)
+ 	 * IDE devices use multiple major numbers, but the drives
+ 	 * are named as:  {hda,hdb}, {hdc,hdd}, {hde,hdf}, {hdg,hdh}..
+ 	 * This requires special handling here.
++	 *
++	 * MD devices are named md0, md1, ... md15, fix it up here.
+ 	 */
+ 	switch (hd->major) {
+ 		case IDE9_MAJOR:
+@@ -207,7 +209,7 @@ char *disk_name (struct gendisk *hd, int minor, char *buf)
+ void add_gd_partition(struct gendisk *hd, int minor, int start, int size)
+ {
+ #ifndef CONFIG_DEVFS_FS
+-	char buf[40];
++	char buf[MAX_DISKNAME_LEN];
+ #endif
+ 
+ 	hd->part[minor].start_sect = start;
+@@ -229,7 +231,7 @@ static void check_partition(struct gendisk *hd, kdev_t dev, int first_part_minor
+ 	static int first_time = 1;
+ 	unsigned long first_sector;
+ 	struct block_device *bdev;
+-	char buf[64];
++	char buf[MAX_DISKNAME_LEN];
+ 	int i;
+ 
+ 	if (first_time)
+@@ -283,6 +285,12 @@ static void devfs_register_partition (struct gendisk *dev, int minor, int part)
+ 	unsigned int devfs_flags = DEVFS_FL_DEFAULT;
+ 	char devname[16];
+ 
++	//+++ add by siyou 2006/1/10 03:50¤U¤È
++	// To prevent us mount these partitions like extention partition.
++	if ( dev->part[minor + part].nr_sects <= 2 )
++		return;
++	//--- add by siyou 2006/1/10 03:50¤U¤È
++	
+ 	if (dev->part[minor + part].de) return;
+ 	dir = devfs_get_parent (dev->part[minor].de);
+ 	if (!dir) return;

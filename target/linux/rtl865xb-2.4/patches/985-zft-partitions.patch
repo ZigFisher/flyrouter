@@ -1,0 +1,49 @@
+--- linux-2.4.26-rp614v4v106_unpatched/drivers/mtd/maps/rtl865x_flash.c	2009-02-12 22:50:30.000000000 +0200
++++ linux-2.4.26-rp614v4v106/drivers/mtd/maps/rtl865x_flash.c	2009-02-12 23:54:04.000000000 +0200
+@@ -97,13 +97,18 @@
+ 	write32: rtl865x_map_write32,
+ 	copy_to: rtl865x_map_copy_to
+ };
++
++#define INITFS_OFFSET (CONFIG_RTL865X_CUSTOM_RUNTIME_ADDRESS+CONFIG_FLASH_SIZE_OF_KERNEL)
++#define INITFS_SIZE   (WINDOW_SIZE-CONFIG_RTL865X_CUSTOM_RUNTIME_ADDRESS-CONFIG_FLASH_SIZE_OF_KERNEL-CONFIG_FLASH_SIZE_OF_DATAFS)
++#define DATAFS_OFFSET (INITFS_OFFSET+INITFS_SIZE)
+ static struct mtd_partition rtl865x_parts[] = {
+-	{ name: "boot1", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG1_ADDRESS, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG1_SIZE, mask_flags: MTD_WRITEABLE },
+-	{ name: "boot2", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG2_ADDRESS, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG2_SIZE, mask_flags: MTD_WRITEABLE },
+-	{ name: "boot3", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG3_ADDRESS, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG3_SIZE, mask_flags: MTD_WRITEABLE },
+-	{ name: "kernel", offset: CONFIG_RTL865X_CUSTOM_RUNTIME_ADDRESS, size: CONFIG_FLASH_SIZE_OF_KERNEL, mask_flags:MTD_WRITEABLE },
+-	{ name: "rootfs", offset: CONFIG_RTL865X_CUSTOM_RUNTIME_ADDRESS+CONFIG_FLASH_SIZE_OF_KERNEL, size: WINDOW_SIZE-CONFIG_RTL865X_CUSTOM_LOADER_SEG2_SIZE-CONFIG_RTL865X_CUSTOM_LOADER_SEG2_SIZE-CONFIG_FLASH_SIZE_OF_KERNEL, mask_flags:MTD_WRITEABLE },
+-#ifdef CONFIG_MTD
++	{ name: "boot1",	offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG1_ADDRESS,	size: CONFIG_RTL865X_CUSTOM_LOADER_SEG1_SIZE,	mask_flags: MTD_WRITEABLE },
++	/*{ name: "boot2", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG2_ADDRESS, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG2_SIZE, mask_flags: MTD_WRITEABLE },*/
++	/*{ name: "boot3", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG3_ADDRESS, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG3_SIZE, mask_flags: MTD_WRITEABLE }, */
++	{ name: "kernel",	offset: CONFIG_RTL865X_CUSTOM_RUNTIME_ADDRESS,		size: CONFIG_FLASH_SIZE_OF_KERNEL,	mask_flags:MTD_WRITEABLE },
++	{ name: "rootfs",	offset: INITFS_OFFSET,								size: INITFS_SIZE,					mask_flags:MTD_WRITEABLE },
++	{ name: "data",		offset: DATAFS_OFFSET,								size: CONFIG_FLASH_SIZE_OF_DATAFS,	mask_flags:MTD_WRITEABLE },
++#if 0
+        { name: "bdinfo", offset: CONFIG_RTL865X_CUSTOM_LOADER_SEG1_ADDRESS+CONFIG_RTL865X_CUSTOM_LOADER_SEG1_SIZE, size: CONFIG_RTL865X_CUSTOM_LOADER_SEG2_ADDRESS - CONFIG_RTL865X_CUSTOM_LOADER_SEG1_ADDRESS - CONFIG_RTL865X_CUSTOM_LOADER_SEG1_SIZE, mask_flags: MTD_WRITEABLE },
+ #endif //end of #ifdef CONFIG_MTD
+ };
+--- linux-2.4.26-rp614v4v106_unpatched/arch/mips/config-shared.in	2009-02-12 22:50:30.000000000 +0200
++++ linux-2.4.26-rp614v4v106/arch/mips/config-shared.in	2009-02-12 22:50:01.000000000 +0200
+@@ -126,6 +126,8 @@
+ 		hex  ' FLASH SIZE OF KERNEL OCCUPIED ' CONFIG_FLASH_SIZE_OF_KERNEL 0xA0000
+ 	fi
+ 
++	hex  ' FLASH SIZE OF DATAFS OCCUPIED ' CONFIG_FLASH_SIZE_OF_DATAFS 0x10000
++
+ 	if [ "$CONFIG_IMAGE_CRAMFS" = "y" ];then
+ 		define_bool CONFIG_CRAMFS y
+ 		unset CONFIG_SQUASHFS
+--- linux-2.4.26-rp614v4v106/arch/mips/realtek/rtl865x/prom.c	2009-02-13 18:46:43.000000000 +0200
++++ linux-2.4.26-rp614v4v106_/arch/mips/realtek/rtl865x/prom.c	2009-02-13 18:45:45.000000000 +0200
+@@ -37,7 +37,7 @@
+ {
+ 	unsigned long mem_size;
+ #ifdef CONFIG_MTD
+-	strcpy(arcs_cmdline, "root=/dev/mtdblock4");
++	strcpy(arcs_cmdline, "root=/dev/mtdblock2");
+ #endif
+ 	mips_machgroup = MACH_GROUP_PHILIPS;
+ 	mips_machtype = MACH_PHILIPS_NINO;

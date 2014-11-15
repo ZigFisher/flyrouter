@@ -1,0 +1,76 @@
+--- linux/drivers/net/re865x/Makefile	2005-12-21 04:30:32.000000000 +0200
++++ linux/drivers/net/re865x/Makefile	2009-01-05 19:21:26.000000000 +0200
+@@ -27,6 +27,7 @@
+ 			obj-y += re_core.o rtl865x_proc.o rtl865x_log.o rtl865x_callBack.o
+ 			obj-y += rtl865x_mpt.o 
+ 		else
++			# use by ZFT lab. (vlad)
+ 			obj-y += re865x_nic.o
+ 		endif
+ 
+--- linux/drivers/net/re865x/re865x_nic.c	2005-12-21 04:30:32.000000000 +0200
++++ linux/drivers/net/re865x/re865x_nic.c	2009-01-05 20:43:30.000000000 +0200
+@@ -666,6 +666,14 @@
+ 	return;
+ }
+ 
++// # use by ZFT lab. (vlad)
++void force_reset(void)
++{
++    printk("force reset!\n");
++    REG32(GIMR) = 0;
++    REG32(WDTCNR)=0x0;
++    while(1) {};
++}
+ 
+ module_init(re865x_probe);
+ module_exit(re865x_exit);
+--- linux/drivers/net/re865x/rtl865x/Makefile	2006-04-10 11:34:35.000000000 +0300
++++ linux/drivers/net/re865x/rtl865x/Makefile	2009-01-05 19:21:26.000000000 +0200
+@@ -117,6 +117,30 @@
+ 	
+ 		endif
+ 
++		# use by ZFT lab. (vlad)
++		ifeq ($(CONFIG_RTL865X_LAYER2_BSP),y)
++			ROME_OBJS +=  \
++				rtl8651_tblDrvFwd.o \
++				rtl8651_tblDrv.o \
++				rtl8651_layer2fwd.o\
++				rtl8651_ipQueue.o \
++				rtl8651_multicast.o \
++				rtl8651_timer.o \
++				rtl8651_dos.o \
++				rtl8651_dos_proc.o \
++				rtl8651_dns.o \
++				rtl8651_dns_domainBlock.o \
++				rtl8651_alg_init.o \
++				rtl8651_alg_ftp.o \
++				rtl8651_alg_h323.o \
++				rtl8651_alg_pptp.o \
++				rtl8651_alg_ipsec.o \
++				rtl8651_alg_ymsg.o \
++				rtl8651_alg_icq.o \
++				rtl8651_alg_l2tp.o \
++				rtl8651_alg_realaudio.o
++		endif
++
+ #		subdir-$(CONFIG_RTL865XB_EXP_VERI) += veri
+ #		obj-$(CONFIG_RTL865XB_EXP_VERI) += veri/veripkg.o
+ 
+--- linux/drivers/net/re865x/rtl_glue.c	2005-12-21 04:30:32.000000000 +0200
++++ linux/drivers/net/re865x/rtl_glue.c	2009-01-05 20:39:55.000000000 +0200
+@@ -1273,6 +1273,13 @@
+ int32 devglue_getLinkIDByName(int8 *devName){ return FAILED; }
+ #endif
+ 
++// # use by ZFT lab. (vlad)
++__IRAM_EXTDEV void rtlglue_extDeviceSend(uint16 vid, int32 linkId, struct rtl_pktHdr *orig_pktHdr)
++{
++	printk("rtlglue_extDeviceSend() failed\n");
++	return ;
++}
++
+  int32 rtlglue_extPortRecv(void *id, uint8 *data,  uint32 len, uint16 myvid, uint32 myportmask, uint32 linkID){
+ #ifdef SWNIC_DEBUG
+ 	if(nicDbgMesg){

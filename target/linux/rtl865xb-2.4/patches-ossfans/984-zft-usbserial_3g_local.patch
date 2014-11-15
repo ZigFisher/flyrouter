@@ -1,0 +1,34 @@
+--- linux/drivers/usb/serial/usbserial-old.c	2008-06-23 14:32:55.000000000 +0300
++++ linux/drivers/usb/serial/usbserial.c	2008-06-23 14:48:35.000000000 +0300
+@@ -332,7 +332,7 @@
+ static __u16	vendor	= 0x05f9;
+ static __u16	product	= 0xffff;
+ 
+-static struct usb_device_id generic_device_ids[9]; /* Initially all zeroes. */
++static struct usb_device_id generic_device_ids[14]; /* Initially all zeroes. */
+ 
+ /* All of the device info needed for the Generic Serial Converter */
+ static struct usb_serial_device_type generic_device = {
+@@ -1797,6 +1797,22 @@
+ 	generic_device_ids[6].idVendor = 0x1199;
+ 	generic_device_ids[6].idProduct = 0x6820;
+ 	generic_device_ids[6].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Novatel/Merlin U720 */
++	generic_device_ids[7].idVendor = 0x1410;
++	generic_device_ids[7].idProduct = 0x2110;
++	generic_device_ids[7].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Huawei E220 - EDGE/GPRS USB Modem */
++	generic_device_ids[8].idVendor = 0x12d1;
++	generic_device_ids[8].idProduct = 0x1001;
++	generic_device_ids[8].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* Huawei E220 - EDGE/GPRS USB Modem */
++	generic_device_ids[8].idVendor = 0x12d1;
++	generic_device_ids[8].idProduct = 0x1003;
++	generic_device_ids[8].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
++	/* ZTE AC8700 - CDMA USB modem */
++	generic_device_ids[9].idVendor = 0x19d2;
++	generic_device_ids[9].idProduct = 0xfffe;
++	generic_device_ids[9].match_flags = USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT;
+ 	/* register our generic driver with ourselves */
+ 	usb_serial_register (&generic_device);
+ #endif

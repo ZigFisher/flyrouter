@@ -1,0 +1,783 @@
+diff -urN --exclude '*.flags' --exclude .depend linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio.c linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio.c
+--- linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio.c	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio.c	2009-02-23 20:44:02.000000000 +0200
+@@ -0,0 +1,472 @@
++#include <linux/module.h>
++#include <linux/version.h>
++#include <linux/kernel.h>
++#include <linux/init.h>    //Must need added by Nick HO
++#include <linux/devfs_fs_kernel.h>
++#include <linux/fs.h>
++
++//=======================================
++// #define RTL865X_DEBUG
++
++//#include <asm-mips/rtl865x/interrupt.h> // if use Interrupt GPIO.(#define ICU_GPIO	7)
++#include "gpio.h"
++//#include "rtl865xb_gst_ioctl.h"
++
++/*
++ * 0 -- less debug information
++ * 5 -- more debug information
++ */
++#define _GPIO_DEBUG_ 0
++
++enum GPIO_FUNC
++{
++	GPIO_FUNC_DEDICATE,
++	GPIO_FUNC_DEDICATE_PERIPHERAL_TYPE,
++	GPIO_FUNC_DIRECTION,
++	GPIO_FUNC_DATA,
++	GPIO_FUNC_INTERRUPT_STATUS,
++	GPIO_FUNC_INTERRUPT_ENABLE,
++	GPIO_FUNC_MAX,
++};
++
++
++static uint32 regGpioControl[] = 
++{
++	PABCCNR, /* Port A */
++	PABCCNR, /* Port B */
++	PABCCNR, /* Port C */
++	PDEPTCR, /* Port D */
++	PDEPTCR, /* Port E */
++	PFGHICNR,/* Port F */
++	PFGHICNR,/* Port G */
++	PFGHICNR,/* Port H */
++	PFGHICNR,/* Port I */
++};
++
++static uint32 bitStartGpioControl[] =
++{
++	24, /* Port A */
++	16, /* Port B */
++	8,  /* Port C */
++	24, /* Port D */
++	16, /* Port E */
++	24, /* Port F */
++	16, /* Port G */
++	8,  /* Port H */
++	0,  /* Port I */
++};
++
++static uint32 regGpioDedicatePeripheralType[] = 
++{
++	PABCPTCR, /* Port A */
++	PABCPTCR, /* Port B */
++	PABCPTCR, /* Port C */
++	PDEPTCR,  /* Port D */
++	PDEPTCR,  /* Port E */
++	0,        /* Port F */
++	0,        /* Port G */
++	0,        /* Port H */
++	0,        /* Port I */
++};
++
++static uint32 bitStartGpioDedicatePeripheralType[] =
++{
++	24, /* Port A */
++	16, /* Port B */
++	8,  /* Port C */
++	24, /* Port D */
++	16, /* Port E */
++	0,  /* Port F */
++	0,  /* Port G */
++	0,  /* Port H */
++	0,  /* Port I */
++};
++
++static uint32 regGpioDirection[] =
++{
++	PABCDIR, /* Port A */
++	PABCDIR, /* Port B */
++	PABCDIR, /* Port C */
++	PDEDIR,  /* Port D */
++	PDEDIR,  /* Port E */
++	PFGHIDIR,/* Port F */
++	PFGHIDIR,/* Port G */
++	PFGHIDIR,/* Port H */
++	PFGHIDIR,/* Port I */
++};
++
++static uint32 bitStartGpioDirection[] =
++{
++	24, /* Port A */
++	16, /* Port B */
++	8,  /* Port C */
++	24, /* Port D */
++	16, /* Port E */
++	24, /* Port F */
++	16, /* Port G */
++	8,  /* Port H */
++	0,  /* Port I */
++};
++
++static uint32 regGpioData[] =
++{
++	PABCDAT, /* Port A */
++	PABCDAT, /* Port B */
++	PABCDAT, /* Port C */
++	PDEDAT,  /* Port D */
++	PDEDAT,  /* Port E */
++	PFGHIDAT,/* Port F */
++	PFGHIDAT,/* Port G */
++	PFGHIDAT,/* Port H */
++	PFGHIDAT,/* Port I */
++};
++
++static uint32 bitStartGpioData[] =
++{
++	24, /* Port A */
++	16, /* Port B */
++	8,  /* Port C */
++	24, /* Port D */
++	16, /* Port E */
++	24, /* Port F */
++	16, /* Port G */
++	8,  /* Port H */
++	0,  /* Port I */
++};
++
++static uint32 regGpioInterruptStatus[] =
++{
++	PABCISR, /* Port A */
++	PABCISR, /* Port B */
++	PABCISR, /* Port C */
++	PDEISR,  /* Port D */
++	PDEISR,  /* Port E */
++	PFGHIISR,/* Port F */
++	PFGHIISR,/* Port G */
++	PFGHIISR,/* Port H */
++	PFGHIISR,/* Port I */
++};
++
++static uint32 bitStartGpioInterruptStatus[] =
++{
++	24, /* Port A */
++	16, /* Port B */
++	8,  /* Port C */
++	24, /* Port D */
++	16, /* Port E */
++	24, /* Port F */
++	16, /* Port G */
++	8,  /* Port H */
++	0,  /* Port I */
++};
++
++static uint32 regGpioInterruptEnable[] =
++{
++	PABIMR,/* Port A */
++	PABIMR,/* Port B */
++	PCIMR, /* Port C */
++	PDEIMR,/* Port D */
++	PDEIMR,/* Port E */
++	PFGIMR,/* Port F */
++	PFGIMR,/* Port G */
++	PHIIMR,/* Port H */
++	PHIIMR,/* Port I */
++};
++
++static uint32 bitStartGpioInterruptEnable[] =
++{
++	16, /* Port A */
++	0,  /* Port B */
++	16, /* Port C */
++	16, /* Port D */
++	0,  /* Port E */
++	16, /* Port F */
++	0,  /* Port G */
++	16, /* Port H */
++	0,  /* Port I */
++};
++
++
++
++/*
++@func int32 | _getGpio | abstract GPIO registers 
++@parm enum GPIO_FUNC | func | control/data/interrupt register
++@parm enum GPIO_PORT | port | GPIO port
++@parm uint32 | pin | pin number
++@rvalue uint32 | value
++@comm
++This function is for internal use only. You don't need to care what register address of GPIO is.
++This function abstracts these information.
++*/
++static uint32 _getGpio( enum GPIO_FUNC func, enum GPIO_PORT port, uint32 pin )
++{
++	assert( port < GPIO_PORT_MAX );
++	assert( func < GPIO_FUNC_MAX );
++	assert( pin < 8 );
++
++#if _GPIO_DEBUG_ >= 4
++	rtlglue_printf("[%s():%d] func=%d port=%d pin=%d\n", __FUNCTION__, __LINE__, func, port, pin );
++#endif
++
++	switch( func )
++	{
++		case GPIO_FUNC_DEDICATE:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioControl[port]=0x%08x  bitStartGpioControl[port]=%d\n", __FUNCTION__, __LINE__, regGpioControl[port], bitStartGpioControl[port] );
++#endif
++			if ( REG32(regGpioControl[port]) & ( (uint32)1 << (pin+bitStartGpioControl[port]) ) )
++				return 1;
++			else
++				return 0;
++			break;
++			
++		case GPIO_FUNC_DEDICATE_PERIPHERAL_TYPE:
++			assert( port <= GPIO_PORT_E );
++
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioDedicatePeripheralType[port]=0x%08x  bitStartGpioDedicatePeripheralType[port]=%d\n", __FUNCTION__, __LINE__, regGpioDedicatePeripheralType[port], bitStartGpioDedicatePeripheralType[port] );
++#endif
++			if ( REG32(regGpioDedicatePeripheralType[port]) & ( (uint32)1 << (pin+bitStartGpioDedicatePeripheralType[port]) ) )
++				return 1;
++			else
++				return 0;
++			break;
++			
++		case GPIO_FUNC_DIRECTION:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioDirection[port]=0x%08x  bitStartGpioDirection[port]=%d\n", __FUNCTION__, __LINE__, regGpioDirection[port], bitStartGpioDirection[port] );
++#endif
++			if ( REG32(regGpioDirection[port]) & ( (uint32)1 << (pin+bitStartGpioDirection[port]) ) )
++				return 1;
++			else
++				return 0;
++			break;
++			
++		case GPIO_FUNC_DATA:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioData[port]=0x%08x  bitStartGpioData[port]=%d\n", __FUNCTION__, __LINE__, regGpioData[port], bitStartGpioData[port] );
++#endif
++			if ( REG32(regGpioData[port]) & ( (uint32)1 << (pin+bitStartGpioData[port]) ) )
++				return 1;
++			else
++				return 0;
++			break;
++			
++		case GPIO_FUNC_INTERRUPT_ENABLE:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioInterruptEnable[port]=0x%08x  bitStartGpioInterruptEnable[port]=%d\n", __FUNCTION__, __LINE__, regGpioInterruptEnable[port], bitStartGpioInterruptEnable[port] );
++#endif
++			return ( REG32(regGpioInterruptEnable[port]) >> (pin*2+bitStartGpioInterruptEnable[port]) ) & (uint32)0x3;
++			break;
++
++		case GPIO_FUNC_INTERRUPT_STATUS:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioInterruptStatus[port]=0x%08x  bitStartGpioInterruptEnable[port]=%d\n", __FUNCTION__, __LINE__, regGpioInterruptStatus[port], bitStartGpioInterruptStatus[port] );
++#endif
++			if ( REG32(regGpioInterruptStatus[port]) & ( (uint32)1 << (pin+bitStartGpioInterruptStatus[port]) ) )
++				return 1;
++			else
++				return 0;
++			break;
++			
++		case GPIO_FUNC_MAX:
++			assert( 0 );
++			break;
++	}
++	return 0xffffffff;
++}
++
++
++/*
++@func int32 | _setGpio | abstract GPIO registers 
++@parm enum GPIO_FUNC | func | control/data/interrupt register
++@parm enum GPIO_PORT | port | GPIO port
++@parm uint32 | pin | pin number
++@parm uint32 | data | value
++@rvalue NONE
++@comm
++This function is for internal use only. You don't need to care what register address of GPIO is.
++This function abstracts these information.
++*/
++static void _setGpio( enum GPIO_FUNC func, enum GPIO_PORT port, uint32 pin, uint32 data )
++{
++	assert( port < GPIO_PORT_MAX );
++	assert( func < GPIO_FUNC_MAX );
++	assert( pin < 8 );
++	
++#if _GPIO_DEBUG_ >= 4
++	rtlglue_printf("[%s():%d] func=%d port=%d pin=%d data=%d\n", __FUNCTION__, __LINE__, func, port, pin, data );
++#endif
++
++	switch( func )
++	{
++		case GPIO_FUNC_DEDICATE:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioControl[port]=0x%08x  bitStartGpioControl[port]=%d\n", __FUNCTION__, __LINE__, regGpioControl[port], bitStartGpioControl[port] );
++#endif
++			if ( data )
++				REG32(regGpioControl[port]) |= (uint32)1 << (pin+bitStartGpioControl[port]);
++			else
++				REG32(regGpioControl[port]) &= ~((uint32)1 << (pin+bitStartGpioControl[port]));
++			break;
++			
++		case GPIO_FUNC_DEDICATE_PERIPHERAL_TYPE:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioDedicatePeripheralType[port]=0x%08x  bitStartGpioDedicatePeripheralType[port]=%d\n", __FUNCTION__, __LINE__, regGpioDedicatePeripheralType[port], bitStartGpioDedicatePeripheralType[port] );
++#endif
++			assert( port <= GPIO_PORT_E );
++			if ( data )
++				REG32(regGpioDedicatePeripheralType[port]) |= (uint32)1 << (pin+bitStartGpioDedicatePeripheralType[port]);
++			else
++				REG32(regGpioDedicatePeripheralType[port]) &= ~((uint32)1 << (pin+bitStartGpioDedicatePeripheralType[port]));
++			break;
++			
++		case GPIO_FUNC_DIRECTION:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioDirection[port]=0x%08x  bitStartGpioDirection[port]=%d\n", __FUNCTION__, __LINE__, regGpioDirection[port], bitStartGpioDirection[port] );
++#endif
++			if ( data )
++				REG32(regGpioDirection[port]) |= (uint32)1 << (pin+bitStartGpioDirection[port]);
++			else
++				REG32(regGpioDirection[port]) &= ~((uint32)1 << (pin+bitStartGpioDirection[port]));
++			break;
++
++		case GPIO_FUNC_DATA:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioData[port]=0x%08x  bitStartGpioData[port]=%d\n", __FUNCTION__, __LINE__, regGpioData[port], bitStartGpioData[port] );
++#endif
++			if ( data )
++				REG32(regGpioData[port]) |= (uint32)1 << (pin+bitStartGpioData[port]);
++			else
++				REG32(regGpioData[port]) &= ~((uint32)1 << (pin+bitStartGpioData[port]));
++			break;
++			
++		case GPIO_FUNC_INTERRUPT_ENABLE:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioInterruptEnable[port]=0x%08x  bitStartGpioInterruptEnable[port]=%d\n", __FUNCTION__, __LINE__, regGpioInterruptEnable[port], bitStartGpioInterruptEnable[port] );
++#endif
++			REG32(regGpioInterruptEnable[port]) &= ~((uint32)0x3 << (pin*2+bitStartGpioInterruptEnable[port]));
++			REG32(regGpioInterruptEnable[port]) |= (uint32)data << (pin*2+bitStartGpioInterruptEnable[port]);
++			break;
++
++		case GPIO_FUNC_INTERRUPT_STATUS:
++#if _GPIO_DEBUG_ >= 5
++			rtlglue_printf("[%s():%d] regGpioInterruptStatus[port]=0x%08x  bitStartGpioInterruptStatus[port]=%d\n", __FUNCTION__, __LINE__, regGpioInterruptStatus[port], bitStartGpioInterruptStatus[port] );
++#endif
++			if ( data )
++				REG32(regGpioInterruptStatus[port]) |= (uint32)1 << (pin+bitStartGpioInterruptStatus[port]);
++			else
++				REG32(regGpioInterruptStatus[port]) &= ~((uint32)1 << (pin+bitStartGpioInterruptStatus[port]));
++			break;
++
++		case GPIO_FUNC_MAX:
++			assert( 0 );
++			break;
++	}
++}
++
++
++/*
++@func int32 | _rtl865x_initGpioPin | Initiate a specifed GPIO port.
++@parm uint32 | gpioId | The GPIO port that will be configured
++@parm enum GPIO_PERIPHERAL | dedicate | Dedicated peripheral type
++@parm enum GPIO_DIRECTION | direction | Data direction, in or out
++@parm enum GPIO_INTERRUPT_TYPE | interruptEnable | Interrupt mode
++@rvalue SUCCESS | success.
++@rvalue FAILED | failed. Parameter error.
++@comm
++This function is used to initialize GPIO port.
++*/
++int32 _rtl865x_initGpioPin( gpioID gpioId, 
++	enum GPIO_PERIPHERAL dedicate, 
++	enum GPIO_DIRECTION direction, 
++	enum GPIO_INTERRUPT_TYPE interruptEnable )
++{
++	uint32 port = GPIO_PORT( gpioId );
++	uint32 pin = GPIO_PIN( gpioId );
++
++	if ( port >= GPIO_PORT_MAX ) return FAILED;
++	if ( pin >= 8 ) return FAILED;
++
++	switch( dedicate )
++	{
++		case GPIO_PERI_GPIO:
++			_setGpio( GPIO_FUNC_DEDICATE, port, pin, 0 );
++
++			if ( port == GPIO_PORT_D || port == GPIO_PORT_E ) /*change Mii interface IO as GPIO pins*/
++				REG32( MISCCR ) |= P5_LINK_PCMCIA << P5_LINK_OFFSET;
++
++			break;
++		case GPIO_PERI_TYPE0:
++			if( port > GPIO_PORT_E ) return FAILED;
++			_setGpio( GPIO_FUNC_DEDICATE, port, pin, 1 );
++			_setGpio( GPIO_FUNC_DEDICATE_PERIPHERAL_TYPE, port, pin, 0 );
++			break;
++		case GPIO_PERI_TYPE1:
++			if( port > GPIO_PORT_E ) return FAILED;
++			_setGpio( GPIO_FUNC_DEDICATE, port, pin, 1 );
++			_setGpio( GPIO_FUNC_DEDICATE_PERIPHERAL_TYPE, port, pin, 1 );
++			break;
++	}
++	
++	_setGpio( GPIO_FUNC_DIRECTION, port, pin, direction );
++
++	_setGpio( GPIO_FUNC_INTERRUPT_ENABLE, port, pin, interruptEnable );
++
++	return SUCCESS;
++}
++
++
++/*
++@func int32 | _rtl865x_getGpioDataBit | Get the bit value of a specified GPIO ID.
++@parm uint32 | gpioId | GPIO ID
++@parm uint32* | data | Pointer to store return value
++@rvalue SUCCESS | success.
++@rvalue FAILED | failed. Parameter error.
++@comm
++*/
++int32 _rtl865x_getGpioDataBit( uint32 gpioId, uint32* pData )
++{
++	uint32 port = GPIO_PORT( gpioId );
++	uint32 pin = GPIO_PIN( gpioId );
++
++	if ( port >= GPIO_PORT_MAX ) return FAILED;
++	if ( pin >= 8 ) return FAILED;
++	if ( pData == NULL ) return FAILED;
++
++	*pData = _getGpio( GPIO_FUNC_DATA, port, pin );
++#if _GPIO_DEBUG_ >= 3
++	rtlglue_printf("[%s():%d] (port=%d,pin=%d)=%d\n", __FUNCTION__, __LINE__, port, pin, *pData );
++#endif
++
++	return SUCCESS;
++}
++
++
++/*
++@func int32 | _rtl865x_setGpioDataBit | Set the bit value of a specified GPIO ID.
++@parm uint32 | gpioId | GPIO ID
++@parm uint32 | data | Data to write
++@rvalue SUCCESS | success.
++@rvalue FAILED | failed. Parameter error.
++@comm
++*/
++int32 _rtl865x_setGpioDataBit( uint32 gpioId, uint32 data )
++{
++	uint32 port = GPIO_PORT( gpioId );
++	uint32 pin = GPIO_PIN( gpioId );
++
++	if ( port >= GPIO_PORT_MAX ) return FAILED;
++	if ( pin >= 8 ) return FAILED;
++#if 0
++	if ( _getGpio( GPIO_FUNC_DIRECTION, port, pin ) == GPIO_DIR_IN ) return FAILED; /* read only */
++#endif
++
++#if _GPIO_DEBUG_ >= 3
++	rtlglue_printf("[%s():%d] (port=%d,pin=%d)=%d\n", __FUNCTION__, __LINE__, port, pin, data );
++#endif
++	_setGpio( GPIO_FUNC_DATA, port, pin, data );
++
++	return SUCCESS;
++}
++
+diff -urN --exclude '*.flags' --exclude .depend linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio.h linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio.h
+--- linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio.h	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio.h	2009-02-23 20:43:09.000000000 +0200
+@@ -0,0 +1,127 @@
++/*
++* Copyright c                  Realtek Semiconductor Corporation, 2002  
++* All rights reserved.
++* 
++* Program : GPIO Header File 
++* Abstract : 
++* Author : Louis Yung-Chieh Lo (yjlou@realtek.com.tw)               
++* $Id: gpio.h,v 1.1.1.1 2006/07/26 05:38:36 blue Exp $
++*/
++
++#ifndef __GPIO_H__
++#define __GPIO_H__
++
++#include <asicRegs.h>
++#include <rtl_types.h>
++
++#include "rtl865x/rtl_glue.h"
++#include "rtl865x/rtl_types.h"
++#include "rtl865x/rtl_errno.h"
++#include "rtl865x/assert.h"
++
++
++#define PECNR	 (PDEPTCR+1)
++#define PEDIR (PDEDIR+1)
++#define PEDATA (PDEDAT+1)
++/*
++			9001 	8651  dir
++----------------------------------
++	RESET			D5		O    (slic2)
++	RESET	A0		E7		O    (slic1)
++	DI		B2		E6		I
++	DO		B1		E5		O
++	CLK		B3		E4		O
++	CS		B0		E3		O
++	INT		A4		E2		I    (slic2)
++	INT				E1		I    (slic1)
++	RELAY			E0		O		
++
++//CS is active low
++#define si3120_RS	0x80
++#define si3210_INT	0x04
++#define si3210_DI	0x40
++#define si3210_DO	0x20
++#define si3210_CLK	0x10
++#define si3210_CS	0x08
++*/
++
++typedef uint32 gpioID;
++
++/* define GPIO port */
++enum GPIO_PORT
++{
++	GPIO_PORT_A = 0,
++	GPIO_PORT_B,
++	GPIO_PORT_C,
++	GPIO_PORT_D,
++	GPIO_PORT_E,
++	GPIO_PORT_F,
++	GPIO_PORT_G,
++	GPIO_PORT_H,
++	GPIO_PORT_I,
++	GPIO_PORT_MAX,
++};
++
++/* define GPIO dedicate peripheral pin */
++enum GPIO_PERIPHERAL
++{
++	GPIO_PERI_GPIO = 0,
++	GPIO_PERI_TYPE0 = 0x2,
++	GPIO_PERI_TYPE1 = 0x3,
++};
++
++
++/* define GPIO direction */
++enum GPIO_DIRECTION
++{
++	GPIO_DIR_IN = 0,
++	GPIO_DIR_OUT,
++};
++
++/* define GPIO Interrupt Type */
++enum GPIO_INTERRUPT_TYPE
++{
++	GPIO_INT_DISABLE = 0,
++	GPIO_INT_FALLING_EDGE,
++	GPIO_INT_RISING_EDGE,
++	GPIO_INT_BOTH_EDGE,
++};
++
++
++
++/*
++ * Every pin of GPIO port can be mapped to a unique ID.
++ * All the access to a GPIO pin must use the ID.
++ * This macro is used to map the port and pin into the ID.
++ */
++#define GPIO_ID(port,pin) ((uint32)port<<16|(uint32)pin)
++
++/* This is reversed macro. */
++#define GPIO_PORT(id) (id>>16)
++#define GPIO_PIN(id) (id&0xffff)
++
++
++#define PIN_CS2		GPIO_ID(GPIO_PORT_C,0)
++#define PIN_CS1		GPIO_ID(GPIO_PORT_E,3)
++#define PIN_RESET2	GPIO_ID(GPIO_PORT_D,5)
++#define PIN_RESET1	GPIO_ID(GPIO_PORT_E,7)
++#define PIN_DI		GPIO_ID(GPIO_PORT_E,6)
++#define PIN_DO		GPIO_ID(GPIO_PORT_E,5)
++#define PIN_CLK		GPIO_ID(GPIO_PORT_E,4)
++#define PIN_INT2		GPIO_ID(GPIO_PORT_E,2)
++#define PIN_INT1		GPIO_ID(GPIO_PORT_E,1)
++#define PIN_RELAY	GPIO_ID(GPIO_PORT_E,0)
++
++int32 _rtl865x_initGpioPin(uint32 gpioId, 
++				enum GPIO_PERIPHERAL dedicate, 
++				enum GPIO_DIRECTION direction, 
++				enum GPIO_INTERRUPT_TYPE interruptEnable );
++int32 _rtl865x_getGpioDataBit( uint32 gpioId, uint32* data );
++int32 _rtl865x_setGpioDataBit( uint32 gpioId, uint32 data );
++#if 0
++int32 _rtl865x_fetchGpioInterruptStatus( uint32 gpioId, uint32* status );
++int32 _rtl865x_clearGpioInterruptStatus( uint32 gpioId );
++#endif
++
++#endif/*__GPIO__*/
++
+diff -urN --exclude '*.flags' --exclude .depend linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio_ioctl.c linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio_ioctl.c
+--- linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/gpio_ioctl.c	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio_ioctl.c	2009-02-23 22:37:15.000000000 +0200
+@@ -0,0 +1,151 @@
++#include <linux/module.h>
++#include <linux/version.h>
++#include <linux/kernel.h>
++#include <linux/init.h>    //Must need added by Nick HO
++#include <linux/devfs_fs_kernel.h>
++#include <linux/fs.h>
++
++#include "gpio.h"
++
++MODULE_DESCRIPTION("RTL-8651B GPIO driver by FlyRouter team");
++MODULE_LICENSE("GPL");
++
++static int gpio_ioctl (struct inode *inode, struct file *file, unsigned int gpio_pin, unsigned long gpio_action);
++static int gpio_open (struct inode *inode, struct file *file);
++static int gpio_release (struct inode *inode, struct file *file);
++
++static struct file_operations gpio_fops = {
++	owner:		THIS_MODULE,
++	ioctl:		gpio_ioctl,
++	open:		gpio_open,
++	release:	gpio_release,
++};
++
++static int gpio_major = 201; // a unused number.
++
++/* extract bit 'b' of x, result is zero or one */
++#define BIT(x,b) ((x & (1<<b))>>b)
++
++#ifndef TEST_BIT
++#define TEST_BIT( x, b )   (((x) & (1<<(b))) != 0 )
++#define SET_BIT( x, b )    ((x) |= (1 << (b)))
++#define CLEAR_BIT( x, b )  ((x) &= ~(1 << (b)))
++#define TOGGLE_BIT( x, b ) ((TEST_BIT(x,b)) ?(CLEAR_BIT(x,b)):(SET_BIT(x,b)))
++#endif
++
++
++static int gpio_ioctl(struct inode *inode, struct file *file, unsigned int gpio_id, unsigned long gpio_action)
++{	
++	int ret_data = -1;
++	int direction = TEST_BIT(gpio_action, 3);
++	int cmd = gpio_action & 0x3;
++	int data = TEST_BIT(gpio_action, 4);
++
++#if _GPIO_DEBUG_ >= 3
++	rtlglue_printf("[%s():%d] direction=%s  cmd=%d  gpio_id=0x%08x  port=0x%08x  pin=0x%08x   data=%d\n", __FUNCTION__, __LINE__, direction?"out":"in", cmd, gpio_id, GPIO_PORT(gpio_id), GPIO_PIN(gpio_id), data );
++#endif
++	
++
++	switch ( cmd ) {
++		case 0: 
++			// INIT
++			_rtl865x_initGpioPin( gpio_id, GPIO_PERI_GPIO, direction, GPIO_INT_DISABLE );
++			ret_data = 1;
++			break;
++
++		case 1:
++			// GET
++			if ( _rtl865x_getGpioDataBit( gpio_id, &data ) == SUCCESS )
++				ret_data = data;
++			else
++				ret_data = -1;
++			break;
++
++		case 2:
++			// SET
++			_rtl865x_setGpioDataBit( gpio_id, data ); 
++			ret_data = 1;
++			break;
++
++	}
++
++	return ret_data;
++}
++
++static int gpio_open (struct inode *inode, struct file *file)
++{
++	// printk( "<1>gpio.o: opened.\n");
++	return 0;
++}
++
++static int gpio_release (struct inode *inode, struct file *file)
++{
++	// printk( "<1>gpio.o: closed.\n");
++	return 0;
++}
++
++static devfs_handle_t devfs_handle;
++
++static int __init gpio_init(void)
++{
++	int result;
++
++	printk("Entry gpio_ioctl init_module !!\n");
++	// Move to Loader
++	//======= Initial & Configure GPIO Registers =================
++	/* already move this section into loader.c 
++	// Set Control Register
++	REG32(PABCCNR) &= ~0x00ff3800; // set to GPIO mode
++	
++	// Set Directory Register
++	REG32(PABCDIR) |=  0x00fe3000;  // set to output
++	REG32(PABCDIR) &=  ~0x00010800; // set to input
++	
++	// testing
++	//REG32(PABCDIR) |=  0x007e3000;  // set to output
++	//REG32(PABCDIR) &=  ~0x00810800; // set to input
++	
++	
++	// Disable all Interrupt
++	REG32(PABIMR) &=  ~0x0000FFFF; // disable Port B interrupt
++	REG32(PCIMR) &=  ~0x0FC00000;  // disable Port C pin3.4.5 interrupt
++	//==================   End   ========================
++	*/
++	
++	// hook device into kernel
++	result = devfs_register_chrdev( gpio_major, "gpio", &gpio_fops);
++	
++	if (result) {
++		printk( "<1>gpio_ioctl : cannot get major %d\n", gpio_major);
++		return result;
++	}
++	devfs_handle = devfs_register(NULL, "gpio_ioctl", DEVFS_FL_DEFAULT,
++				      gpio_major, 0,
++				      S_IFCHR | S_IRUSR | S_IWUSR,
++				      &gpio_fops, NULL);
++	#ifdef _GPIO_DEBUG_					      
++	printk( "init gpio_ioctl Successful,  major = %d\n", gpio_major);
++	#endif
++	
++#if 0
++	// Set PIN initial state
++	REG32(PABCDAT) |= (GPIO_DIRECT_LED_ON | GPIO_USB1_LED_ON | GPIO_USB2_LED_ON); // USB 1/2 & Direct LEDs to dim
++	REG32(PABCDAT) &= ~(GPIO_WLAN_LED_ON | GPIO_SYS_STATUS_LED_ON); // luminesce status LEDs
++#endif
++	
++	return	0;
++}
++
++
++
++static void __exit gpio_exit(void)
++{
++	if ( devfs_unregister_chrdev( gpio_major, "gpio_ioctl") !=0 ){
++           printk( "<1>gpio_ioctl : unable to release major %d\n", gpio_major);
++	}
++	devfs_unregister(devfs_handle);
++}
++
++module_init(gpio_init);
++module_exit(gpio_exit);
++
+diff -urN --exclude '*.flags' --exclude .depend linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/Makefile linux-2.4.26-rp614v4v106/drivers/net/re865x/Makefile
+--- linux-2.4.26-rp614v4v106_orig/drivers/net/re865x/Makefile	2009-02-23 21:20:14.000000000 +0200
++++ linux-2.4.26-rp614v4v106/drivers/net/re865x/Makefile	2009-02-23 21:17:10.000000000 +0200
+@@ -28,7 +28,7 @@
+ 			obj-y += rtl865x_mpt.o 
+ 		else
+ 			# use by ZFT lab. (vlad)
+-			obj-y += re865x_nic.o
++			obj-y += re865x_nic.o gpio.o gpio_ioctl.o
+ 		endif
+ 
+ 	else
+@@ -83,7 +83,7 @@
+ 
+ 
+ 
+-EXTRA_CFLAGS += -DRTL865X_OVER_KERNEL -DRTL865X_OVER_LINUX -D__KERNEL__ -Wno-implicit -Werror
++EXTRA_CFLAGS += -DRTL865X_OVER_KERNEL -DRTL865X_OVER_LINUX -D__KERNEL__ -Wno-implicit 
+ ifeq ($(CONFIG_AIRGO103BB),y)
+ EXTRA_CFLAGS += -DAIRGO_FAST_PATH
+ #EXTRA_CFLAGS += -DAIRGO_NEW

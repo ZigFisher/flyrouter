@@ -1,0 +1,74 @@
+choice
+
+	prompt "beerouter type"
+	default BEEROUTER_TYPE_TMPFS
+	depends BR2_LINUX_2_4_RTL865xB
+	config BEEROUTER_TYPE_JFFS2
+		bool "jffs2"
+	config BEEROUTER_TYPE_TMPFS
+		bool "tmpfs"
+
+endchoice
+
+
+choice
+	prompt "beerouter device target"
+	default BEEROUTER_TARGET_EDIMAX
+	depends BR2_LINUX_2_4_RTL865xB
+	config BEEROUTER_TARGET_EDIMAX
+		bool "Edimax"
+	config BEEROUTER_TARGET_DLINK
+		bool "Dlink"
+
+endchoice
+
+config BEEROUTER_FLASH_SIZE
+	hex "Flash size"
+	default "0x200000"
+	help
+		Flash Size in hex
+
+config BEEROUTER_BOOT_SIZE
+	hex "Size of boot sector"
+	default "0x08000"
+	depends BR2_LINUX_2_4_RTL865xB
+	help
+		Size of boot sector (default 0x8000)
+
+config BEEROUTER_KERNEL_START
+	hex "Kernel entry point"
+	default "0x20000"
+	depends BR2_LINUX_2_4_RTL865xB
+	help
+		Start position of kernel (default 0x10000)
+
+config BEEROUTER_KERNEL_SIZE
+	hex "Size of kernel partition"
+	default "0xA0000"
+	depends BR2_LINUX_2_4_RTL865xB
+	help
+		Size of kernel partition
+
+config BEEROUTER_DATAFS_SIZE
+	hex "Size of raw data partition"
+	default "0x10000"
+	depends BR2_LINUX_2_4_RTL865xB
+	help
+		Size of kernel partition
+
+#config BEEROUTER_SQUASHFS_SIZE
+#	int "Size of read-only partition"
+#	default XXXXXXXX
+#	depends BR2_LINUX_2_4_RTL865xB
+#	help
+#		Size of kernel partition
+
+config BR2_PACKAGE_KMOD_RTL865XB_USB
+	prompt "kmod-usb-ohci-rtl865x     RTL865xB USB Driver"
+	tristate
+	depends BR2_LINUX_2_4_RTL865xB
+	default m
+	select BR2_PACKAGE_KMOD_USB_CONTROLLER
+	help
+	  USB driver for RTL865xB
+								

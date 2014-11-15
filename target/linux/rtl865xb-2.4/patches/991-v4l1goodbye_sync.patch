@@ -1,0 +1,266 @@
+diff -urN linux-2.4.31-716LE08.orig/drivers/usb/spca5xx/spca_core.c linux-2.4.31-716LE08.v4l1goodbye/drivers/usb/spca5xx/spca_core.c
+--- linux-2.4.31-716LE08.orig/drivers/usb/spca5xx/spca_core.c	2008-02-04 14:20:42.000000000 +0100
++++ linux-2.4.31-716LE08.v4l1goodbye/drivers/usb/spca5xx/spca_core.c	2008-02-05 22:36:57.000000000 +0100
+@@ -306,6 +306,19 @@
+   PcCam350,
+   Vimicro303b,
+   CyberpixS550V,
++  LogitechQCim,
++  AiptekSlim3000F,
++  CTXM730VCam,
++  PhilipsSPC200NC,
++  PhilipsSPC700NC,
++  SpeedNVC350K,
++  PhilipsSPC600NC,
++  PhilipsSPC300NC,
++  LogitechQCImage,
++  Sunplus500c,
++  LogitechQCCool,
++  QCimconnect,
++  QCmessenger,
+   LastCamera
+ };
+ 
+@@ -393,6 +406,19 @@
+   {PcCam350,"PC-Cam350"}, 
+   {Vimicro303b,"Generic Vimicro 303b"},
+   {CyberpixS550V,"Mercury Cyberpix S550V"},
++  {LogitechQCim,"Logitech QCIM"},
++  {AiptekSlim3000F,"Aiptek Slim3000F"},
++  {CTXM730VCam,"CTX M730V built in Cam"},
++  {PhilipsSPC200NC,"Philips SPC200NC "},
++  {PhilipsSPC700NC,"Philips SPC700NC "},
++  {SpeedNVC350K,"Speed NVC 350K "},
++  {PhilipsSPC600NC,"Philips SPC600NC "},
++  {PhilipsSPC300NC,"Philips SPC300NC "},
++  {LogitechQCImage,"Logitech QuickCam Image "},
++  {Sunplus500c,"Sunplus CA500C "},
++  {LogitechQCCool,"Logitech QuickCam Cool"},
++  {QCimconnect,"Logitech QuickCam IM/Connect "},
++  {QCmessenger,"Logitech QuickCam Messenger "},
+   {-1, NULL}
+ };
+ 
+@@ -3391,6 +3417,20 @@
+ 	    ("USB SPCA5XX camera found. Maxell MaxPocket 1.3 (SPCA504A FW2)");
+ 	  break;
+ 
++	case 0x500c:
++
++	  spca50x->desc = Sunplus500c;
++	  spca50x->bridge = BRIDGE_SPCA504B;
++	  spca50x->sensor = SENSOR_INTERNAL;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPEG;
++	  info
++	    ("USB SPCA5XX camera found. SunPlus CA500C");
++	  break;
++
+ 	case 0xffff:
+ 
+ 	  spca50x->desc = PureDigitalDakota;
+@@ -3458,6 +3498,19 @@
+ 	    ("USB SPCA5XX camera found. ApexDigital Digitrex 2110 spca533");
+ 	  break;
+ 
++	case 0x2020:
++
++	  spca50x->desc = AiptekSlim3000F;
++	  spca50x->bridge = BRIDGE_SPCA533;
++	  spca50x->sensor = SENSOR_INTERNAL;
++	  spca50x->header_len = SPCA533_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPEG;
++	  info ("USB SPCA5XX camera found type: Aiptek Slim3000F spca533");
++	  break;
++
+ 	case 0x2022:
+ 
+ 	  spca50x->desc = AiptekSlim3200;
+@@ -3758,6 +3811,33 @@
+ 	    ("USB SPCA5XX camera found. Logitech QC Chat ");
+ 	  break;
+ 	  
++	 case 0x08a6:
++
++	  spca50x->desc = LogitechQCim;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_HV7131C;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info
++	    ("USB SPCA5XX camera found. Logitech QC IM ");
++	  break;
++
++	 case 0x08a7:
++	  spca50x->desc = LogitechQCImage;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_PAS202;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info
++	    ("USB SPCA5XX camera found. Logitech QC Image ");
++	  break;
++
+ 	 case 0x08a9:
+ 	
+ 	  spca50x->desc = LogitechNotebookDeluxe;
+@@ -3771,6 +3851,20 @@
+ 	  info
+ 	    ("USB SPCA5XX camera found. Logitech Notebooks Deluxe Zc0302 + Hdcs2020");
+ 	  break;
++
++	case 0x08ac:
++	  spca50x->desc = LogitechQCCool;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_HV7131C;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info
++	    ("USB SPCA5XX camera found. Logitech QuickCam Cool");
++	  break;
++
+ 	case 0x08ae:
+ 	
+ 	  spca50x->desc = QuickCamNB;
+@@ -3824,6 +3918,32 @@
+ 	    ("USB SPCA5XX camera found. Logitech QC IM ??? ");
+ 	  break;
+ 
++	case 0x08d9:
++	  spca50x->desc = QCimconnect;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_TAS5130C;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info
++	    ("USB SPCA5XX camera found. Logitech QC IM/Connect ");
++	  break;
++
++	case 0x08da:
++	  spca50x->desc = QCmessenger;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_TAS5130C;
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info
++	    ("USB SPCA5XX camera found. Logitech QC Messenger ");
++	  break;
++
+ 	case 0x0905:
+ 	  spca50x->desc = LogitechClickSmart820;
+ 	  spca50x->bridge = BRIDGE_SPCA533;
+@@ -4155,6 +4275,18 @@
+     case 0x0c45:		/* Sonix6025 TAS 5130d1b */
+       switch (product)
+ 	{
++	case 0x6040:
++	  spca50x->desc = SpeedNVC350K;
++	  spca50x->bridge = BRIDGE_SN9CXXX;
++	  spca50x->sensor = SENSOR_HV7131R;
++	  spca50x->customid = SN9C102P;
++	  spca50x->header_len = 0;
++	  spca50x->i2c_ctrl_reg = 0x81;
++	  spca50x->i2c_base = 0x11;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGS;	// jpeg 4.2.2 whithout header ;
++	  info ("USB SPCA5XX camera found. Speed NVC 350K sn9c102p + Hv7131R ");
++	  break;
+ 	case 0x607c:
+ 	  spca50x->desc = SonixWC311P;
+ 	  spca50x->bridge = BRIDGE_SN9CXXX;
+@@ -4265,6 +4397,74 @@
+ 	default:
+ 	  goto error;
+ 	};
++    case 0x0698:		/* Chuntex (CTX) */
++      switch (product)
++	{
++	case 0x2003:		/* The Webcam built in the CTX M730V TFT-Display, behind an USB-HUB */
++	  spca50x->desc = CTXM730VCam;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_ICM105A;	//overwrite by the sensor detect routine
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info("USB SPCA5XX camera found. Type CTX M730V built in Webcam");
++	  break;
++	default:
++	  goto error;
++	};
++      break;
++    case 0x0471:		/* Philips Product */
++      switch (product)
++	{
++	case 0x0325:		/* Low cost Philips Webcam */
++	  spca50x->desc = PhilipsSPC200NC;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_PAS106;	//overwrite by the sensor detect routine
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info("USB SPCA5XX camera found. Type Philips SPC200NC Vimicro PAS106");
++	  break;
++	case 0x0326:		/* Low cost Philips Webcam */
++	  spca50x->desc = PhilipsSPC300NC;
++	  spca50x->bridge = BRIDGE_ZC3XX;
++	  spca50x->sensor = SENSOR_PAS106;	//overwrite by the sensor detect routine
++	  spca50x->header_len = SPCA50X_OFFSET_DATA;
++	  spca50x->i2c_ctrl_reg = 0;
++	  spca50x->i2c_base = 0;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGH;
++	  info("USB SPCA5XX camera found. Type Philips SPC300NC Vimicro PAS106");
++	  break;
++	case 0x0327:
++	  spca50x->desc = PhilipsSPC600NC;
++	  spca50x->bridge = BRIDGE_SN9CXXX;
++	  spca50x->sensor = SENSOR_MI0360;
++	  spca50x->customid = SN9C105;
++	  spca50x->i2c_ctrl_reg = 0x81;
++	  spca50x->i2c_base = 0x5d;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGS;	// jpeg 4.2.2 whithout header ;
++	  info("USB SPCA5XX camera found. Philips SPC600NC sn9c105 + MI0360 ");
++	  break;
++	case 0x0328:
++	  spca50x->desc = PhilipsSPC700NC;
++	  spca50x->bridge = BRIDGE_SN9CXXX;
++	  spca50x->sensor = SENSOR_MI0360;
++	  spca50x->customid = SN9C105;
++	  spca50x->i2c_ctrl_reg = 0x81;
++	  spca50x->i2c_base = 0x5d;
++	  spca50x->i2c_trigger_on_write = 0;
++	  spca50x->cameratype = JPGS;	// jpeg 4.2.2 whithout header ;
++	  info("USB SPCA5XX camera found. Philips SPC700NC sn9c105 + MI0360 ");
++	  break;
++	default:
++	  goto error;
++	};
+       break;
+ 
+     default:

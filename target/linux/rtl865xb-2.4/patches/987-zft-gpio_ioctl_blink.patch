@@ -1,0 +1,181 @@
+--- linux-2.4.26-rp614v4v106/drivers/net/re865x/gpio_ioctl.c	2009-02-26 14:22:56.000000000 +0200
++++ linux-2.4.26-rp614v4v106_p/drivers/net/re865x/gpio_ioctl.c	2009-02-26 11:11:30.000000000 +0200
+@@ -4,9 +4,13 @@
+ #include <linux/init.h>    //Must need added by Nick HO
+ #include <linux/devfs_fs_kernel.h>
+ #include <linux/fs.h>
++#include <linux/timer.h>
++#include <linux/sched.h>
+ 
+ #include "gpio.h"
+ 
++#define dbg if(0)printk 
++
+ MODULE_DESCRIPTION("RTL-8651B GPIO driver by FlyRouter team");
+ MODULE_LICENSE("GPL");
+ 
+@@ -33,23 +37,91 @@
+ #define TOGGLE_BIT( x, b ) ((TEST_BIT(x,b)) ?(CLEAR_BIT(x,b)):(SET_BIT(x,b)))
+ #endif
+ 
++#define GPIO_INDEX(id) ( (GPIO_PORT(gpio_id)*8) + GPIO_PIN(gpio_id) )
++
++struct gpio_port_data {
++	char peripheral;
++	char direction;
++	unsigned char last_value;
++	int period;
++	struct timer_list timer;
++};
++
++static struct gpio_port_data rtl865x_port_data[GPIO_PORT_MAX*8];
++
++static int rtl865x_set_gpio(unsigned int gpio_id, unsigned char data)
++{
++	int index = GPIO_INDEX(gpio_id);
++	rtl865x_port_data[index].last_value = data;
++	dbg("set port:%d pin:%d to %d (%d)\n", GPIO_PORT(gpio_id), GPIO_PIN(gpio_id), data,  rtl865x_port_data[index].last_value);
++	if ( _rtl865x_setGpioDataBit( gpio_id, data ) == SUCCESS ) {
++		return data;
++	} else
++		return -1;
++}
++
++static void gpio_blink(unsigned long gpio_id)
++{
++	int index = GPIO_INDEX(gpio_id);
++	// setup period
++	rtl865x_port_data[index].timer.expires = jiffies + (rtl865x_port_data[index].period * HZ / 1000 );
++	dbg("firing timer(%d): period = %d, last_value = %d, setto= %d\n", index, rtl865x_port_data[index].period, (int)rtl865x_port_data[index].last_value, (int)rtl865x_port_data[index].last_value?0:1);
++	rtl865x_set_gpio(gpio_id, rtl865x_port_data[index].last_value?0:1);
++	add_timer(&rtl865x_port_data[index].timer);
++}
++
++
++static int rtl865x_handle_blink(unsigned int gpio_id, int period)
++{
++	int index = GPIO_INDEX(gpio_id);
++	// delete timer
++	dbg("index: %d\n", index);
++	dbg("del_timer()\n");
++	del_timer(&rtl865x_port_data[index].timer);
++	rtl865x_port_data[index].timer.function = gpio_blink;
++	rtl865x_port_data[index].timer.data = gpio_id;
++	rtl865x_port_data[index].period = period;
++
++	if (period == 0)
++		return 0;
++
++	dbg("init_timer()\n");
++	init_timer(&rtl865x_port_data[index].timer);
++	
++	rtl865x_port_data[index].timer.expires = jiffies + ( period * HZ / 1000);
++
++	dbg("add_timer()\n");
++	add_timer(&rtl865x_port_data[index].timer);
++
++	return 1;
++}
++
++/* 
++ * gpio_action
++ 0,1   bit - action
++ 3     bit - direction for init
++ 4     bit - set gpio to 1/0 
++ 7-31  bit - blink period
++ */
+ 
+ static int gpio_ioctl(struct inode *inode, struct file *file, unsigned int gpio_id, unsigned long gpio_action)
+ {	
+ 	int ret_data = -1;
+ 	int direction = TEST_BIT(gpio_action, 3);
+ 	int cmd = gpio_action & 0x3;
+-	int data = TEST_BIT(gpio_action, 4);
++	unsigned int data = TEST_BIT(gpio_action, 4);
++	int index = GPIO_INDEX(gpio_id);
++	int period = gpio_action & 0xFFFFFF00;
++	period = (period >> 8);
+ 
+-#if _GPIO_DEBUG_ >= 3
+-	rtlglue_printf("[%s():%d] direction=%s  cmd=%d  gpio_id=0x%08x  port=0x%08x  pin=0x%08x   data=%d\n", __FUNCTION__, __LINE__, direction?"out":"in", cmd, gpio_id, GPIO_PORT(gpio_id), GPIO_PIN(gpio_id), data );
+-#endif
+-	
++	dbg("[%s():%d] direction=%s  cmd=%d  gpio_id=0x%08x  port=0x%08x  pin=0x%08x   data=%x, period=%d\n", __FUNCTION__, __LINE__, direction?"out":"in", cmd, gpio_id, GPIO_PORT(gpio_id), GPIO_PIN(gpio_id), data, period);
+ 
+ 	switch ( cmd ) {
+ 		case 0: 
+ 			// INIT
+ 			_rtl865x_initGpioPin( gpio_id, GPIO_PERI_GPIO, direction, GPIO_INT_DISABLE );
++			rtl865x_port_data[index].peripheral = GPIO_PERI_GPIO;
++			rtl865x_port_data[index].direction = direction;
+ 			ret_data = 1;
+ 			break;
+ 
+@@ -63,10 +135,13 @@
+ 
+ 		case 2:
+ 			// SET
+-			_rtl865x_setGpioDataBit( gpio_id, data ); 
++			//_rtl865x_setGpioDataBit(gpio_id, data); 
++			rtl865x_set_gpio(gpio_id, data);
+ 			ret_data = 1;
+ 			break;
+-
++		case 3:
++			ret_data = rtl865x_handle_blink(gpio_id, period);
++			break;
+ 	}
+ 
+ 	return ret_data;
+@@ -90,30 +165,11 @@
+ {
+ 	int result;
+ 
+-	printk("Entry gpio_ioctl init_module !!\n");
+-	// Move to Loader
+-	//======= Initial & Configure GPIO Registers =================
+-	/* already move this section into loader.c 
+-	// Set Control Register
+-	REG32(PABCCNR) &= ~0x00ff3800; // set to GPIO mode
+-	
+-	// Set Directory Register
+-	REG32(PABCDIR) |=  0x00fe3000;  // set to output
+-	REG32(PABCDIR) &=  ~0x00010800; // set to input
+-	
+-	// testing
+-	//REG32(PABCDIR) |=  0x007e3000;  // set to output
+-	//REG32(PABCDIR) &=  ~0x00810800; // set to input
+-	
+-	
+-	// Disable all Interrupt
+-	REG32(PABIMR) &=  ~0x0000FFFF; // disable Port B interrupt
+-	REG32(PCIMR) &=  ~0x0FC00000;  // disable Port C pin3.4.5 interrupt
+-	//==================   End   ========================
+-	*/
++	printk("Flyrouter gpio_ioctl module\n");
++	memset(rtl865x_port_data, 0, sizeof(rtl865x_port_data));
+ 	
+ 	// hook device into kernel
+-	result = devfs_register_chrdev( gpio_major, "gpio", &gpio_fops);
++	result = devfs_register_chrdev( gpio_major, "gpio_gpio", &gpio_fops);
+ 	
+ 	if (result) {
+ 		printk( "<1>gpio_ioctl : cannot get major %d\n", gpio_major);
+@@ -123,16 +179,10 @@
+ 				      gpio_major, 0,
+ 				      S_IFCHR | S_IRUSR | S_IWUSR,
+ 				      &gpio_fops, NULL);
+-	#ifdef _GPIO_DEBUG_					      
++	#ifdef _GPIO_DEBUG_	
+ 	printk( "init gpio_ioctl Successful,  major = %d\n", gpio_major);
+ 	#endif
+ 	
+-#if 0
+-	// Set PIN initial state
+-	REG32(PABCDAT) |= (GPIO_DIRECT_LED_ON | GPIO_USB1_LED_ON | GPIO_USB2_LED_ON); // USB 1/2 & Direct LEDs to dim
+-	REG32(PABCDAT) &= ~(GPIO_WLAN_LED_ON | GPIO_SYS_STATUS_LED_ON); // luminesce status LEDs
+-#endif
+-	
+ 	return	0;
+ }
+ 

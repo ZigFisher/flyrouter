@@ -1,0 +1,22 @@
+Index: linux-2.4.27/drivers/usb/host/usb-ohci.c
+===================================================================
+--- linux-2.4.27.orig/drivers/usb/host/usb-ohci.c	2004-04-14 17:05:33.000000000 +0400
++++ linux-2.4.27/drivers/usb/host/usb-ohci.c	2008-03-24 23:54:02.000000000 +0300
+@@ -2219,10 +2219,13 @@
+   	/* Reset USB (needed by some controllers) */
+ 	writel (0, &ohci->regs->control);
+ 
+-	/* Force a state change from USBRESET to USBOPERATIONAL for ALi */
+-	(void) readl (&ohci->regs->control);	/* PCI posting */
+-	writel (ohci->hc_control = OHCI_USB_OPER, &ohci->regs->control);
+-
++	if(ohci->ohci_dev->vendor==PCI_VENDOR_ID_AL) //tony: patch for NEC usb 2.0 card, crash here.
++	{		
++		/* Force a state change from USBRESET to USBOPERATIONAL for ALi */	
++		(void) readl (&ohci->regs->control);	/* PCI posting */		
++		writel (ohci->hc_control = OHCI_USB_OPER, &ohci->regs->control);		
++	}
++		
+ 	/* HC Reset requires max 10 ms delay */
+ 	writel (OHCI_HCR,  &ohci->regs->cmdstatus);
+ 	while ((readl (&ohci->regs->cmdstatus) & OHCI_HCR) != 0) {

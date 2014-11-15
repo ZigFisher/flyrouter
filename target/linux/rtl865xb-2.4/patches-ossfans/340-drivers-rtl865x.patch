@@ -1,0 +1,4222 @@
+Index: linux-2.4.27/drivers/mtd/maps/Config.in
+===================================================================
+--- linux-2.4.27.orig/drivers/mtd/maps/Config.in	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/mtd/maps/Config.in	2008-03-25 00:22:56.000000000 +0300
+@@ -1,6 +1,6 @@
+ # drivers/mtd/maps/Config.in
+ 
+-# $Id: Config.in,v 1.43 2003/01/24 14:26:38 dwmw2 Exp $
++# $Id: Config.in,v 1.1.1.1 2004/08/20 11:30:52 r04482 Exp $
+ 
+ mainmenu_option next_comment
+ 
+@@ -13,6 +13,37 @@
+    int '    Bus width in octets' CONFIG_MTD_PHYSMAP_BUSWIDTH 2
+ fi
+ 
++dep_tristate '  CFI Flash device mapped on Dragonix VZ' CONFIG_MTD_DRAGONIX $CONFIG_MTD_CFI_INTELEXT $CONFIG_MTD_CFI_AMDSTD $CONFIG_MTD_PARTITIONS
++dep_tristate '  CFI Flash device mapped on SnapGear/SecureEdge' CONFIG_MTD_NETtel $CONFIG_MTD_PARTITIONS
++dep_tristate '  CFI Flash device mapped on SnapGear/GEODE boards' CONFIG_MTD_SNAPGEODE $CONFIG_MTD_PARTITIONS
++dep_tristate '  CFI Flash device mapped on SnapGear/SecureEdge (uClinux)' CONFIG_MTD_NETteluC $CONFIG_UCLINUX $CONFIG_MTD_PARTITIONS
++if [ "$CONFIG_MTD_NETteluC" = "y" ]; then
++   choice '  FLASH size' \
++           " AUTO  CONFIG_FLASHAUTO \
++            128KB  CONFIG_FLASH128KB \
++              1MB  CONFIG_FLASH1MB \
++              2MB  CONFIG_FLASH2MB \
++              4MB  CONFIG_FLASH4MB \
++              6MB  CONFIG_FLASH6MB \
++              8MB  CONFIG_FLASH8MB \
++             16MB  CONFIG_FLASH16MB" AUTO
++fi
++dep_tristate '  CFI Flash device mapped on Microblaze/mbvanilla (uClinux)' CONFIG_MTD_MBVANILLA $CONFIG_UCLINUX $CONFIG_MTD_PARTITIONS
++if [ "$CONFIG_MTD_MBVANILLA" = "y" ]; then
++   choice '  FLASH size' \
++           " AUTO  CONFIG_FLASHAUTO \
++            128KB  CONFIG_FLASH128KB \
++              1MB  CONFIG_FLASH1MB \
++              2MB  CONFIG_FLASH2MB \
++              4MB  CONFIG_FLASH4MB \
++              6MB  CONFIG_FLASH6MB \
++              8MB  CONFIG_FLASH8MB " AUTO
++fi
++
++dep_tristate '  CFI Flash device mapped on Microblaze/SUZAKU (uClinux)' CONFIG_MTD_SUZAKU $CONFIG_MICROBLAZE $CONFIG_SUZAKU $CONFIG_MTD_PARTITIONS
++
++dep_tristate '  CFI Flash device mapped on Key Technology devices' CONFIG_MTD_KeyTechnology $CONFIG_UCLINUX $CONFIG_MTD_PARTITIONS
++dep_tristate '  CFI Flash device mapped on SED SIOS III Core' CONFIG_MTD_SED_SIOSIII $CONFIG_MTD_PARTITIONS
+ if [ "$CONFIG_SPARC" = "y" -o "$CONFIG_SPARC64" = "y" ]; then
+    dep_tristate '  Sun Microsystems userflash support' CONFIG_MTD_SUN_UFLASH $CONFIG_MTD_CFI
+ fi
+@@ -30,11 +61,11 @@
+    dep_tristate '  JEDEC Flash device mapped on Mixcom piggyback card' CONFIG_MTD_MIXMEM $CONFIG_MTD_JEDEC
+    dep_tristate '  JEDEC Flash device mapped on Octagon 5066 SBC' CONFIG_MTD_OCTAGON $CONFIG_MTD_JEDEC
+    dep_tristate '  JEDEC Flash device mapped on Tempustech VMAX SBC301' CONFIG_MTD_VMAX $CONFIG_MTD_JEDEC
++   dep_tristate '  OTP EPROM device mapped on Adtran Advanta 3110' CONFIG_MTD_ADVANTA $CONFIG_MTD_ROM
+    dep_tristate '  Flash device mapped with DOCCS on NatSemi SCx200' CONFIG_MTD_SCx200_DOCFLASH $CONFIG_MTD_CFI
+    dep_tristate '  BIOS flash chip on Intel L440GX boards' CONFIG_MTD_L440GX $CONFIG_MTD_JEDECPROBE
+    dep_tristate '  ROM connected to AMD76X southbridge' CONFIG_MTD_AMD76XROM $CONFIG_MTD_GEN_PROBE   
+    dep_tristate '  ROM connected to Intel Hub Controller 2' CONFIG_MTD_ICH2ROM $CONFIG_MTD_JEDECPROBE
+-   dep_tristate '  CFI Flash device mapped on SnapGear/SecureEdge' CONFIG_MTD_NETtel $CONFIG_MTD_PARTITIONS
+    dep_tristate '  BIOS flash chip on Intel SCB2 boards' CONFIG_MTD_SCB2_FLASH $CONFIG_MTD_GEN_PROBE
+ fi
+ 
+@@ -62,6 +93,7 @@
+       hex '    Physical length of flash mapping' CONFIG_MTD_CSTM_MIPS_IXX_LEN 0x4000000
+       int '    Bus width in octets' CONFIG_MTD_CSTM_MIPS_IXX_BUSWIDTH 2
+    fi
++   dep_tristate '  CFI Flash devcie mapped on Realtek RTL865X boards' CONFIG_MTD_RTL865X $CONFIG_MTD_PARTITIONS $CONFIG_MTD_CFI
+    dep_tristate '  Momenco Ocelot boot flash device' CONFIG_MTD_OCELOT $CONFIG_MOMENCO_OCELOT
+    dep_tristate '  LASAT flash device' CONFIG_MTD_LASAT $CONFIG_MTD_CFI $CONFIG_LASAT
+ fi
+@@ -74,6 +106,10 @@
+    fi
+ fi
+ 
++if [ "$CONFIG_SUPERH" = "y" ]; then
++   tristate '  Hitachi SH KeyWest Intel flash device' CONFIG_MTD_KEYWEST
++fi
++
+ if [ "$CONFIG_ARM" = "y" ]; then
+    dep_tristate '  CFI Flash device mapped on Nora' CONFIG_MTD_NORA $CONFIG_MTD_CFI
+    dep_tristate '  CFI Flash device mapped on ARM Integrator/P720T' CONFIG_MTD_ARM_INTEGRATOR $CONFIG_MTD_CFI
+@@ -84,18 +120,55 @@
+    dep_tristate '  CFI Flash device mapped on Epxa10db' CONFIG_MTD_EPXA10DB $CONFIG_MTD_CFI  $CONFIG_MTD_PARTITIONS $CONFIG_ARCH_CAMELOT
+    dep_tristate '  CFI Flash device mapped on the FortuNet board' CONFIG_MTD_FORTUNET $CONFIG_MTD_CFI $CONFIG_MTD_PARTITIONS $CONFIG_SA1100_FORTUNET
+    dep_tristate '  NV-RAM mapping AUTCPU12 board' CONFIG_MTD_AUTCPU12 $CONFIG_ARCH_AUTCPU12
++   dep_tristate '  CFI Flash device mapped on IXP425' CONFIG_MTD_IXP425 $CONFIG_MTD_CFI $CONFIG_MTD_PARTITIONS
++   dep_tristate '  CFI Flash device mapped on SnapGear SE4000 board' CONFIG_MTD_SE4000 $CONFIG_MTD_CFI $CONFIG_ARCH_SE4000
++   dep_tristate '  CFI Flash device mapped on SnapGear ARM based boards' CONFIG_MTD_SNAPARM $CONFIG_MTD_CFI
++   dep_tristate '  CFI Flash device mapped on TI TMS320DM270' CONFIG_MTD_DM270 $CONFIG_MTD_CFI $CONFIG_ARCH_DM270 $CONFIG_MTD_PARTITIONS
+    dep_tristate '  CFI Flash device mapped on EDB7312' CONFIG_MTD_EDB7312 $CONFIG_MTD_CFI
+    dep_tristate '  JEDEC Flash device mapped on impA7' CONFIG_MTD_IMPA7 $CONFIG_MTD_JEDECPROBE
+    dep_tristate '  JEDEC Flash device mapped on Ceiva/Polaroid PhotoMax Digital Picture Frame' CONFIG_MTD_CEIVA $CONFIG_MTD_JEDECPROBE  $CONFIG_ARCH_CEIVA
+ fi
++
++if [ "$CONFIG_COBRA5272" = "y" ]; then
++	dep_tristate '  CFI Flash device mapped on COBRA5272' CONFIG_MTD_COBRA5272 $CONFIG_MTD_CFI
++fi
++
++if [ "$CONFIG_M5272C3" ]; then
++   dep_tristate '  CFI Flash device mapped on Motorola M5272C3' CONFIG_MTD_M5272C3 $CONFIG_MTD_CFI
++fi
++
+ if [ "$CONFIG_ALPHA" = "y" ]; then
+    dep_tristate '  Flash chip mapping on TSUNAMI' CONFIG_MTD_TSUNAMI $CONFIG_MTD_GENPROBE
+ fi
+ 
++if [ "$CONFIG_DNP5280" = "y" ]; then
++	dep_tristate '  CFI Flash device mapped on DNP5280' CONFIG_MTD_DNP5280 $CONFIG_MTD_CFI
++fi
++
++if [ "$CONFIG_COBRA5282" = "y" ]; then
++	dep_tristate '  CFI Flash device mapped on COBRA5282' CONFIG_MTD_COBRA5282 $CONFIG_MTD_CFI
++fi
++
++if [ "$CONFIG_BLACKFIN" = "y" ]; then
++   dep_tristate '  ADDS-BF533-EZLITE Flash support' CONFIG_MTD_BLACKFIN_533 $CONFIG_MTD_PARTITIONS $CONFIG_BLACKFIN_EZKIT
++fi
++
+ if [ "$CONFIG_UCLINUX" = "y" ]; then
+    dep_tristate '  Generic uClinux RAM/ROM filesystem support' CONFIG_MTD_UCLINUX $CONFIG_MTD_PARTITIONS
+ fi
+ 
++if [ "$CONFIG_HW_FEITH" = "y" ]; then
++	dep_tristate '  CFI Flash device mapped on Feith boards' CONFIG_MTD_FEITH $CONFIG_MTD_CFI
++fi
++if [ "$CONFIG_MTD_FEITH" = "y" ]; then
++   choice '  FLASH size' \
++           " AUTO  CONFIG_FLASHAUTO \
++              2MB  CONFIG_FLASH2MB \
++              4MB  CONFIG_FLASH4MB \
++              6MB  CONFIG_FLASH6MB \
++             16MB  CONFIG_FLASH8MB" AUTO
++fi
++
+ # This needs CFI or JEDEC, depending on the cards found.
+ dep_tristate '  PCI MTD driver' CONFIG_MTD_PCI $CONFIG_MTD $CONFIG_PCI
+ dep_tristate '  PCMCIA MTD driver' CONFIG_MTD_PCMCIA $CONFIG_MTD $CONFIG_PCMCIA
+Index: linux-2.4.27/drivers/mtd/maps/RealTek865x_flash.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/drivers/mtd/maps/RealTek865x_flash.c	2008-03-25 00:22:56.000000000 +0300
+@@ -0,0 +1,351 @@
++/*
++ * Flash mapping for RealTek865x boards
++ */
++
++#include <linux/module.h>
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <asm/io.h>
++#include <linux/mtd/mtd.h>
++#include <linux/mtd/map.h>
++#include <linux/mtd/partitions.h>
++#include <linux/config.h>
++
++#include <linux/string.h>
++
++//#include <asm/mips-boards/prom.h>
++extern char *prom_getargv(char *name);
++
++#ifdef CONFIG_MTD_PARTITIONS
++#define MAX_NUM_PARTITIONS 4
++static int num_of_partitions = 1;
++
++#if 0
++static struct mtd_partition RealTek865x_parts[] = {
++			{ name: "ldr1", offset: 0x00000000, size: 0x4000, mask_flags: 0},
++			{ name: "bdinfo", offset: 0x00004000, size: 0x2000, mask_flags: MTD_WRITEABLE,},
++			{ name: "cfg", offset: 0x00006000, size: 0x2000, mask_flags: MTD_WRITEABLE,},
++			{ name: "ldr2", offset: 0x00008000, size: 0x18000, mask_flags: 0},
++			{ name: "kernel", offset: 0, size: 0, mask_flags: MTD_WRITEABLE,},
++			{ name: "squashfs", offset: 0, size: 0, mask_flags: MTD_WRITEABLE, },
++			{ name: NULL, },		
++};
++#else
++static struct mtd_partition RealTek865x_parts[] = {
++                        { name: "ldr", offset: 0x00000000, size: 0x20000, mask_flags: 0},
++                        { name: "alphafs", offset: 0, size: 0,},
++                        { name: "kernel", offset: 0, size: 0, mask_flags: MTD_WRITEABLE,},
++                        { name: "squashfs", offset: 0, size: 0, mask_flags: MTD_WRITEABLE, },
++                        { name: NULL, },
++};
++
++
++#endif
++
++//extern struct mtd_partition * init_mtd_partitions(struct mtd_info *mtd, size_t size);
++#endif
++
++#define WINDOW_ADDR		0xbfc00000
++#define WINDOW_SIZE		0x200000   //Shiang: can we get the size by query flash?
++#define BUSWIDTH 		2    
++
++/* e.g., flash=2M or flash=4M */
++static int flash = 0;
++MODULE_PARM(flash, "i");
++static int __init
++rt865x_setup(char *str)
++{
++	flash = memparse(str, &str);
++	return 1;
++}
++__setup("flash=", rt865x_setup);
++
++static struct mtd_info *rt865x_mtd;
++
++__u8 rt865x_map_read8(struct map_info *map, unsigned long ofs)
++{
++#if 0  //Shaing: what those codes means?
++	if (map->map_priv_2 == 1)
++		return __raw_readb(map->map_priv_1 + ofs);
++
++	u16 val = __raw_readw(map->map_priv_1 + (ofs & ~1));
++	if (ofs & 1)
++		return ((val >> 8) & 0xff);
++	else
++		return (val & 0xff);
++#else
++		return __raw_readb(map->map_priv_1 + ofs);
++#endif
++}
++
++__u16 rt865x_map_read16(struct map_info *map, unsigned long ofs)
++{
++	return __raw_readw(map->map_priv_1 + ofs);
++}
++
++__u32 rt865x_map_read32(struct map_info *map, unsigned long ofs)
++{
++	return __raw_readl(map->map_priv_1 + ofs);
++}
++
++void rt865x_map_copy_from(struct map_info *map, void *to, unsigned long from, ssize_t len)
++{
++	memcpy_fromio(to, map->map_priv_1 + from, len);
++}
++
++void rt865x_map_write8(struct map_info *map, __u8 d, unsigned long adr)
++{
++	__raw_writeb(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rt865x_map_write16(struct map_info *map, __u16 d, unsigned long adr)
++{
++	__raw_writew(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rt865x_map_write32(struct map_info *map, __u32 d, unsigned long adr)
++{
++	__raw_writel(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rt865x_map_copy_to(struct map_info *map, unsigned long to, const void *from, ssize_t len)
++{
++	memcpy_toio(map->map_priv_1 + to, from, len);
++}
++
++struct map_info rt865x_map = {
++	name: "Physically mapped flash",
++	size: WINDOW_SIZE,
++	buswidth: BUSWIDTH,
++	read8: rt865x_map_read8,
++	read16: rt865x_map_read16,
++	read32: rt865x_map_read32,
++	copy_from: rt865x_map_copy_from,
++	write8: rt865x_map_write8,
++	write16: rt865x_map_write16,
++	write32: rt865x_map_write32,
++	copy_to: rt865x_map_copy_to
++};
++
++#if LINUX_VERSION_CODE < 0x20212 && defined(MODULE)
++#define init_rt865x_map init_module
++#define cleanup_rt865x_map cleanup_module
++#endif
++
++static char *strdup(char *str)
++{
++	int n = strlen(str)+1;
++	char *s = kmalloc(n, GFP_KERNEL);
++	if (!s) return NULL;
++	return strcpy(s, str);
++}
++
++#if 0
++int *prom_getenv(char *envname, char *buf)
++{
++	/*
++	 * Return a pointer to the given environment variable.
++	 * In 64-bit mode: we're using 64-bit pointers, but all pointers
++	 * in the PROM structures are only 32-bit, so we need some
++	 * workarounds, if we are running in 64-bit mode.
++	 */
++	int i, len;
++	char *tmp, *envp , *loc_space;
++	char SPACE = ' ';
++	
++	i = strlen(envname);
++	envp  = (char *)_prom_envp;
++
++	if ( (tmp = strstr(envp, envname))!=NULL)
++	{	
++		tmp = (char *)(tmp+i+1);
++		printk(" tmp=%s\n", tmp);
++		if ( (loc_space = strchr(tmp, SPACE)) !=NULL)
++		{	
++			len = strlen(tmp)-strlen(loc_space);
++		} else {
++			len = strlen(tmp);
++		}
++		
++		memcpy(buf, tmp, len);
++		buf[len] = '\0';
++		printk("buf = %s\n", buf);
++
++		return 0;
++		
++	}
++
++	return -1;
++}
++#endif
++
++static int create_mtd_partitions(void)
++{
++	unsigned int offset;
++	unsigned int size;
++	unsigned int found;
++	unsigned char *flash_base;
++	unsigned char *flash_end;
++	char *env_ptr;
++	char *base_ptr;
++	char *end_ptr;
++	char COMMA[] = "," ;
++	
++	do {
++		char	env_name[20];
++
++		found = 0;
++
++		/* get base and end addresses of flash file system from environment */
++		sprintf(env_name, "mtd%1u", num_of_partitions);
++		printk("Looking for mtd device %s:\n", env_name);
++
++		env_ptr = prom_getargv(env_name);
++		if( env_ptr == NULL) {
++			/* No more partitions to find */
++			printk("Shiang: Don't find any partitions!\n");
++			break;
++		}
++		
++		//printk("Shiang: env_ptr:%s, strlen(env_name)=%d,\n", env_ptr, strlen(env_name));  //Add by shiang for debug
++		
++		/* Extract the offset and size of the partition */
++		env_ptr = env_ptr + strlen(env_name) + 1;  //Ignore the env_name
++		//printk("Shiang: env_ptr:%s\n", env_ptr);  //Add by shiang for debug
++		
++		base_ptr = strsep((char **)(&env_ptr), COMMA);
++		end_ptr = strsep((char **)(&env_ptr), COMMA);
++
++		if ((base_ptr == NULL) || (end_ptr == NULL)) {	
++			printk("MTD ERROR: Invalid %s offset, size.\n", env_name);
++			break;
++		}
++		//printk("base_ptr =%s, end_ptr =%s\n", base_ptr, end_ptr); //Add by shiang for debug
++
++		offset = (unsigned char*) simple_strtol(base_ptr, NULL, 0);
++		size = (unsigned char*) simple_strtol(end_ptr, NULL, 0);
++		if((!offset) || (!size)) {
++			printk("MTD ERROR: Invalid %s start,end.\n", env_name);
++			break;
++		}
++
++		printk("Found a %s image (0x%x), with size (0x%x).\n",env_name, offset, size);
++
++		/* Setup the partition info. We duplicate the env_name for the partiton name */
++		RealTek865x_parts[num_of_partitions].offset = (unsigned long)offset;
++		RealTek865x_parts[num_of_partitions].size = (unsigned long)size;
++		//RealTek865x_parts[num_of_partitions].mask_flags = 0;
++		//printk("Shiang:RealTek865x_parts[%d].offset =0x%08x\n", num_of_partitions, RealTek865x_parts[num_of_partitions].offset); 
++		//printk("Shiang: RealTek865x_parts[%d].size=0x%08x\n", num_of_partitions, RealTek865x_parts[num_of_partitions].size);	
++		num_of_partitions++;
++	} while (num_of_partitions < MAX_NUM_PARTITIONS);
++	
++	return num_of_partitions;
++}
++
++mod_init_t init_rt865x_map(void)
++{
++	ulong flags;
++ 	//uint coreidx;
++	//chipcregs_t *cc;
++	//unsigned int fltype;
++	//uint window_addr = 0, window_size = 0;
++	size_t size;
++	int ret = 0;
++#ifdef CONFIG_MTD_PARTITIONS
++	struct mtd_partition *parts;
++	int i;
++#endif
++
++// +++ Modify by shiang 2004/08/19 for get the flash related info.
++
++	//Here we need to assign the map_priv_2, size, and buswidth
++	rt865x_map.map_priv_2 = WINDOW_ADDR;                    
++	//rt865x_map.size = PAGE_ALIGN(*((unsigned long *)((&_flashstart) + 8)));  //Shiang: Need to check it again
++	rt865x_map.size = WINDOW_SIZE;
++	rt865x_map.buswidth = 2;
++
++#if 0  //Modify by shiang, here we define the map_priv_2 as physical address, map_priv_1 as ioremap address.
++	rt865x_map.map_priv_1 = (unsigned long) ioremap(window_addr, window_size);
++#else
++	//rt865x_map.map_priv_1 = (unsigned long) ioremap(rt865x_map.map_priv_2, rt865x_map.size);
++	rt865x_map.map_priv_1 = WINDOW_ADDR;  //Shiang: Why we didn't need ioremap??
++	//printk("map_priv_1 address=0x%08x\n", rt865x_map.map_priv_1);
++#endif
++
++	if (!rt865x_map.map_priv_1) {
++		printk(KERN_ERR "pflash: ioremap failed\n");
++		ret = -EIO;
++		goto fail;
++	}
++
++	if (!(rt865x_mtd = do_map_probe("cfi_probe", &rt865x_map))) {
++		printk(KERN_ERR "pflash: cfi_probe failed\n");
++		ret = -ENXIO;
++		goto fail;
++	}
++	
++	//Shiang: After get the mtd_info structure, we set the mtd_info->module field!
++	rt865x_mtd->module = THIS_MODULE;
++
++	/* Allow size override for testing */
++	//Shiang: We don't need it!
++	//size = flash ? : rt865x_mtd->size;
++
++	//printk(KERN_NOTICE "Flash device: 0x%x at 0x%x\n", size, window_addr);
++
++#ifdef CONFIG_MTD_PARTITIONS
++
++#if 0   //Shiang: create mtd partitions by search mtd blocks , broadcomm style
++	parts = init_mtd_partitions(rt865x_mtd, size);
++	for (i = 0; RealTek865x_parts[i].name; i++);  //Shiang: Here we get the number of partitions.
++	ret = add_mtd_partitions(rt865x_mtd, parts, i);
++	if (ret) {
++		printk(KERN_ERR "pflash: add_mtd_partitions failed\n");
++		goto fail;
++	}
++#else //Shiang: create mtd partitions by parse kernel command line, TI style
++	num_of_partitions = create_mtd_partitions();
++	//printk("num_of_partitions = %d\n", num_of_partitions);
++	ret  = add_mtd_partitions(rt865x_mtd, RealTek865x_parts, sizeof(RealTek865x_parts)/sizeof(RealTek865x_parts[0])-1);
++	if (ret) {
++		printk(KERN_ERR "pflash: add_mtd_partitions failed\n");
++		goto fail;
++	}
++#endif
++
++#endif
++
++
++	return 0;
++
++ fail:
++	if (rt865x_mtd)
++		map_destroy(rt865x_mtd);
++	if (rt865x_map.map_priv_1)
++		iounmap((void *) rt865x_map.map_priv_1);
++	rt865x_map.map_priv_1 = 0;
++	return ret;
++}
++
++mod_exit_t cleanup_rt865x_map(void)
++{
++#ifdef CONFIG_MTD_PARTITIONS
++    if (rt865x_mtd)
++    {
++	del_mtd_partitions(rt865x_mtd);
++	map_destroy(rt865x_mtd);
++    }
++#endif
++    if (rt865x_map.map_priv_1) 
++    {
++	iounmap((void *) rt865x_map.map_priv_1);
++	rt865x_map.map_priv_1 = 0;
++    }
++}
++
++module_init(init_rt865x_map);
++module_exit(cleanup_rt865x_map);
+Index: linux-2.4.27/drivers/mtd/maps/rtl865x_flash.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/drivers/mtd/maps/rtl865x_flash.c	2008-03-25 00:22:56.000000000 +0300
+@@ -0,0 +1,127 @@
++/*
++ * Flash mapping for BCM947XX boards
++ *
++ * Copyright (C) 2001 Broadcom Corporation
++ *
++ * $Id$
++ */
++
++#include <linux/module.h>
++#include <linux/types.h>
++#include <linux/kernel.h>
++#include <asm/io.h>
++#include <linux/mtd/mtd.h>
++#include <linux/mtd/map.h>
++#include <linux/mtd/partitions.h>
++#include <linux/config.h>
++
++
++#define WINDOW_ADDR 0xbfc00000
++#define WINDOW_SIZE 0x200000
++#define BUSWIDTH 2
++
++static struct mtd_info *rtl865x_mtd;
++
++__u8 rtl865x_map_read8(struct map_info *map, unsigned long ofs)
++{
++	return __raw_readb(map->map_priv_1 + ofs);
++}
++
++__u16 rtl865x_map_read16(struct map_info *map, unsigned long ofs)
++{
++	return __raw_readw(map->map_priv_1 + ofs);
++}
++
++__u32 rtl865x_map_read32(struct map_info *map, unsigned long ofs)
++{
++	return __raw_readl(map->map_priv_1 + ofs);
++}
++
++void rtl865x_map_copy_from(struct map_info *map, void *to, unsigned long from, ssize_t len)
++{
++	memcpy_fromio(to, map->map_priv_1 + from, len);
++}
++
++void rtl865x_map_write8(struct map_info *map, __u8 d, unsigned long adr)
++{
++	__raw_writeb(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rtl865x_map_write16(struct map_info *map, __u16 d, unsigned long adr)
++{
++	__raw_writew(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rtl865x_map_write32(struct map_info *map, __u32 d, unsigned long adr)
++{
++	__raw_writel(d, map->map_priv_1 + adr);
++	mb();
++}
++
++void rtl865x_map_copy_to(struct map_info *map, unsigned long to, const void *from, ssize_t len)
++{
++	memcpy_toio(map->map_priv_1 + to, from, len);
++}
++
++struct map_info rtl865x_map = {
++	name: "Physically mapped flash",
++	size: WINDOW_SIZE,
++	buswidth: BUSWIDTH,
++	read8: rtl865x_map_read8,
++	read16: rtl865x_map_read16,
++	read32: rtl865x_map_read32,
++	copy_from: rtl865x_map_copy_from,
++	write8: rtl865x_map_write8,
++	write16: rtl865x_map_write16,
++	write32: rtl865x_map_write32,
++	copy_to: rtl865x_map_copy_to
++};
++
++static struct mtd_partition rtl865x_parts[] = {
++	{ name: "boot",	offset:  0 ,size:  0x20000, mask_flags: MTD_WRITEABLE },
++	{ name: "kernel",offset:  0x20000, size:0xe0000,mask_flags:MTD_WRITEABLE},
++	{ name: "rootfs",offset:  0x100000, size:0x100000,mask_flags:MTD_WRITEABLE},
++};
++
++
++#if LINUX_VERSION_CODE < 0x20212 && defined(MODULE)
++#define init_rtl865x_map init_module
++#define cleanup_rtl865x_map cleanup_module
++#endif
++
++mod_init_t init_rtl865x_map(void)
++{
++       	printk(KERN_NOTICE "flash device: %x at %x\n", WINDOW_SIZE, WINDOW_ADDR);
++	rtl865x_map.map_priv_1 =WINDOW_ADDR;
++
++	if (!rtl865x_map.map_priv_1) {
++		printk("Failed to ioremap\n");
++		return -EIO;
++	}
++	rtl865x_mtd = do_map_probe("cfi_probe", &rtl865x_map);
++	if (rtl865x_mtd) {
++		rtl865x_mtd->module = THIS_MODULE;
++		add_mtd_partitions(rtl865x_mtd, rtl865x_parts, sizeof(rtl865x_parts)/sizeof(rtl865x_parts[0]));
++		return 0;
++	}
++
++	iounmap((void *)rtl865x_map.map_priv_1);
++	return -ENXIO;
++}
++
++mod_exit_t cleanup_rtl865x_map(void)
++{
++	if (rtl865x_mtd) {
++		del_mtd_partitions(rtl865x_mtd);
++		map_destroy(rtl865x_mtd);
++	}
++	if (rtl865x_map.map_priv_1) {
++		iounmap((void *)rtl865x_map.map_priv_1);
++		rtl865x_map.map_priv_1 = 0;
++	}
++}
++
++module_init(init_rtl865x_map);
++module_exit(cleanup_rtl865x_map);
+Index: linux-2.4.27/drivers/net/8139cp.c
+===================================================================
+--- linux-2.4.27.orig/drivers/net/8139cp.c	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/8139cp.c	2008-03-25 00:22:56.000000000 +0300
+@@ -18,19 +18,21 @@
+ 
+ 	See the file COPYING in this distribution for more information.
+ 
+-	Contributors:
+-	
+-		Wake-on-LAN support - Felipe Damasio <felipewd@terra.com.br>
+-		PCI suspend/resume  - Felipe Damasio <felipewd@terra.com.br>
+-		LinkChg interrupt   - Felipe Damasio <felipewd@terra.com.br>
+-			
+-	TODO:
+-	* Test Tx checksumming thoroughly
+-	* Implement dev->tx_timeout
+-
+-	Low priority TODO:
++	TODO, in rough priority order:
++	* dev->tx_timeout
++	* LinkChg interrupt
++	* Support forcing media type with a module parameter,
++	  like dl2k.c/sundance.c
++	* Implement PCI suspend/resume
++	* Constants (module parms?) for Rx work limit
++	* support 64-bit PCI DMA
+ 	* Complete reset on PciErr
+ 	* Consider Rx interrupt mitigation using TimerIntr
++	* Implement 8139C+ statistics dump; maybe not...
++	  h/w stats can be reset only by software reset
++	* Tx checkuumming
++	* Handle netif_rx return value
++	* ETHTOOL_GREGS, ETHTOOL_[GS]WOL,
+ 	* Investigate using skb->priority with h/w VLAN priority
+ 	* Investigate using High Priority Tx Queue with skb->priority
+ 	* Adjust Rx FIFO threshold and Max Rx DMA burst on Rx FIFO error
+@@ -85,43 +87,34 @@
+ #endif
+ 
+ /* These identify the driver base version and may not be removed. */
+-static char version[] =
+-KERN_INFO DRV_NAME ": 10/100 PCI Ethernet driver v" DRV_VERSION " (" DRV_RELDATE ")\n";
++static char version[] __devinitdata =
++KERN_INFO DRV_NAME " 10/100 PCI Ethernet driver v" DRV_VERSION " (" DRV_RELDATE ")\n";
+ 
+-MODULE_AUTHOR("Jeff Garzik <jgarzik@pobox.com>");
++MODULE_AUTHOR("Jeff Garzik <jgarzik@mandrakesoft.com>");
+ MODULE_DESCRIPTION("RealTek RTL-8139C+ series 10/100 PCI Ethernet driver");
+ MODULE_LICENSE("GPL");
+ 
+ static int debug = -1;
+ MODULE_PARM (debug, "i");
+-MODULE_PARM_DESC (debug, "8139cp: bitmapped message enable number");
++MODULE_PARM_DESC (debug, "8139cp bitmapped message enable number");
+ 
+ /* Maximum number of multicast addresses to filter (vs. Rx-all-multicast).
+    The RTL chips use a 64 element hash table based on the Ethernet CRC.  */
+ static int multicast_filter_limit = 32;
+ MODULE_PARM (multicast_filter_limit, "i");
+-MODULE_PARM_DESC (multicast_filter_limit, "8139cp: maximum number of filtered multicast addresses");
++MODULE_PARM_DESC (multicast_filter_limit, "8139cp maximum number of filtered multicast addresses");
+ 
+ #define PFX			DRV_NAME ": "
+ 
+-#ifndef TRUE
+-#define FALSE 0
+-#define TRUE (!FALSE)
+-#endif
+-
+ #define CP_DEF_MSG_ENABLE	(NETIF_MSG_DRV		| \
+ 				 NETIF_MSG_PROBE 	| \
+ 				 NETIF_MSG_LINK)
+-#define CP_NUM_STATS		14	/* struct cp_dma_stats, plus one */
+-#define CP_STATS_SIZE		64	/* size in bytes of DMA stats block */
+ #define CP_REGS_SIZE		(0xff + 1)
+-#define CP_REGS_VER		1		/* version 1 */
+ #define CP_RX_RING_SIZE		64
+ #define CP_TX_RING_SIZE		64
+ #define CP_RING_BYTES		\
+ 		((sizeof(struct cp_desc) * CP_RX_RING_SIZE) +	\
+-		 (sizeof(struct cp_desc) * CP_TX_RING_SIZE) +	\
+-		 CP_STATS_SIZE)
++		(sizeof(struct cp_desc) * CP_TX_RING_SIZE))
+ #define NEXT_TX(N)		(((N) + 1) & (CP_TX_RING_SIZE - 1))
+ #define NEXT_RX(N)		(((N) + 1) & (CP_RX_RING_SIZE - 1))
+ #define TX_BUFFS_AVAIL(CP)					\
+@@ -150,7 +143,6 @@
+ 	/* NIC register offsets */
+ 	MAC0		= 0x00,	/* Ethernet hardware address. */
+ 	MAR0		= 0x08,	/* Multicast filter. */
+-	StatsAddr	= 0x10,	/* 64-bit start addr of 64-byte DMA stats blk */
+ 	TxRingAddr	= 0x20, /* 64-bit start addr of Tx ring */
+ 	HiTxRingAddr	= 0x28, /* 64-bit start addr of high priority Tx ring */
+ 	Cmd		= 0x37, /* Command register */
+@@ -159,7 +151,6 @@
+ 	TxConfig	= 0x40, /* Tx configuration */
+ 	ChipVersion	= 0x43, /* 8-bit chip version, inside TxConfig */
+ 	RxConfig	= 0x44, /* Rx configuration */
+-	RxMissed	= 0x4C,	/* 24 bits valid, write clears */
+ 	Cfg9346		= 0x50, /* EEPROM select/control; Cfg reg [un]lock */
+ 	Config1		= 0x52, /* Config1 */
+ 	Config3		= 0x59, /* Config3 */
+@@ -172,9 +163,7 @@
+ 	NWayExpansion	= 0x6A, /* MII Expansion */
+ 	Config5		= 0xD8,	/* Config5 */
+ 	TxPoll		= 0xD9,	/* Tell chip to check Tx descriptors for work */
+-	RxMaxSize	= 0xDA, /* Max size of an Rx packet (8169 only) */
+ 	CpCmd		= 0xE0, /* C+ Command register (C+ mode only) */
+-	IntrMitigate	= 0xE2,	/* rx/tx interrupt mitigation control */
+ 	RxRingAddr	= 0xE4, /* 64-bit start addr of Rx ring */
+ 	TxThresh	= 0xEC, /* Early Tx threshold */
+ 	OldRxBufAddr	= 0x30, /* DMA address of Rx ring buffer (C mode) */
+@@ -198,8 +187,8 @@
+ 	NormalTxPoll	= (1 << 6),  /* One or more normal Tx packets to send */
+ 	PID1		= (1 << 17), /* 2 protocol id bits:  0==non-IP, */
+ 	PID0		= (1 << 16), /* 1==UDP/IP, 2==TCP/IP, 3==IP */
+-	RxProtoTCP	= 1,
+-	RxProtoUDP	= 2,
++	RxProtoTCP	= 2,
++	RxProtoUDP	= 1,
+ 	RxProtoIP	= 3,
+ 	TxFIFOUnder	= (1 << 25), /* Tx FIFO underrun */
+ 	TxOWC		= (1 << 22), /* Tx Out-of-window collision */
+@@ -214,9 +203,6 @@
+ 	RxErrLong	= (1 << 21), /* Rx error, packet > 4096 bytes */
+ 	RxErrFIFO	= (1 << 22), /* Rx error, FIFO overflowed, pkt bad */
+ 
+-	/* StatsAddr register */
+-	DumpStats	= (1 << 3),  /* Begin stats dump */
+-
+ 	/* RxConfig register */
+ 	RxCfgFIFOShift	= 13,	     /* Shift, to get Rx FIFO thresh value */
+ 	RxCfgDMAShift	= 8,	     /* Shift, to get Rx Max DMA value */
+@@ -242,10 +228,16 @@
+ 	RxOK		= (1 << 0),  /* Rx packet received */
+ 	IntrResvd	= (1 << 10), /* reserved, according to RealTek engineers,
+ 					but hardware likes to raise it */
++#ifdef CONFIG_RTL865X
++	IntrAll		=   TimerIntr | LenChg | SWInt | TxEmpty |
++			  RxFIFOOvr | LinkChg | RxEmpty | TxErr | TxOK |
++			  RxErr | RxOK | IntrResvd,
++#else
+ 
+ 	IntrAll		= PciErr | TimerIntr | LenChg | SWInt | TxEmpty |
+ 			  RxFIFOOvr | LinkChg | RxEmpty | TxErr | TxOK |
+ 			  RxErr | RxOK | IntrResvd,
++#endif
+ 
+ 	/* C mode command register */
+ 	CmdReset	= (1 << 4),  /* Enable to reset; self-clearing */
+@@ -255,7 +247,6 @@
+ 	/* C+ mode command register */
+ 	RxVlanOn	= (1 << 6),  /* Rx VLAN de-tagging enable */
+ 	RxChkSum	= (1 << 5),  /* Rx checksum offload enable */
+-	PCIDAC		= (1 << 4),  /* PCI Dual Address Cycle (64-bit PCI) */
+ 	PCIMulRW	= (1 << 3),  /* Enable PCI read/write multiple */
+ 	CpRxOn		= (1 << 1),  /* Rx mode enable */
+ 	CpTxOn		= (1 << 0),  /* Tx mode enable */
+@@ -274,30 +265,26 @@
+ 
+ 	/* Config1 register */
+ 	DriverLoaded	= (1 << 5),  /* Software marker, driver is loaded */
+-	LWACT           = (1 << 4),  /* LWAKE active mode */
+ 	PMEnable	= (1 << 0),  /* Enable various PM features of chip */
+ 
+ 	/* Config3 register */
+ 	PARMEnable	= (1 << 6),  /* Enable auto-loading of PHY parms */
+-	MagicPacket     = (1 << 5),  /* Wake up when receives a Magic Packet */
+-	LinkUp          = (1 << 4),  /* Wake up when the cable connection is re-established */
+-
+-	/* Config4 register */
+-	LWPTN           = (1 << 1),  /* LWAKE Pattern */
+-	LWPME           = (1 << 4),  /* LANWAKE vs PMEB */
+ 
+ 	/* Config5 register */
+-	BWF             = (1 << 6),  /* Accept Broadcast wakeup frame */
+-	MWF             = (1 << 5),  /* Accept Multicast wakeup frame */
+-	UWF             = (1 << 4),  /* Accept Unicast wakeup frame */
+-	LANWake         = (1 << 1),  /* Enable LANWake signal */
+ 	PMEStatus	= (1 << 0),  /* PME status can be reset by PCI RST# */
+-
+-	cp_norx_intr_mask = PciErr | LinkChg | TxOK | TxErr | TxEmpty,
+-	cp_rx_intr_mask = RxOK | RxErr | RxEmpty | RxFIFOOvr,
+-	cp_intr_mask = cp_rx_intr_mask | cp_norx_intr_mask,
+ };
+ 
++#ifdef CONFIG_RTL865X
++static const unsigned int cp_intr_mask =
++	LinkChg |
++	RxOK | RxErr | RxEmpty | RxFIFOOvr |
++	TxOK | TxErr | TxEmpty;
++#else
++static const unsigned int cp_intr_mask =
++	PciErr | LinkChg |
++	RxOK | RxErr | RxEmpty | RxFIFOOvr |
++	TxOK | TxErr | TxEmpty;
++#endif
+ static const unsigned int cp_rx_config =
+ 	  (RX_FIFO_THRESH << RxCfgFIFOShift) |
+ 	  (RX_DMA_BURST << RxCfgDMAShift);
+@@ -305,7 +292,8 @@
+ struct cp_desc {
+ 	u32		opts1;
+ 	u32		opts2;
+-	u64		addr;
++	u32		addr_lo;
++	u32		addr_hi;
+ };
+ 
+ struct ring_info {
+@@ -314,22 +302,6 @@
+ 	unsigned		frag;
+ };
+ 
+-struct cp_dma_stats {
+-	u64			tx_ok;
+-	u64			rx_ok;
+-	u64			tx_err;
+-	u32			rx_err;
+-	u16			rx_fifo;
+-	u16			frame_align;
+-	u32			tx_ok_1col;
+-	u32			tx_ok_mcol;
+-	u64			rx_ok_phys;
+-	u64			rx_ok_bcast;
+-	u32			rx_ok_mcast;
+-	u16			tx_abort;
+-	u16			tx_underrun;
+-} __attribute__((packed));
+-
+ struct cp_extra_stats {
+ 	unsigned long		rx_frags;
+ };
+@@ -460,6 +432,7 @@
+ 		cp->rx_buf_sz = PKT_BUF_SZ;
+ }
+ 
++
+ static inline void cp_rx_skb (struct cp_private *cp, struct sk_buff *skb,
+ 			      struct cp_desc *desc)
+ {
+@@ -471,11 +444,11 @@
+ 
+ #if CP_VLAN_TAG_USED
+ 	if (cp->vlgrp && (desc->opts2 & RxVlanTagged)) {
+-		vlan_hwaccel_receive_skb(skb, cp->vlgrp,
+-					 be16_to_cpu(desc->opts2 & 0xffff));
++		vlan_hwaccel_rx(skb, cp->vlgrp, desc->opts2 & 0xffff);
+ 	} else
+ #endif
+-		netif_receive_skb(skb);
++ 		netif_rx(skb);
++
+ }
+ 
+ static void cp_rx_err_acct (struct cp_private *cp, unsigned rx_tail,
+@@ -490,14 +463,81 @@
+ 		cp->net_stats.rx_frame_errors++;
+ 	if (status & RxErrCRC)
+ 		cp->net_stats.rx_crc_errors++;
+-	if ((status & RxErrRunt) || (status & RxErrLong))
++	if (status & RxErrRunt)
+ 		cp->net_stats.rx_length_errors++;
+-	if ((status & (FirstFrag | LastFrag)) != (FirstFrag | LastFrag))
++	if (status & RxErrLong)
+ 		cp->net_stats.rx_length_errors++;
+ 	if (status & RxErrFIFO)
+ 		cp->net_stats.rx_fifo_errors++;
+ }
+ 
++static void cp_rx_frag (struct cp_private *cp, unsigned rx_tail,
++			struct sk_buff *skb, u32 status, u32 len)
++{
++	struct sk_buff *copy_skb, *frag_skb = cp->frag_skb;
++	unsigned orig_len = frag_skb ? frag_skb->len : 0;
++	unsigned target_len = orig_len + len;
++	unsigned first_frag = status & FirstFrag;
++	unsigned last_frag = status & LastFrag;
++
++	if (netif_msg_rx_status (cp))
++		printk (KERN_DEBUG "%s: rx %s%sfrag, slot %d status 0x%x len %d\n",
++			cp->dev->name,
++			cp->dropping_frag ? "dropping " : "",
++			first_frag ? "first " :
++			last_frag ? "last " : "",
++			rx_tail, status, len);
++
++	cp->cp_stats.rx_frags++;
++
++	if (!frag_skb && !first_frag)
++		cp->dropping_frag = 1;
++	if (cp->dropping_frag)
++		goto drop_frag;
++
++	copy_skb = dev_alloc_skb (target_len + RX_OFFSET);
++	if (!copy_skb) {
++		printk(KERN_WARNING "%s: rx slot %d alloc failed\n",
++		       cp->dev->name, rx_tail);
++
++		cp->dropping_frag = 1;
++drop_frag:
++		if (frag_skb) {
++			dev_kfree_skb_irq(frag_skb);
++			cp->frag_skb = NULL;
++		}
++		if (last_frag) {
++			cp->net_stats.rx_dropped++;
++			cp->dropping_frag = 0;
++		}
++		return;
++	}
++
++	copy_skb->dev = cp->dev;
++	skb_reserve(copy_skb, RX_OFFSET);
++	skb_put(copy_skb, target_len);
++	if (frag_skb) {
++		memcpy(copy_skb->data, frag_skb->data, orig_len);
++		dev_kfree_skb_irq(frag_skb);
++	}
++	pci_dma_sync_single(cp->pdev, cp->rx_skb[rx_tail].mapping,
++			    len, PCI_DMA_FROMDEVICE);
++	memcpy(copy_skb->data + orig_len, skb->data, len);
++
++	copy_skb->ip_summed = CHECKSUM_NONE;
++
++	if (last_frag) {
++		if (status & (RxError | RxErrFIFO)) {
++			cp_rx_err_acct(cp, rx_tail, status, len);
++			dev_kfree_skb_irq(copy_skb);
++		} else
++			cp_rx_skb(cp, copy_skb, &cp->rx_ring[rx_tail]);
++		cp->frag_skb = NULL;
++	} else {
++		cp->frag_skb = copy_skb;
++	}
++}
++
+ static inline unsigned int cp_rx_csum_ok (u32 status)
+ {
+ 	unsigned int protocol = (status >> 16) & 0x3;
+@@ -540,19 +580,12 @@
+ 
+ 		len = (status & 0x1fff) - 4;
+ 		mapping = cp->rx_skb[rx_tail].mapping;
+-
++#if 0
+ 		if ((status & (FirstFrag | LastFrag)) != (FirstFrag | LastFrag)) {
+-			/* we don't support incoming fragmented frames.
+-			 * instead, we attempt to ensure that the
+-			 * pre-allocated RX skbs are properly sized such
+-			 * that RX fragments are never encountered
+-			 */
+-			cp_rx_err_acct(cp, rx_tail, status, len);
+-			cp->net_stats.rx_dropped++;
+-			cp->cp_stats.rx_frags++;
++			cp_rx_frag(cp, rx_tail, skb, status, len);
+ 			goto rx_next;
+ 		}
+-
++#endif
+ 		if (status & (RxError | RxErrFIFO)) {
+ 			cp_rx_err_acct(cp, rx_tail, status, len);
+ 			goto rx_next;
+@@ -739,7 +772,7 @@
+ 
+ 	cp->tx_tail = tx_tail;
+ 
+-	if (TX_BUFFS_AVAIL(cp) > (MAX_SKB_FRAGS + 1))
++	if (netif_queue_stopped(cp->dev) && (TX_BUFFS_AVAIL(cp) > (MAX_SKB_FRAGS + 1)))
+ 		netif_wake_queue(cp->dev);
+ }
+ 
+@@ -765,37 +798,31 @@
+ 
+ #if CP_VLAN_TAG_USED
+ 	if (cp->vlgrp && vlan_tx_tag_present(skb))
+-		vlan_tag = TxVlanTag | cpu_to_be16(vlan_tx_tag_get(skb));
++		vlan_tag = TxVlanTag | vlan_tx_tag_get(skb);
+ #endif
+ 
+ 	entry = cp->tx_head;
+ 	eor = (entry == (CP_TX_RING_SIZE - 1)) ? RingEnd : 0;
+ 	if (skb_shinfo(skb)->nr_frags == 0) {
+ 		struct cp_desc *txd = &cp->tx_ring[entry];
+-		u32 len;
+-		dma_addr_t mapping;
++		u32 mapping, len;
+ 
+ 		len = skb->len;
+ 		mapping = pci_map_single(cp->pdev, skb->data, len, PCI_DMA_TODEVICE);
++		eor = (entry == (CP_TX_RING_SIZE - 1)) ? RingEnd : 0;
++		//memDump(skb->data, len,"PCI sending");
++
+ 		CP_VLAN_TX_TAG(txd, vlan_tag);
+-		txd->addr = cpu_to_le64(mapping);
++		txd->addr_lo = cpu_to_le32(mapping);
+ 		wmb();
+ 
+-		if (skb->ip_summed == CHECKSUM_HW) {
+-			const struct iphdr *ip = skb->nh.iph;
+-			if (ip->protocol == IPPROTO_TCP)
+-				txd->opts1 = cpu_to_le32(eor | len | DescOwn |
+-							 FirstFrag | LastFrag |
+-							 IPCS | TCPCS);
+-			else if (ip->protocol == IPPROTO_UDP)
+-				txd->opts1 = cpu_to_le32(eor | len | DescOwn |
+-							 FirstFrag | LastFrag |
+-							 IPCS | UDPCS);
+-			else
+-				BUG();
+-		} else
+-			txd->opts1 = cpu_to_le32(eor | len | DescOwn |
+-						 FirstFrag | LastFrag);
++#ifdef CP_TX_CHECKSUM
++		txd->opts1 = cpu_to_le32(eor | len | DescOwn | FirstFrag |
++			LastFrag | IPCS | UDPCS | TCPCS);
++#else
++		txd->opts1 = cpu_to_le32(eor | len | DescOwn | FirstFrag |
++			LastFrag);
++#endif
+ 		wmb();
+ 
+ 		cp->tx_skb[entry].skb = skb;
+@@ -804,16 +831,13 @@
+ 		entry = NEXT_TX(entry);
+ 	} else {
+ 		struct cp_desc *txd;
+-		u32 first_len, first_eor;
+-		dma_addr_t first_mapping;
++		u32 first_len, first_mapping;
+ 		int frag, first_entry = entry;
+-		const struct iphdr *ip = skb->nh.iph;
+ 
+ 		/* We must give this initial chunk to the device last.
+ 		 * Otherwise we could race with the device.
+ 		 */
+-		first_eor = eor;
+-		first_len = skb_headlen(skb);
++		first_len = skb->len - skb->data_len;
+ 		first_mapping = pci_map_single(cp->pdev, skb->data,
+ 					       first_len, PCI_DMA_TODEVICE);
+ 		cp->tx_skb[entry].skb = skb;
+@@ -823,9 +847,8 @@
+ 
+ 		for (frag = 0; frag < skb_shinfo(skb)->nr_frags; frag++) {
+ 			skb_frag_t *this_frag = &skb_shinfo(skb)->frags[frag];
+-			u32 len;
++			u32 len, mapping;
+ 			u32 ctrl;
+-			dma_addr_t mapping;
+ 
+ 			len = this_frag->size;
+ 			mapping = pci_map_single(cp->pdev,
+@@ -833,24 +856,17 @@
+ 						  this_frag->page_offset),
+ 						 len, PCI_DMA_TODEVICE);
+ 			eor = (entry == (CP_TX_RING_SIZE - 1)) ? RingEnd : 0;
+-
+-			if (skb->ip_summed == CHECKSUM_HW) {
+-				ctrl = eor | len | DescOwn | IPCS;
+-				if (ip->protocol == IPPROTO_TCP)
+-					ctrl |= TCPCS;
+-				else if (ip->protocol == IPPROTO_UDP)
+-					ctrl |= UDPCS;
+-				else
+-					BUG();
+-			} else
+-				ctrl = eor | len | DescOwn;
+-
++#ifdef CP_TX_CHECKSUM
++			ctrl = eor | len | DescOwn | IPCS | UDPCS | TCPCS;
++#else
++			ctrl = eor | len | DescOwn;
++#endif
+ 			if (frag == skb_shinfo(skb)->nr_frags - 1)
+ 				ctrl |= LastFrag;
+ 
+ 			txd = &cp->tx_ring[entry];
+ 			CP_VLAN_TX_TAG(txd, vlan_tag);
+-			txd->addr = cpu_to_le64(mapping);
++			txd->addr_lo = cpu_to_le32(mapping);
+ 			wmb();
+ 
+ 			txd->opts1 = cpu_to_le32(ctrl);
+@@ -864,23 +880,14 @@
+ 
+ 		txd = &cp->tx_ring[first_entry];
+ 		CP_VLAN_TX_TAG(txd, vlan_tag);
+-		txd->addr = cpu_to_le64(first_mapping);
++		txd->addr_lo = cpu_to_le32(first_mapping);
+ 		wmb();
+ 
+-		if (skb->ip_summed == CHECKSUM_HW) {
+-			if (ip->protocol == IPPROTO_TCP)
+-				txd->opts1 = cpu_to_le32(first_eor | first_len |
+-							 FirstFrag | DescOwn |
+-							 IPCS | TCPCS);
+-			else if (ip->protocol == IPPROTO_UDP)
+-				txd->opts1 = cpu_to_le32(first_eor | first_len |
+-							 FirstFrag | DescOwn |
+-							 IPCS | UDPCS);
+-			else
+-				BUG();
+-		} else
+-			txd->opts1 = cpu_to_le32(first_eor | first_len |
+-						 FirstFrag | DescOwn);
++#ifdef CP_TX_CHECKSUM
++		txd->opts1 = cpu_to_le32(first_len | FirstFrag | DescOwn | IPCS | UDPCS | TCPCS);
++#else
++		txd->opts1 = cpu_to_le32(first_len | FirstFrag | DescOwn);
++#endif
+ 		wmb();
+ 	}
+ 	cp->tx_head = entry;
+@@ -957,9 +964,7 @@
+ 
+ static void __cp_get_stats(struct cp_private *cp)
+ {
+-	/* only lower 24 bits valid; write any value to clear */
+-	cp->net_stats.rx_missed_errors += (cpr32 (RxMissed) & 0xffffff);
+-	cpw32 (RxMissed, 0);
++	/* XXX implement */
+ }
+ 
+ static struct net_device_stats *cp_get_stats(struct net_device *dev)
+@@ -1067,21 +1072,27 @@
+ 			goto err_out;
+ 
+ 		skb->dev = cp->dev;
++#if defined(CONFIG_8139CP_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++//#ifdef RTL865X_CRC_BUG
++		skb_reserve(skb, RX_OFFSET+4);
++#else
+ 		skb_reserve(skb, RX_OFFSET);
+-
++#endif
+ 		cp->rx_skb[i].mapping = pci_map_single(cp->pdev,
+ 			skb->tail, cp->rx_buf_sz, PCI_DMA_FROMDEVICE);
++
+ 		cp->rx_skb[i].skb = skb;
+ 		cp->rx_skb[i].frag = 0;
+ 
+-		cp->rx_ring[i].opts2 = 0;
+-		cp->rx_ring[i].addr = cpu_to_le64(cp->rx_skb[i].mapping);
+ 		if (i == (CP_RX_RING_SIZE - 1))
+ 			cp->rx_ring[i].opts1 =
+ 				cpu_to_le32(DescOwn | RingEnd | cp->rx_buf_sz);
+ 		else
+ 			cp->rx_ring[i].opts1 =
+ 				cpu_to_le32(DescOwn | cp->rx_buf_sz);
++		cp->rx_ring[i].opts2 = 0;
++		cp->rx_ring[i].addr_lo = cpu_to_le32(cp->rx_skb[i].mapping);
++		cp->rx_ring[i].addr_hi = 0;
+ 	}
+ 
+ 	return 0;
+@@ -1104,19 +1115,10 @@
+ 
+ static int cp_alloc_rings (struct cp_private *cp)
+ {
+-	void *mem;
+-
+-	mem = pci_alloc_consistent(cp->pdev, CP_RING_BYTES, &cp->ring_dma);
+-	if (!mem)
++	cp->rx_ring = pci_alloc_consistent(cp->pdev, CP_RING_BYTES, &cp->ring_dma);
++	if (!cp->rx_ring)
+ 		return -ENOMEM;
+-
+-	cp->rx_ring = mem;
+ 	cp->tx_ring = &cp->rx_ring[CP_RX_RING_SIZE];
+-
+-	mem += (CP_RING_BYTES - CP_STATS_SIZE);
+-	cp->nic_stats = mem;
+-	cp->nic_stats_dma = cp->ring_dma + (CP_RING_BYTES - CP_STATS_SIZE);
+-
+ 	return cp_init_rings(cp);
+ }
+ 
+@@ -1155,7 +1157,6 @@
+ 	pci_free_consistent(cp->pdev, CP_RING_BYTES, cp->rx_ring, cp->ring_dma);
+ 	cp->rx_ring = NULL;
+ 	cp->tx_ring = NULL;
+-	cp->nic_stats = NULL;
+ }
+ 
+ static int cp_open (struct net_device *dev)
+@@ -1173,11 +1174,27 @@
+ 	cp_init_hw(cp);
+ 
+ 	rc = request_irq(dev->irq, cp_interrupt, SA_SHIRQ, dev->name, dev);
+-	if (rc)
++	if (rc){
++		printk("XXX Can't register IRQ %d for device %s  err=%d!!!\n", dev->irq, dev->name,rc );
+ 		goto err_out_hw;
++	}
+ 
+-	netif_carrier_off(dev);
+-	mii_check_media(&cp->mii_if, netif_msg_link(cp), TRUE);
++#if defined(CONFIG_8139CP_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++	{
++		char chipVersion[16];
++		rtl8651_getChipVersion(chipVersion, sizeof(chipVersion), NULL);
++		if(chipVersion[strlen(chipVersion)-1]!='B'){
++			printk("This driver supports WLAN acceleration only for 865xB chips\n");
++			goto err_out_hw;
++		}
++		cp->rtl8650extPortNum=CONFIG_RTL865XB_WLAN1_PORT;
++
++		if(0!=devglue_regExtDevice(dev->name, CONFIG_8139CP_VID, cp->rtl8650extPortNum, &cp->rtl8650linkNum))
++			printk("XXX Can't register a link ID for device %s on extPort 0x%x!!!\n", dev->name,cp->rtl8650extPortNum );
++		else
++			printk("Device %s on vlan ID %d using Link ID %d. Loopback/Ext port is %d\n", dev->name,CONFIG_8139CP_VID,  cp->rtl8650linkNum, cp->rtl8650extPortNum);
++	}
++#endif
+ 	netif_start_queue(dev);
+ 
+ 	return 0;
+@@ -1245,7 +1262,6 @@
+ 
+ 	return rc;
+ }
+-#endif /* BROKEN */
+ 
+ static char mii_2_8139_map[8] = {
+ 	BasicModeCtrl,
+@@ -1263,7 +1279,7 @@
+ 	struct cp_private *cp = netdev_priv(dev);
+ 
+ 	return location < 8 && mii_2_8139_map[location] ?
+-	       readw(cp->regs + mii_2_8139_map[location]) : 0;
++	       readw((u32)cp->regs + mii_2_8139_map[location]) : 0;
+ }
+ 
+ 
+@@ -1574,86 +1590,106 @@
+    No extra delay is needed with 33Mhz PCI, but 66Mhz may change this.
+  */
+ 
+-#define eeprom_delay()	readl(ee_addr)
++#define eeprom_delay()	readl((u32)ee_addr)
+ 
+ /* The EEPROM commands include the alway-set leading bit. */
+ #define EE_WRITE_CMD	(5)
+ #define EE_READ_CMD		(6)
+ #define EE_ERASE_CMD	(7)
+ 
+-static int read_eeprom (void *ioaddr, int location, int addr_len)
++static int __devinit read_eeprom (void *ioaddr, int location, int addr_len)
+ {
+ 	int i;
+ 	unsigned retval = 0;
+ 	void *ee_addr = ioaddr + Cfg9346;
+ 	int read_cmd = location | (EE_READ_CMD << addr_len);
+ 
+-	writeb (EE_ENB & ~EE_CS, ee_addr);
+-	writeb (EE_ENB, ee_addr);
++	writeb (EE_ENB & ~EE_CS, (u32)ee_addr);
++	writeb (EE_ENB, (u32)ee_addr);
+ 	eeprom_delay ();
+ 
+ 	/* Shift the read command bits out. */
+ 	for (i = 4 + addr_len; i >= 0; i--) {
+ 		int dataval = (read_cmd & (1 << i)) ? EE_DATA_WRITE : 0;
+-		writeb (EE_ENB | dataval, ee_addr);
++		writeb (EE_ENB | dataval, (u32)ee_addr);
+ 		eeprom_delay ();
+-		writeb (EE_ENB | dataval | EE_SHIFT_CLK, ee_addr);
++		writeb (EE_ENB | dataval | EE_SHIFT_CLK, (u32)ee_addr);
+ 		eeprom_delay ();
+ 	}
+-	writeb (EE_ENB, ee_addr);
++	writeb (EE_ENB, (u32)ee_addr);
+ 	eeprom_delay ();
+ 
+ 	for (i = 16; i > 0; i--) {
+-		writeb (EE_ENB | EE_SHIFT_CLK, ee_addr);
++		writeb (EE_ENB | EE_SHIFT_CLK, (u32)ee_addr);
+ 		eeprom_delay ();
+ 		retval =
+-		    (retval << 1) | ((readb (ee_addr) & EE_DATA_READ) ? 1 :
++		    (retval << 1) | ((readb ((u32)ee_addr) & EE_DATA_READ) ? 1 :
+ 				     0);
+-		writeb (EE_ENB, ee_addr);
++		writeb (EE_ENB, (u32)ee_addr);
+ 		eeprom_delay ();
+ 	}
+ 
+ 	/* Terminate the EEPROM access. */
+-	writeb (~EE_CS, ee_addr);
++	writeb (~EE_CS, (u32)ee_addr);
+ 	eeprom_delay ();
+ 
+ 	return retval;
+ }
+ 
+-/* Put the board into D3cold state and wait for WakeUp signal */
+-static void cp_set_d3_state (struct cp_private *cp)
+-{
+-	pci_enable_wake (cp->pdev, 0, 1); /* Enable PME# generation */
+-	pci_set_power_state (cp->pdev, 3);
+-}
+-
+-static int cp_init_one (struct pci_dev *pdev, const struct pci_device_id *ent)
++static int __devinit cp_init_one (struct pci_dev *pdev,
++				  const struct pci_device_id *ent)
+ {
+ 	struct net_device *dev;
+ 	struct cp_private *cp;
+ 	int rc;
+ 	void *regs;
+ 	long pciaddr;
+-	unsigned int addr_len, i, pci_using_dac;
+-	u8 pci_rev;
++	unsigned addr_len, i;
++	u8 pci_rev, cache_size;
++	u16 pci_command;
+ 
+ #ifndef MODULE
+ 	static int version_printed;
+ 	if (version_printed++ == 0)
+ 		printk("%s", version);
+ #endif
+-
+ 	pci_read_config_byte(pdev, PCI_REVISION_ID, &pci_rev);
+ 
+ 	if (pdev->vendor == PCI_VENDOR_ID_REALTEK &&
+ 	    pdev->device == PCI_DEVICE_ID_REALTEK_8139 && pci_rev < 0x20) {
+ 		printk(KERN_ERR PFX "pci dev %s (id %04x:%04x rev %02x) is not an 8139C+ compatible chip\n",
+-		       pci_name(pdev), pdev->vendor, pdev->device, pci_rev);
++		       pdev->slot_name, pdev->vendor, pdev->device, pci_rev);
+ 		printk(KERN_ERR PFX "Try the \"8139too\" driver instead.\n");
+ 		return -ENODEV;
+ 	}
+ 
++#ifdef USE_NAME_ETH /* device driver will appear as eth* */	
+ 	dev = alloc_etherdev(sizeof(struct cp_private));
++#else	/* USE_NAME_ETH */
++	{
++	int alloc_size;
++
++	/* ensure 32-byte alignment of the private area */
++	alloc_size = sizeof (*dev) + sizeof (struct cp_private) + 31;
++
++	dev = (struct net_device *) kmalloc (alloc_size, GFP_KERNEL);
++	if (dev == NULL)
++	{
++		printk(KERN_ERR "alloc_dev: Unable to allocate device memory.\n");
++		dev = NULL;
++	}else{
++
++		memset(dev, 0, alloc_size);
++
++		if (sizeof (struct cp_private))
++			dev->priv = (void *) (((long)(dev + 1) + 31) & ~31);
++
++		ether_setup(dev);
++		strcpy(dev->name, "wlan%d");	
++	}
++	}
++#endif /* USE_NAME_ETH */		
++	
+ 	if (!dev)
+ 		return -ENOMEM;
+ 	SET_MODULE_OWNER(dev);
+@@ -1766,10 +1802,11 @@
+ 	if (rc)
+ 		goto err_out_iomap;
+ 
+-	printk (KERN_INFO "%s: RTL-8139C+ at 0x%lx, "
++	printk (KERN_INFO "%s: %s at 0x%lx, "
+ 		"%02x:%02x:%02x:%02x:%02x:%02x, "
+ 		"IRQ %d\n",
+ 		dev->name,
++		"RTL-8139C+",
+ 		dev->base_addr,
+ 		dev->dev_addr[0], dev->dev_addr[1],
+ 		dev->dev_addr[2], dev->dev_addr[3],
+@@ -1778,19 +1815,40 @@
+ 
+ 	pci_set_drvdata(pdev, dev);
+ 
++	/*
++	 * Looks like this is necessary to deal with on all architectures,
++	 * even this %$#%$# N440BX Intel based thing doesn't get it right.
++	 * Ie. having two NICs in the machine, one will have the cache
++	 * line set at boot time, the other will not.
++	 */
++	pci_read_config_byte(pdev, PCI_CACHE_LINE_SIZE, &cache_size);
++	cache_size <<= 2;
++	if (cache_size != SMP_CACHE_BYTES) {
++		printk(KERN_INFO "%s: PCI cache line size set incorrectly "
++		       "(%i bytes) by BIOS/FW, ", dev->name, cache_size);
++		if (cache_size > SMP_CACHE_BYTES)
++			printk("expecting %i\n", SMP_CACHE_BYTES);
++		else {
++			printk("correcting to %i\n", SMP_CACHE_BYTES);
++			pci_write_config_byte(pdev, PCI_CACHE_LINE_SIZE,
++					      SMP_CACHE_BYTES >> 2);
++		}
++	}
++
+ 	/* enable busmastering and memory-write-invalidate */
++	pci_read_config_word(pdev, PCI_COMMAND, &pci_command);
++	if (!(pci_command & PCI_COMMAND_INVALIDATE)) {
++		pci_command |= PCI_COMMAND_INVALIDATE;
++		pci_write_config_word(pdev, PCI_COMMAND, pci_command);
++	}
+ 	pci_set_master(pdev);
+ 
+-	if (cp->wol_enabled) cp_set_d3_state (cp);
+-
+ 	return 0;
+ 
+ err_out_iomap:
+ 	iounmap(regs);
+ err_out_res:
+ 	pci_release_regions(pdev);
+-err_out_mwi:
+-	pci_clear_mwi(pdev);
+ err_out_disable:
+ 	pci_disable_device(pdev);
+ err_out_free:
+@@ -1798,7 +1856,7 @@
+ 	return rc;
+ }
+ 
+-static void cp_remove_one (struct pci_dev *pdev)
++static void __devexit cp_remove_one (struct pci_dev *pdev)
+ {
+ 	struct net_device *dev = pci_get_drvdata(pdev);
+ 	struct cp_private *cp = netdev_priv(dev);
+Index: linux-2.4.27/drivers/net/8139too.c
+===================================================================
+--- linux-2.4.27.orig/drivers/net/8139too.c	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/8139too.c	2008-03-25 00:22:56.000000000 +0300
+@@ -112,6 +112,15 @@
+ #include <linux/crc32.h>
+ #include <asm/io.h>
+ #include <asm/uaccess.h>
++#ifdef CONFIG_RTL865X
++#include <asm/rtl865x/interrupt.h>
++#if defined(CONFIG_8139TOO_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++#include "re865x/rtl865x/mbuf.h" 
++#include "re865x/rtl865x/rtl8651_tblDrvFwd.h"
++#include "re865x/rtl865x/rtl8651_tblAsicDrv.h"
++#include "re865x/rtl865x/rtl8651_tblDrv.h"
++#endif
++#endif
+ 
+ #define RTL8139_DRIVER_NAME   DRV_NAME " Fast Ethernet driver " DRV_VERSION
+ #define PFX DRV_NAME ": "
+@@ -191,7 +200,11 @@
+ #define MAX_ETH_FRAME_SIZE	1536
+ 
+ /* Size of the Tx bounce buffers -- must be at least (dev->mtu+14+4). */
+-#define TX_BUF_SIZE	MAX_ETH_FRAME_SIZE
++#ifdef CONFIG_RTL865X
++	#define TX_BUF_SIZE	2048
++#else
++	#define TX_BUF_SIZE	MAX_ETH_FRAME_SIZE
++#endif
+ #define TX_BUF_TOT_LEN	(TX_BUF_SIZE * NUM_TX_DESC)
+ 
+ /* PCI Tuning Parameters
+@@ -592,6 +605,12 @@
+ 	int time_to_die;
+ 	struct mii_if_info mii;
+ 	unsigned int regs_len;
++#ifdef CONFIG_RTL865X
++#if defined(CONFIG_8139TOO_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++	int	rtl8650extPortNum; //to save the extension port allocated from glue interface.
++	int rtl8650linkNum;//to save the link ID allocated from glue interface.
++#endif
++#endif	
+ };
+ 
+ MODULE_AUTHOR ("Jeff Garzik <jgarzik@pobox.com>");
+@@ -767,7 +786,33 @@
+ 	*dev_out = NULL;
+ 
+ 	/* dev and dev->priv zeroed in alloc_etherdev */
++#ifdef USE_NAME_ETH /* device driver will appear as eth* */	
+ 	dev = alloc_etherdev (sizeof (*tp));
++#else
++	{
++	int alloc_size;
++
++	/* ensure 32-byte alignment of the private area */
++	alloc_size = sizeof (*dev) + sizeof (*tp) + 31;
++
++	dev = (struct net_device *) kmalloc (alloc_size, GFP_KERNEL);
++	if (dev == NULL)
++	{
++		printk(KERN_ERR "alloc_dev: Unable to allocate device memory.\n");
++		dev = NULL;
++	}else{
++
++		memset(dev, 0, alloc_size);
++
++		if (sizeof (*tp))
++			dev->priv = (void *) (((long)(dev + 1) + 31) & ~31);
++
++		ether_setup(dev);
++		strcpy(dev->name, "wlan%d");	
++	}
++	}
++#endif /* USE_NAME_ETH */	
++
+ 	if (dev == NULL) {
+ 		printk (KERN_ERR PFX "%s: Unable to alloc new net device\n", pci_name(pdev));
+ 		return -ENOMEM;
+@@ -1325,6 +1370,24 @@
+ 	tp->tx_flag = (TX_FIFO_THRESH << 11) & 0x003f0000;
+ 
+ 	rtl8139_init_ring (dev);
++#ifdef CONFIG_RTL865X
++#if defined(CONFIG_8139TOO_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++	{
++		char chipVersion[16];
++		rtl8651_getChipVersion(chipVersion, sizeof(chipVersion), NULL);
++		if(chipVersion[strlen(chipVersion)-1]!='B'){
++			printk("This driver supports WLAN acceleration only for 865xB chips\n");
++			return -1;
++		}
++		tp->rtl8650extPortNum=CONFIG_RTL865XB_WLAN1_PORT;
++
++		if(0!=devglue_regExtDevice(dev->name, CONFIG_8139TOO_VID, tp->rtl8650extPortNum, &tp->rtl8650linkNum))
++			printk("XXX Can't register a link ID for device %s on extPort 0x%x!!!\n", dev->name,tp->rtl8650extPortNum );
++		else
++			printk("Device %s on vlan ID %d is using main Link ID %d. RTL8651 Loopback port is %d\n", dev->name,CONFIG_8139TOO_VID,  tp->rtl8650extPortNum, tp->rtl8650extPortNum);
++	}	
++#endif
++#endif
+ 	rtl8139_hw_start (dev);
+ 
+ 	if (netif_msg_ifup(tp))
+@@ -1982,8 +2045,37 @@
+ 			eth_copy_and_sum (skb, &rx_ring[ring_offset + 4], pkt_size, 0);
+ 			skb_put (skb, pkt_size);
+ 
++#ifdef CONFIG_RTL865X
++
++#if defined(CONFIG_8139TOO_HWACCEL) && defined(CONFIG_RTL865X_MULTILAYER_BSP)
++			tp->stats.rx_packets++;
++			tp->stats.rx_bytes += skb->len;
++			dev->last_rx = jiffies;
++
++			{
++				int32 retval;
++				retval=rtl8651_fwdEngineExtPortRecv(skb, skb->data, skb->len, CONFIG_8139TOO_VID, 1<<tp->rtl8650extPortNum, tp->rtl8650linkNum);
++				if(retval==SUCCESS){
++					//8651 fwd engine consumed the packet.
++				}else if (retval==FAILED){
++					//exception. Drop it.
++					kfree(skb);
++				}else{
++					//pkt is WLAN->WLAN(maybe a host on WDS link), deliver it to bridge module.
++				        skb->protocol = eth_type_trans(skb, dev);
++				        //skb->dev = dev; /* important, crash if not correct */
++				        netif_rx(skb);
++				}
++			}
++			
++			//if (rtl8651_fwdEngineExtPortRecv(skb, skb->data, skb->len, cp->rtl8650extPortNum)==FAILED)
++			//	kfree(skb);
++#endif
++
++#else
+ 			skb->protocol = eth_type_trans (skb, dev);
+ 			netif_rx (skb);
++#endif
+ 			dev->last_rx = jiffies;
+ 			tp->stats.rx_bytes += pkt_size;
+ 			tp->stats.rx_packets++;
+@@ -2041,6 +2133,7 @@
+ 		tp->stats.rx_length_errors++;
+ 	if (status & (RxUnderrun | RxFIFOOver))
+ 		tp->stats.rx_fifo_errors++;
++#ifndef CONFIG_RTL865X
+ 	if (status & PCIErr) {
+ 		u16 pci_cmd_status;
+ 		pci_read_config_word (tp->pci_dev, PCI_STATUS, &pci_cmd_status);
+@@ -2049,6 +2142,7 @@
+ 		printk (KERN_ERR "%s: PCI Bus error %4.4x.\n",
+ 			dev->name, pci_cmd_status);
+ 	}
++#endif
+ }
+ 
+ 
+Index: linux-2.4.27/drivers/net/Makefile
+===================================================================
+--- linux-2.4.27.orig/drivers/net/Makefile	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/Makefile	2008-03-25 00:22:56.000000000 +0300
+@@ -24,6 +24,11 @@
+ ifeq ($(CONFIG_TULIP),y)
+   obj-y += tulip/tulip.o
+ endif
++ifeq ($(CONFIG_RE865X),y)
++#  obj-y += re865x-src/re865x.o
++  obj-y += re865x/re865x.o
++endif
++
+ 
+ obj-$(CONFIG_OCP_NET) += ibm_emac/ocp.o
+ 
+@@ -51,6 +56,8 @@
+ subdir-$(CONFIG_DEV_APPLETALK) += appletalk
+ subdir-$(CONFIG_SK98LIN) += sk98lin
+ subdir-$(CONFIG_SKFP) += skfp
++subdir-$(CONFIG_RE865X) += re865x
++#subdir-$(CONFIG_RE865X) += re865x-src
+ subdir-$(CONFIG_E100) += e100
+ subdir-$(CONFIG_E1000) += e1000
+ subdir-$(CONFIG_BONDING) += bonding
+@@ -58,6 +65,8 @@
+ #
+ # link order important here
+ #
++
++
+ obj-$(CONFIG_PLIP) += plip.o
+ 
+ obj-$(CONFIG_ROADRUNNER) += rrunner.o
+Index: linux-2.4.27/drivers/net/pci8139.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/drivers/net/pci8139.c	2008-03-25 00:22:56.000000000 +0300
+@@ -0,0 +1,829 @@
++#include <linux/types.h>
++#undef C_PLUS_MODE
++#include "pci.h"
++#include "pci8139.h"
++#include "rtl8650.h"
++
++#define RXBFRSIZE 8192
++
++int getchar(char in);
++enum ClearBitMasks {
++	MultiIntrClear = 0xF000,
++	ChipCmdClear = 0xE2,
++	Config1Clear = (1<<7)|(1<<6)|(1<<3)|(1<<2)|(1<<1),
++};
++
++enum ChipCmdBits {
++	CmdReset = 0x10,
++	CmdRxEnb = 0x08,
++	CmdTxEnb = 0x04,
++	RxBufEmpty = 0x01,
++};
++
++/* Interrupt register bits, using my own meaningful names. */
++enum IntrStatrtl8139nicits {
++	PCIErr = 0x8000,
++	PCSTimeout = 0x4000,
++	RxFIFOOver = 0x40,
++	RxUnderrun = 0x20,
++	RxOverflow = 0x10,
++	TxErr = 0x08,
++	TxOK = 0x04,
++	RxErr = 0x02,
++	RxOK = 0x01,
++};
++enum TxStatrtl8139nicits {
++	TxHostOwns = 0x2000,
++	TxUnderrun = 0x4000,
++	TxStatOK = 0x8000,
++	TxOutOfWindow = 0x20000000,
++	TxAborted = 0x40000000,
++	TxCarrierLost = 0x80000000,
++};
++enum RxStatrtl8139nicits {
++	RxMulticast = 0x8000,
++	RxPhysical = 0x4000,
++	RxBroadcast = 0x2000,
++	RxBadSymbol = 0x0020,
++	RxRunt = 0x0010,
++	RxTooLong = 0x0008,
++	RxCRCErr = 0x0004,
++	RxBadAlign = 0x0002,
++	RxStatusOK = 0x0001,
++};
++
++/* Bits in RxConfig. */
++enum rx_mode_bits {
++	AcceptErr = 0x20,
++	AcceptRunt = 0x10,
++	AcceptBroadcast = 0x08,
++	AcceptMulticast = 0x04,
++	AcceptMyPhys = 0x02,
++	AcceptAllPhys = 0x01,
++};
++
++/* Bits in TxConfig. */
++enum tx_config_bits {
++	TxIFG1 = (1 << 25),	/* Interframe Gap Time */
++	TxIFG0 = (1 << 24),	/* Enabling these bits violates IEEE 802.3 */
++	TxLoopBack = (1 << 18) | (1 << 17), /* enable loopback test mode */
++	TxCRC = (1 << 16),	/* DISABLE appending CRC to end of Tx packets */
++	TxClearAbt = (1 << 0),	/* Clear abort (WO) */
++	TxDMAShift = 8,		/* DMA burst value (0-7) is shift this many bits */
++
++	TxVersionMask = 0x7C800000, /* mask out version bits 30-26, 23 */
++};
++
++/* Bits in Config1 */
++enum Config1Bits {
++	Cfg1_PM_Enable = 0x01,
++	Cfg1_VPD_Enable = 0x02,
++	Cfg1_PIO = 0x04,
++	Cfg1_MMIO = 0x08,
++	Cfg1_LWAKE = 0x10,
++	Cfg1_Driver_Load = 0x20,
++	Cfg1_LED0 = 0x40,
++	Cfg1_LED1 = 0x80,
++};
++
++enum RxConfigBits {
++	/* Early Rx threshold, none or X/16 */
++	RxCfgEarlyRxNone = 0,
++	RxCfgEarlyRxShift = 24,
++
++	/* rx fifo threshold */
++	RxCfgFIFOShift = 13,
++	RxCfgFIFONone = (7 << RxCfgFIFOShift),
++
++	/* Max DMA burst */
++	RxCfgDMAShift = 8,
++	RxCfgDMAUnlimited = (7 << RxCfgDMAShift),
++
++	/* rx ring buffer length */
++	RxCfgRcv8K = 0,
++	RxCfgRcv16K = (1 << 11),
++	RxCfgRcv32K = (1 << 12),
++	RxCfgRcv64K = (1 << 11) | (1 << 12),
++
++	/* Disable packet wrap at end of Rx buffer */
++	RxNoWrap = (1 << 7),
++};
++
++
++/* Twister tuning parameters from RealTek.
++   Completely undocumented, but required to tune bad links. */
++enum CSCRBits {
++	CSCR_LinkOKBit = 0x0400,
++	CSCR_LinkChangeBit = 0x0800,
++	CSCR_LinkStatrtl8139nicits = 0x0f000,
++	CSCR_LinkDownOffCmd = 0x003c0,
++	CSCR_LinkDownCmd = 0x0f3c0,
++};
++
++
++enum Cfg9346Bits {
++	Cfg9346_Lock = 0x00,
++	Cfg9346_Unlock = 0xC0,
++};
++
++
++int rtl8139nic_ISR(pci_config_s *pcfg);
++
++static const u16 rtl8139_intr_mask =
++	PCIErr | PCSTimeout | RxUnderrun | RxOverflow | RxFIFOOver |
++	TxErr | TxOK | RxErr | RxOK;
++
++u32 ioaddr1;
++u8 *txbfr, *rxbfr;
++int tx_producer;
++
++//use 32bit RW for PCI device
++u8 Reg8r(u32 addr)
++{
++    return REG8(addr);
++}
++
++void Reg8w(u32 addr, u8 data)
++{
++    REG8(addr)=data;
++}
++
++u16 Reg16r(u32 addr)
++{
++    return REG16(addr);
++}
++
++void Reg16w(u32 addr, u16 data)
++{
++    REG16(addr) = data;
++}
++
++
++/*
++enable 8139 nic card
++rtn 0:fail, -1 ok
++*/
++int pci8139nic_Enable(int slot, int func, pci_config_s *pcfg)
++{ 
++  u8 tmp8;
++          
++	/* Soft reset the chip. */
++	Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd)&ChipCmdClear) | CmdReset);
++	while (Reg8r(ioaddr1+rChipCmd)&CmdReset) ;  //wait reset complete
++	/* Bring the chip out of low-power mode. */	
++	Reg8w(ioaddr1+Config1, 0);
++	/* make sure chip thinks PIO and MMIO are enabled */
++	tmp8 = Reg8r(ioaddr1+rConfig1);
++	if ((tmp8 & Cfg1_PIO) == 0) {
++		printk("PIO not enabled, Cfg1=%02X, aborting\n", tmp8);
++		return 0;
++	}
++	if ((tmp8 & Cfg1_MMIO) == 0) {
++		printk("MMIO not enabled, Cfg1=%02X, aborting\n", tmp8);
++		return 0;
++	}
++	return -1;
++}
++
++#if 0
++u32 rtl8139nic_SendPacket(packet_desc_t *pkt)//, int desc_num)
++{
++    printk("rtl8139nic Send Pkt %X\n", pkt);
++    return 0;
++}
++#endif
++char rx_buff[12000];
++#define RX_MODE 0x0000E00F
++#define TX_MODE 0x00000700
++u32 rtl8139nic_Open(void)
++{
++  int i;
++  u8 tmp;
++  
++    
++  	printk("Open rtl8139nic\n");
++    
++    pci_int_Register(0, 0, rtl8139nic_ISR);
++
++    //set Tx/Rx data bfr
++    txbfr = (u8*)((u32)(kmalloc(8192+256)+256)&0xFFFFFF00|0x20000000);
++    //txbfr=(u8*)0xA0410000;
++    memset(txbfr, 0, RXBFRSIZE);
++    for (i=0;i<4;i++) {
++      REG32(ioaddr1+TxAddr0+i*4) = (u32)(txbfr+i*2048)&0x1FFFFFFF;  //map to physical addr
++    };
++    //rxbfr = (u8*)((u32)(kmalloc(8192+256+16)+256)&0xFFFFFF00|0x20000000);
++    rxbfr = (u8*)((u32)(rx_buff+256)&0xFFFFFF00|0x20000000);
++    //rxbfr=(u8*)0xA0430000;
++    memset(rxbfr, 0, RXBFRSIZE);
++    REG32(ioaddr1+RxBuf) = (u32)rxbfr&0x1FFFFFFF;  //map to physical addr
++    
++	/* Soft reset the chip. */
++	Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd)&ChipCmdClear) | CmdReset);
++	while (Reg8r(ioaddr1+rChipCmd)&CmdReset) ;  //wait reset complete
++	/* Must enable Tx/Rx before setting transfer thresholds! */
++	Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd) & ChipCmdClear) | CmdRxEnb | CmdTxEnb);
++        //RX config
++        if (RXBFRSIZE==8192)
++            REG32(ioaddr1+RxConfig) = RX_MODE;//0xFF00E00F;
++        else
++            REG32(ioaddr1+RxConfig) = 0x0000E90F;//0xFF00E00F;
++        //reset CARP
++        Reg16w(ioaddr1+RxBufPtr, 0x0000FFF0);
++    	//TX config
++	REG32(ioaddr1+TxConfig) = TX_MODE;//0x00010000;
++
++	/* unlock Config[01234] and BMCR register writes */
++	Reg8w(ioaddr1+Cfg9346, Cfg9346_Unlock);
++	for (i=0;i<100;i++);
++	//config 
++    //auto flow control
++    //Reg8w(ioaddr1+rMediaStatus, 0xc0);        
++    //auto neg
++    Reg16w(ioaddr1+BasicModeCtrl, 0x1100);        
++	tmp = Reg8r(ioaddr1+rConfig1) & Config1Clear;
++	tmp |= Cfg1_Driver_Load;
++	tmp |= 3; /* Enable PM/VPD */
++	Reg8w(ioaddr1+Config1, tmp);
++	tmp = Reg8r(ioaddr1+rConfig4) & ~(1<<2);
++	/* chip will clear Rx FIFO overflow automatically */
++	tmp |= (1<<7);
++	Reg8w(ioaddr1+Config4, tmp);
++	/* disable magic packet scanning, which is enabled
++	 * when PM is enabled above (Config1) */
++	Reg8w(ioaddr1+Config3, Reg8r(ioaddr1+rConfig3) & ~(1<<5));
++	/* lock Config[01234] and BMCR register writes */
++	Reg8w(ioaddr1+Cfg9346, Cfg9346_Lock);
++	for (i=0;i<100;i++);
++	
++	//reset miss counter
++	REG32(ioaddr1+RxMissed) = 0;
++	/* no early-rx interrupts */
++	Reg16w(ioaddr1+MultiIntr, Reg16r(ioaddr1+rMultiIntr) & MultiIntrClear);
++	/* make sure RxTx has started */
++	Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd)& ChipCmdClear) | CmdRxEnb | CmdTxEnb);
++	//reset Tx index
++	tx_producer = 3;
++	/* Enable all known interrupts by setting the interrupt mask. */
++	Reg16w(ioaddr1+IntrMask, rtl8139_intr_mask);
++	//Reg16w(ioaddr1+IntrMask, 0);
++	
++    	
++    return 0;
++}
++
++u32 rtl8139nic_Close(void)
++{
++	
++    printk("Close rtl8139nic\n");
++    return 0;
++}
++
++u32 rtl8139nic_IOControl(u32 io_id, void *data)
++{
++    printk("rtl8139nic IO Request\n");
++	
++    return 0;
++}
++
++void reset_rx(u32 *loc)
++{
++    //disable Rx
++    Reg8w(ioaddr1+ChipCmd, CmdTxEnb);
++    
++    //reset counter
++    *loc=0;
++    Reg16w(ioaddr1+RxBufPtr, 0xFFF0);
++    //set Rx mode
++    REG32(ioaddr1+RxConfig) = 0x0000E10F;//0xFF00E00F;
++    
++    //re-enable Rx
++    Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd)& ChipCmdClear) | CmdRxEnb | CmdTxEnb);
++    while ((Reg8r(ioaddr1+rChipCmd)&(CmdRxEnb|CmdTxEnb))!=(CmdRxEnb|CmdTxEnb) ) ;
++
++    //set Rx mode again
++    REG32(ioaddr1+RxConfig) = 0x0000E10F;//0xFF00E00F;
++
++    return;
++}   
++
++void reset_tx(void)
++{
++    //disable Tx
++    Reg8w(ioaddr1+ChipCmd, CmdRxEnb);
++    
++    //re-enable Tx
++    Reg8w(ioaddr1+ChipCmd, (Reg8r(ioaddr1+rChipCmd)& ChipCmdClear) | CmdRxEnb | CmdTxEnb);
++    while ((Reg8r(ioaddr1+rChipCmd)&(CmdRxEnb|CmdTxEnb))!=(CmdRxEnb|CmdTxEnb) ) ;
++
++    //set Tx mode again
++    REG32(ioaddr1+TxConfig) = TX_MODE;//0xFF00E00F;
++
++    return;
++}   
++
++/*
++parameter: 
++	*loc: rx bfr consumer location, it will move to pkt header if receive a good pkt,
++	      or the total pkt will be skipped if rx status header report any error
++	*getbytenum: byte count of this RX
++rtn: 
++	number of bytes in this pkt, 0 means pkt is bad and skipped
++	-1 means byte count is not enough to parse a kt
++*/
++u32 parsePkt(u32 *loc, u32 *getbytenum)
++{
++  u32 num;
++  u32 tmp_loc;
++  u8 *pbfr;
++  u32 status=0;
++  
++    if (*getbytenum<64) return -2;  //pkt is too smalll, wait next turn
++    
++    //align to 4 byte
++    *loc=((*loc+3)&0xFFFFFFFC)&(RXBFRSIZE-1);
++    tmp_loc=*loc;
++    pbfr = (u8*)rxbfr;
++    //get status
++    status = (u16)pbfr[tmp_loc];
++    tmp_loc = (tmp_loc+1)&(RXBFRSIZE-1);
++    status = status|(pbfr[tmp_loc]<<8);
++    tmp_loc = (tmp_loc+1)&(RXBFRSIZE-1);
++    //get pkt size
++    num = (u16)pbfr[tmp_loc];
++    tmp_loc = (tmp_loc+1)&(RXBFRSIZE-1);
++    num = num|(pbfr[tmp_loc]<<8);
++    tmp_loc = (tmp_loc+1)&(RXBFRSIZE-1);
++    if ((num>1600)||(num<8)) {  //frame out of sync
++      	//reset_rx(loc);
++      	*getbytenum = 0;
++      	return -1;
++    };
++      
++    if (num>(*getbytenum-4)) 
++      return -1;  //this is not a complete pkt
++      
++    //update ptr
++    *loc = tmp_loc;  //skip rx desc
++    *getbytenum -= 4;
++    //check pkt status
++    if (!(status&1)) {  //skip bad packet
++        tmp_loc = (tmp_loc+num)&(RXBFRSIZE-1);
++        *loc = tmp_loc;
++        *getbytenum -= num;
++        num = 0;
++    };
++    return num;
++}
++
++void wait_TXOK(u32 ioaddr1, u32 TxStatus)
++{
++  u32 status;
++    
++#if 1
++wait_pause:
++        status = Reg8r(ioaddr1+rMediaStatus);  //get pause flag
++        if (status&0x00000001) goto wait_pause;
++wait_txok:
++        //status = Reg16r(ioaddr1+rIntrStatus);
++        //if (status&0x2020) 
++        //    Reg16w(ioaddr1+IntrStatus, 0x2020);
++  //for (i=0;i<0x80000;i++) {
++  //};
++        status = REG32(ioaddr1+TxStatus);
++        //printk("1 %X\r",status);
++        if (!(status&0x00002000)) goto wait_txok;
++#else
++  int i;
++//loop wait
++  for (i=0;i<0x00200000;i++) {
++  };
++check_sts:
++//          status = Reg16r(ioaddr1+rIntrStatus);
++//        if (status&0x2020) {
++//          if (status!=0) {
++//            Reg16w(ioaddr1+IntrStatus, status);
++//            goto check_sts;
++//        };
++#endif        
++};	
++static volatile int dd;
++
++void test_tx()
++{
++  int i, send_num, size;
++  u32 status;
++  char bfr[8];
++  REG32(GIMR)=0;
++    //send 1 pkt
++    for (i=0;i<2048;i++) {
++    	txbfr[i+6]=i;
++    	txbfr[1*2048+i+6]=i;
++    	txbfr[2*2048+i+6]=i;
++    	txbfr[3*2048+i+6]=i;
++    };
++    for (i=0;i<4;i++)
++    {
++    	txbfr[0+i*2048]=0x00;    txbfr[1+i*2048]=0x50;
++    txbfr[2+i*2048]=0xfc;    txbfr[3+i*2048]=0x82;
++    txbfr[4+i*2048]=0x9e;    txbfr[5+i*2048]=0x4e;
++    }
++
++    
++///////repeat send pkt test
++    	//TX config
++	REG32(ioaddr1+TxConfig) = TX_MODE;//0x00010000;
++	Reg16w(ioaddr1+IntrMask, 0);
++        //REG32(GIMR) = REG32(GIMR)&0xFDFFFFFF;  //disable pci int
++    
++    size=1510;
++    i=0; send_num=0;
++    while (1) {
++    	send_num++;
++    	if ((send_num&0x00FF)==0) {
++          if  (getchar(bfr) != 0) {
++            if (bfr[0]=='q') {
++                printk("Quit Tx Test\n");    	
++                break;
++            };
++          };
++        };
++wait1:
++        status = Reg16r(ioaddr1+rTxSummary);
++        //printk("1 %X\r",status);
++        if (!(status&0x00000001)) {
++            for (i=0;i<100;i++) dd++;
++            goto wait1;
++        };
++        i+=33;
++        if (i<60) i=60;
++        if (i>1510) i=1510;
++        REG32(ioaddr1+TxStatus0) = 0x00FF0000|size;  //size=256
++        if (i==1510) i=60;
++
++wait2:
++        //for (i=0;i<0x20000;i++) ;
++        status = Reg16r(ioaddr1+rTxSummary);
++        //printk("2 %X\r",status);
++        if (!(status&0x00000002)) {
++            for (i=0;i<100;i++) dd++;        	
++            goto wait2;
++        };
++        i+=4;
++        if (i<60) i=60;
++        if (i>1510) i=1510;
++        REG32(ioaddr1+TxStatus0+4) = 0x00FF0000|size;  //size=256
++        if (i==1510) i=60;
++
++wait3:
++        //for (i=0;i<0x20000;i++) ;
++        status = Reg16r(ioaddr1+rTxSummary);
++        //printk("3 %X\r",status);
++        if (!(status&0x00000004)) {
++            for (i=0;i<100;i++) dd++;        	
++            goto wait3;
++        };
++        i+=9;
++        if (i<60) i=60;
++        if (i>1510) i=1510;
++        REG32(ioaddr1+TxStatus0+8) = 0x00FF0000|size;  //size=256
++        if (i==1510) i=60;
++
++wait4:
++        status = Reg16r(ioaddr1+rTxSummary);
++        //printk("4 %X\r",status);
++        if (!(status&0x00000008)) {
++            for (i=0;i<100;i++) dd++;
++            goto wait4;
++	};
++        i+=17;
++        if (i<60) i=60;
++        if (i>1510) i=1510;
++        REG32(ioaddr1+TxStatus0+12) = 0x00FF0000|size;  //size=256
++        if (i==1510) i=60;
++    };	
++}
++
++int txnum;
++int TxWait[4];
++u32 getApkt;
++
++void test_loopback(int mode)
++{
++  u8 tmp;
++  u32 tmp_sts, status, ovfl_sts;
++  int i, kk, pkt_size, count, hw_count, consumer, bus_error, wait_num;
++  char bfr[8];
++  
++    //clear IRQA
++    status = Reg16r(ioaddr1+rIntrStatus);
++    Reg16w(ioaddr1+IntrStatus, status);
++
++    //REG16(GISR)=PCIIP;  //PCI IRQ pending clear
++    REG32(GIMR)=0;  //PCI IRQ pending clear
++    
++    kk=0; consumer=0; getApkt=0;
++    TxWait[0]= TxWait[1]=TxWait[2]=TxWait[3] =0;
++
++    //REG32(GIMR) = REG32(GIMR)&0xFDFFFFFF;  //disable pci int
++    Reg16w(ioaddr1+IntrMask, 0);
++
++wait_num=0;
++repeat_test:    
++
++    i=0; bus_error=0; 
++waitRx:
++    wait_num++;
++#if 0 
++    if ((wait_num&0x00FF)==0) {
++        if  (getchar(bfr) != 0) {
++            if (bfr[0]=='q') {
++                printk("Quit Loopback Test\n");    	
++                return;
++            };
++        }
++    };
++#endif
++    status = Reg16r(ioaddr1+rIntrStatus);
++    //status = REG32(PCI_SLOT0_CONFIG_BASE);
++    //if (i&1) printk("Rx status: 0x%4X <\r", status);
++    //else printk("Rx status: 0x%4X >\r", status);
++    tmp_sts = 0;
++    if (status&0x8000) {  //PCI bus error
++      //printk("PCI bus error sts %X\n", status);
++      //while (1);
++      tmp_sts |= 0x8000;
++      bus_error++;
++    };
++    if (status&0x0004)  //TxOK
++      tmp_sts |= 0x0004;
++    if (status&0x0008)  //TxError
++      tmp_sts |= 0x0008;
++    if (status&0x2000)  //cable change
++      tmp_sts |= 0x2000;
++    if (status&0x0020)  //link change
++      tmp_sts |= 0x0020;
++    if (status&0x0050) {  //RX buffer overflow //RX FIFO overflow
++      if (status&0x0010) tmp_sts |= 0x0010;  //clear RX bfr overflow
++      if (status&0x0040) tmp_sts |= 0x0040;  //clear RX FIFO overflow
++      if (!(status&0x0003)) {  //no pkt rcv in, clear to allow RX again
++        if (status&0x0010) tmp_sts |= 0x0010;  //clear RX bfr overflow
++        if (status&0x0040) tmp_sts |= 0x0040;  //clear RX FIFO overflow
++        //reset_rx((u32*)&consumer);  //clear rx bfr
++      } else {  //we have pkt in rx bfr though RXBFR is overflow, process pkts if possible
++        ovfl_sts = 0;
++        if (status&0x0010) ovfl_sts |= 0x0010;  //clear RX bfr overflow
++        if (status&0x0040) ovfl_sts |= 0x0040;  //clear RX FIFO overflow
++      };
++    };
++    if (tmp_sts!=0)  //clear status, rx bfr/fifo overflow not included
++      Reg16w(ioaddr1+IntrStatus, tmp_sts);
++    if (!(status&0x0003)) goto waitRx;
++
++    //clear rx pkt related status only, we need to handle overflow case
++    Reg16w(ioaddr1+IntrStatus, status&0x03);
++    
++    hw_count=Reg16r(ioaddr1+rRxBufAddr);
++    count=(hw_count&(RXBFRSIZE-1))-consumer;
++    if (count<0) count+=RXBFRSIZE;
++    //printk("RxOK: No.0x%X size:0x%X\n", kk, count);
++    
++
++#if 0
++    //move ptr forward, no parse needed
++    consumer=(consumer+count)&(RXBFRSIZE-1);
++#else
++    //*((u16*)rxbfr+14);
++    //copy pkt data from Rx bfr to Tx bfr
++    //parse packet
++re_parse:
++    //loopback
++    tmp=(tx_producer+1)&3;
++    pkt_size=parsePkt((u32*)&consumer, (u32*)&count);
++    if (pkt_size>0) {
++      if (mode==1) {  //loopback w/ data copy
++    	if ((consumer+pkt_size)<RXBFRSIZE) {
++            memcpy(txbfr+tmp*2048, rxbfr+consumer, pkt_size);
++        } else {
++            memcpy(txbfr+tmp*2048, rxbfr+consumer, (RXBFRSIZE-consumer));
++            memcpy(txbfr+tmp*2048+(RXBFRSIZE-consumer), rxbfr, (pkt_size-(RXBFRSIZE-consumer)));
++        };
++      };
++        
++wait_tx_ready:
++        status = Reg16r(ioaddr1+rTxSummary);
++        if (!(status&(1<<tmp))) {
++            for (i=0;i<100;i++) ;
++            goto wait_tx_ready;
++        };
++        REG32(ioaddr1+TxStatus0+tmp*4) = 0x003F0000|(pkt_size-4);  //send it
++//wait_tx_ready1:        
++//        status = Reg16r(ioaddr1+rTxSummary);
++//            for (i=0;i<100;i++) ;
++//        if (!(status&(1<<tmp))) goto wait_tx_ready1;
++    
++        consumer=((consumer+pkt_size+3)&0xFFFFFFFC)&(RXBFRSIZE-1);
++        count=count-pkt_size;
++        //printk("hwcount %X rest %X cons %X pktsz %X\n", hw_count, count, consumer, pkt_size);
++        
++        tx_producer = tmp;  //update pointer
++     	goto re_parse;
++    };
++#endif
++
++    kk++;
++    //update CAPR
++    Reg16w(ioaddr1+RxBufPtr, (consumer-16)&(RXBFRSIZE-1));
++    if(ovfl_sts!=0) {  //clear overflow case
++      //reset_rx((u32*)&consumer);
++      Reg16w(ioaddr1+IntrStatus, ovfl_sts);
++      ovfl_sts = 0;
++    };
++    getApkt--;
++    goto repeat_test;	
++}
++
++enum chip_flags {
++	HasHltClk = (1 << 0),
++	HasLWake = (1 << 1),
++};
++
++
++const static struct {
++	const char *name;
++	u8 version; /* from RTL8139C docs */
++	u32 RxConfigMask; /* should clear the bits supported by this chip */
++	u32 flags;
++} rtl_chip_info[] = {
++	{ "RTL-8139",
++	  0x40,
++	  0xf0fe0040, /* XXX copied from RTL8139A, verify */
++	  HasHltClk,
++	},
++
++	{ "RTL-8139 rev K",
++	  0x60,
++	  0xf0fe0040,
++	  HasHltClk,
++	},
++
++	{ "RTL-8139A",
++	  0x70,
++	  0xf0fe0040,
++	  HasHltClk, /* XXX undocumented? */
++	},
++
++	{ "RTL-8139B",
++	  0x78,
++	  0xf0fc0040,
++	  HasLWake,
++	},
++
++	{ "RTL-8130",
++	  0x7C,
++	  0xf0fe0040, /* XXX copied from RTL8139A, verify */
++	  HasLWake,
++	},
++
++	{ "RTL-8139C",
++	  0x74,
++	  0xf0fc0040, /* XXX copied from RTL8139B, verify */
++	  HasLWake,
++	},
++
++};
++
++
++
++
++int *init_RTL8139nic(int slot, int func, pci_config_s *pcfg)
++{
++  //driverif_t *drvif;
++  u8 tmp;
++  int i;
++  u8 bfr[8];
++ 
++     txbfr=0;
++     rxbfr=0;
++    ioaddr1 = pcfg->BAR[1].Address;
++    getApkt = 0;
++    /* Put the chip into low-power mode. */
++    Reg8w(ioaddr1+Cfg9346, Cfg9346_Unlock);
++
++
++     tmp = Reg8r(ioaddr1+ChipVersion);
++	for (i = 0; i <  5; i++)
++		if (tmp == rtl_chip_info[i].version) {
++			break;
++		}
++
++    for (i=0;i<100;i++); 
++    i=Reg8r(ioaddr1+rCfg9346);
++
++    /*reset phy*/
++    Reg16w(ioaddr1+BasicModeCtrl, (Reg16r(ioaddr1+rBasicModeCtrl)&0x7FFF) | 0x8000);
++    while ((Reg16r(ioaddr1+rBasicModeCtrl)&0x8000)) ;  //wait reset complete
++    
++    //LED on/OFF
++    tmp = Reg8r(ioaddr1+rConfig1);
++    Reg8w(ioaddr1+Config1, tmp&0x3F);
++    Reg8w(ioaddr1+Config1, tmp|0xc0);
++    Reg8w(ioaddr1+Config1, tmp&0x3F);
++    //enable 8139 nic device
++    if (!pci8139nic_Enable(slot, func, pcfg)) return NULL;
++                   
++    
++    tmp = Reg8r(ioaddr1+rConfig1) & Config1Clear;
++    tmp |= 3; /* Enable PM/VPD */
++    Reg8w(ioaddr1+Config1, tmp);
++    
++    rtl8139nic_Open();
++    
++reread_cmd:        
++    printk("\n8139 [0]Loopback Test without data copy, [1]Loopback Test w/ data copy, [2]Tx Test, [q]Quit? (return for 0)");
++
++
++        test_loopback(1);
++    while (getchar(bfr) == 0);
++    printk("%c\n", *bfr);
++
++    if (*bfr=='2') {
++        printk("enter 'q' to quit test!\n");
++        test_tx();
++    } else if ((*bfr=='0')||(*bfr==0x0d)) {
++        printk("enter 'q' to quit test!\n");
++        test_loopback(0);
++    } else if ((*bfr=='1')||(*bfr==0x0d)) {
++        printk("enter 'q' to quit test!\n");
++        test_loopback(1);
++    } else if (*bfr!='q')
++        goto reread_cmd;
++    if (txbfr!=0) kfree(txbfr);
++    if (rxbfr!=0) kfree(rxbfr);
++    return NULL;
++}
++
++int rtl8139nic_ISR(pci_config_s *pcfg)
++{
++#if 0
++  u16 status, link_changed;
++  int rtn_val;
++  
++        rtn_val=0;
++    	//check if this is my IRQ
++	status = Reg16r(ioaddr1+rIntrStatus);
++	/* h/w no longer present (hotplug?) or major error, bail */
++	if (status == 0xFFFF)
++		return 0;
++	/* Acknowledge all of the current interrupt sources ASAP, but
++	   an first get an additional status bit from CSCR. */
++	if (status & RxUnderrun)
++		link_changed = Reg16r(ioaddr1+rCSCR8139) & CSCR_LinkChangeBit;
++	//clear IRQ
++  	Reg16w(ioaddr1+IntrStatus, status);
++	if ((status & (PCIErr | PCSTimeout | RxUnderrun | RxOverflow |
++		RxFIFOOver | TxErr | TxOK | RxErr | RxOK)) == 0)
++		return 0;  //not my irq
++	//check RX
++	//if (status & (RxOK | RxUnderrun | RxOverflow | RxFIFOOver)) {	/* Rx interrupt */
++	//	while (1);  //check data if it is correct
++	//};
++	if (status & RxOK) {	/* Rx interrupt, loopback */
++	    if (!(Reg8r(ioaddr1+rChipCmd)&1)) {  //pkt in Rx bfr
++	        //u16 rx_size;
++	        getApkt += 1;
++	        //disable RX
++ 	        //Reg8w(ioaddr1+0x0037, Reg8r(ioaddr1+rChipCmd)&0xF7);
++	        //tmp=(tx_producer+1)&3;
++	        //rx_size=*((u16*)rxbfr+14);
++	        //copy pkt data from Rx bfr to Tx bfr
++	        //memcpy(txbfr+tmp*2048, rxbfr+2, rx_size+18);
++	        //memcpy(txbfr+tmp*2048, rxbfr, rx_size+18);
++	        //REG32(ioaddr1+TxStatus0+tmp*4) = REG32(ioaddr1+TxStatus0+tmp*4)|rx_size;  //send it
++	        //REG32(ioaddr1+TxStatus0+tmp*4) = REG32(ioaddr1+TxStatus0+tmp*4)|0x100;  //send it
++	    	//tx_producer = tmp;  //update pointer
++		    rtn_val= -1;
++	    };
++	};
++
++	if (status & (TxOK | TxErr)) {  //enable rx
++	    if (REG32(ioaddr1+TxStatus0)&0x00002000) TxWait[0]=0;
++	    else  TxWait[0]=1;
++	    if (REG32(ioaddr1+TxStatus0+4)&0x00002000) TxWait[1]=0;
++	    else  TxWait[1]=1;
++	    if (REG32(ioaddr1+TxStatus0+8)&0x00002000) TxWait[2]=0;
++	    else  TxWait[2]=1;
++	    if (REG32(ioaddr1+TxStatus0+12)&0x00002000) TxWait[3]=0;
++	    else  TxWait[3]=1;
++		rtn_val= -1;
++	};
++    return rtn_val;
++#endif
++}
++extern jiffies;
++int getchar(char in)
++{
++	if (jiffies%3==0)
++		return 0;
++	else return 1;
++}
+Index: linux-2.4.27/drivers/net/rtl8650.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/drivers/net/rtl8650.h	2008-03-25 00:22:56.000000000 +0300
+@@ -0,0 +1,1053 @@
++
++#ifndef _ASICREGS_H
++#define _ASICREGS_H
++
++
++
++#undef SWTABLE_NO_HW
++
++/* Basic features
++*/
++#define MAX_PORT_NUMBER                 6
++#define PORT_NUM_MASK                   7
++#define ALL_PORT_MASK                   0x3F
++
++
++
++/* Memory mapping of tables 
++*/
++enum {
++    TYPE_L2_SWITCH_TABLE = 0,
++    TYPE_ARP_TABLE,
++    TYPE_L3_ROUTING_TABLE,
++    TYPE_MULTICAST_TABLE,
++    TYPE_PROTOCOL_TRAP_TABLE,
++    TYPE_VLAN_TABLE,
++    TYPE_EXT_INT_IP_TABLE,
++    TYPE_ALG_TABLE,
++    TYPE_SERVER_PORT_TABLE,
++    TYPE_L4_TCP_UDP_TABLE,
++    TYPE_L4_ICMP_TABLE,
++    TYPE_PPPOE_TABLE,
++    TYPE_ACL_RULE_TABLE
++};
++
++
++
++/* Register access macro
++*/
++#define	TIMER_CLK_DIV_BASE	2
++#define	DIVISOR	4096
++#define TCD_OFFSET		8
++//#define TICK_FREQ	100
++#define REG32(reg)	(*(volatile unsigned int *)(reg))
++#define REG16(reg)	(*(volatile unsigned short *)(reg))
++#define REG8(reg)	(*(volatile unsigned char *)(reg))
++
++
++#ifndef SWTABLE_NO_HW
++#define SWCORE_BASE                 0xBC800000
++#else
++#define SWCORE_BASE                 0x80600000
++#endif /*SWTABLE_NO_HW*/
++/* Table access and CPU interface control registers
++*/
++#define TACI_BASE                   (SWCORE_BASE + 0x00000000)
++#define SWTACR                      (0x000 + TACI_BASE)     /* Table Access Control */
++#define SWTASR                      (0x004 + TACI_BASE)     /* Table Access Status */
++#define SWTAA                       (0x008 + TACI_BASE)     /* Table Access Address */
++#define TCR0                        (0x020 + TACI_BASE)     /* Table Access Control 0 */
++#define TCR1                        (0x024 + TACI_BASE)     /* Table Access Control 1 */
++#define TCR2                        (0x028 + TACI_BASE)     /* Table Access Control 2 */
++#define TCR3                        (0x02C + TACI_BASE)     /* Table Access Control 3 */
++#define TCR4                        (0x030 + TACI_BASE)     /* Table Access Control 4 */
++#define TCR5                        (0x034 + TACI_BASE)     /* Table Access Control 5 */
++#define TCR6                        (0x038 + TACI_BASE)     /* Table Access Control 6 */
++#define TCR7                        (0x03C + TACI_BASE)     /* Table Access Control 7 */
++/* Table access control register field definitions
++*/
++#define ACTION_MASK                 1
++#define ACTION_DONE                 0
++#define ACTION_START                1
++#define CMD_MASK                    (7 << 1)
++#define CMD_ADD                     (1 << 1)
++#define CMD_MODIFY                  (2 << 1)
++#define CMD_FORCE                   (4 << 1)
++/* Table access status register field definitions 
++*/
++#define TABSTS_MASK                 1
++#define TABSTS_SUCCESS              0
++#define TABSTS_FAIL                 1
++/* Vlan table access definitions 
++*/
++#define STP_DISABLE                 0
++#define STP_BLOCK                   1
++#define STP_LEARN                   2
++#define STP_FORWARD                 3
++/* Protocol trapping table access definitions
++*/
++#define TYPE_TRAP_ETHERNET          0x00
++#define TYPE_TRAP_IP                0x02
++#define TYPE_TRAP_TCP               0x05
++#define TYPE_TRAP_UDP               0x06
++/* L3 Routing table access definitions
++*/
++#define PROCESS_PPPOE               0x00
++#define PROCESS_DIRECT              0x01
++#define PROCESS_INDIRECT            0x02
++#define PROCESS_S_CPU               0x04
++#define PROCESS_N_CPU               0x05
++#define PROCESS_S_DROP              0x06
++#define PROCESS_N_DROP              0x07
++/* ACL table access definitions
++*/
++#define RULE_ETHERNET               0x00
++#define RULE_IP                     0x02
++#define RULE_IFSEL                  0x03
++#define RULE_ICMP                   0x04
++#define RULE_IGMP                   0x05
++#define RULE_TCP                    0x06
++#define RULE_UDP                    0x07
++#define ACTION_PERMIT               0x00
++#define ACTION_REDIRECT             0x01
++#define ACTION_S_CPU                0x02
++#define ACTION_N_CPU                0x03
++#define ACTION_S_DROP               0x04
++#define ACTION_N_DROP               0x05
++#define ACTION_MIRROR               0x06
++#define ACTION_PPPOE_REDIRECT       0x07
++
++
++
++/* MIB counter registers
++*/
++#define MIB_COUNTER_BASE                            (SWCORE_BASE + 0x00001000)
++#define ETHER_STATS_OCTETS                          (0x000 + MIB_COUNTER_BASE)
++#define ETHER_STATS_DROP_EVENTS                     (0x004 + MIB_COUNTER_BASE)
++#define ETHER_STATS_CRC_ALIGN_ERRORS                (0x008 + MIB_COUNTER_BASE)
++#define ETHER_STATS_FRAGMENTS                       (0x00C + MIB_COUNTER_BASE)
++#define ETHER_STATS_JABBERS                         (0x010 + MIB_COUNTER_BASE)
++#define IF_IN_UCAST_PKTS                            (0x014 + MIB_COUNTER_BASE)
++#define ETHER_STATS_MULTICAST_PKTS                  (0x018 + MIB_COUNTER_BASE)
++#define ETHER_STATS_BROADCAST_PKTS                  (0x01C + MIB_COUNTER_BASE)
++#define ETHER_STATS_UNDERSIZE_PKTS                  (0x020 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_64_OCTETS                  (0x024 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_65_TO_127_OCTETS           (0x028 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_128_TO_255_OCTETS          (0x02C + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_256_TO_511_OCTETS          (0x030 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_512_TO_1023_OCTETS         (0x034 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_1024_TO_1518_OCTETS        (0x038 + MIB_COUNTER_BASE)
++#define ETHER_STATS_OVERSIZE_PKTS                   (0x03C + MIB_COUNTER_BASE)
++#define DOT3_CONTROL_IN_UNKNOWN_OPCODES             (0x040 + MIB_COUNTER_BASE)
++#define DOT3_IN_PAUSE_FRAMES                        (0x044 + MIB_COUNTER_BASE)
++#define IF_OUT_OCTETS                               (0x048 + MIB_COUNTER_BASE)
++#define IF_OUT_UCAST_PKTS                           (0x04C + MIB_COUNTER_BASE)
++#define IF_OUT_MULTICASTCAST_PKTS                   (0x050 + MIB_COUNTER_BASE)
++#define IF_OUT_BROADCASTCAST_PKTS                   (0x054 + MIB_COUNTER_BASE)
++#define DOT3_STATS_LATE_COLLISIONS                  (0x05C + MIB_COUNTER_BASE)
++#define DOT3_STATS_DEFERRED_TRANSMISSIONS           (0x05C + MIB_COUNTER_BASE)
++#define ETHER_STATS_COLLISIONS                      (0x060 + MIB_COUNTER_BASE)
++#define DOT3_STATS_SINGLE_COLLISION_FRAMES          (0x064 + MIB_COUNTER_BASE)
++#define DOT3_STATS_MULTIPLE_COLLISION_FRAMES        (0x068 + MIB_COUNTER_BASE)
++#define DOT3_OUT_PAUSE_FRAMES                       (0x06C + MIB_COUNTER_BASE)
++#define MIB_CONTROL                                 (0x070 + MIB_COUNTER_BASE)
++/* MIB control register field definitions 
++*/
++#define IN_COUNTER_RESTART                          (1 << 31)
++#define OUT_COUNTER_RESTART                         (1 << 30)
++#define PORT_FOR_COUNTING_MASK                      0x3F000000
++#define PORT_FOR_COUNTING_OFFSET                    24
++
++
++
++/* PHY control registers 
++*/
++#define PHY_BASE                                    (SWCORE_BASE + 0x00002000)
++#define PORT0_PHY_CONTROL                           (0x000 + PHY_BASE)
++#define PORT0_PHY_STATUS                            (0x004 + PHY_BASE)
++#define PORT0_PHY_IDENTIFIER_1                      (0x008 + PHY_BASE)
++#define PORT0_PHY_IDENTIFIER_2                      (0x00C + PHY_BASE)
++#define PORT0_PHY_AUTONEGO_ADVERTISEMENT            (0x010 + PHY_BASE)
++#define PORT0_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x014 + PHY_BASE)
++#define PORT1_PHY_CONTROL                           (0x020 + PHY_BASE)
++#define PORT1_PHY_STATUS                            (0x024 + PHY_BASE)
++#define PORT1_PHY_IDENTIFIER_1                      (0x028 + PHY_BASE)
++#define PORT1_PHY_IDENTIFIER_2                      (0x02C + PHY_BASE)
++#define PORT1_PHY_AUTONEGO_ADVERTISEMENT            (0x030 + PHY_BASE)
++#define PORT1_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x034 + PHY_BASE)
++#define PORT2_PHY_CONTROL                           (0x040 + PHY_BASE)
++#define PORT2_PHY_STATUS                            (0x044 + PHY_BASE)
++#define PORT2_PHY_IDENTIFIER_1                      (0x048 + PHY_BASE)
++#define PORT2_PHY_IDENTIFIER_2                      (0x04C + PHY_BASE)
++#define PORT2_PHY_AUTONEGO_ADVERTISEMENT            (0x050 + PHY_BASE)
++#define PORT2_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x054 + PHY_BASE)
++#define PORT3_PHY_CONTROL                           (0x060 + PHY_BASE)
++#define PORT3_PHY_STATUS                            (0x064 + PHY_BASE)
++#define PORT3_PHY_IDENTIFIER_1                      (0x068 + PHY_BASE)
++#define PORT3_PHY_IDENTIFIER_2                      (0x06C + PHY_BASE)
++#define PORT3_PHY_AUTONEGO_ADVERTISEMENT            (0x070 + PHY_BASE)
++#define PORT3_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x074 + PHY_BASE)
++#define PORT4_PHY_CONTROL                           (0x080 + PHY_BASE)
++#define PORT4_PHY_STATUS                            (0x084 + PHY_BASE)
++#define PORT4_PHY_IDENTIFIER_1                      (0x088 + PHY_BASE)
++#define PORT4_PHY_IDENTIFIER_2                      (0x08C + PHY_BASE)
++#define PORT4_PHY_AUTONEGO_ADVERTISEMENT            (0x090 + PHY_BASE)
++#define PORT4_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x094 + PHY_BASE)
++#define PORT5_PHY_CONTROL                           (0x0A0 + PHY_BASE)
++#define PORT5_PHY_STATUS                            (0x0A4 + PHY_BASE)
++#define PORT5_PHY_IDENTIFIER_1                      (0x0A8 + PHY_BASE)
++#define PORT5_PHY_IDENTIFIER_2                      (0x0AC + PHY_BASE)
++#define PORT5_PHY_AUTONEGO_ADVERTISEMENT            (0x0B0 + PHY_BASE)
++#define PORT5_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x0B4 + PHY_BASE)
++/* PHY control register field definitions 
++*/
++#define PHY_RESET                                   (1 << 15)
++#define ENABLE_LOOPBACK                             (1 << 14)
++#define SPEED_SELECT_100M                           (1 << 13)
++#define SPEED_SELECT_10M                            0
++#define ENABLE_AUTONEGO                             (1 << 12)
++#define POWER_DOWN                                  (1 << 11)
++#define ISOLATE_PHY                                 (1 << 10)
++#define RESTART_AUTONEGO                            (1 << 9)
++#define SELECT_FULL_DUPLEX                          (1 << 8)
++#define SELECT_HALF_DUPLEX                          0
++/* PHY status register field definitions 
++*/
++#define STS_CAPABLE_100BASE_T4                      (1 << 15)
++#define STS_CAPABLE_100BASE_TX_FD                   (1 << 14)
++#define STS_CAPABLE_100BASE_TX_HD                   (1 << 13)
++#define STS_CAPABLE_100BASE_T_FD                    (1 << 12)
++#define STS_CAPABLE_100BASE_T_HD                    (1 << 11)
++#define STS_MF_PREAMBLE_SUPPRESSION                 (1 << 6)
++#define STS_AUTONEGO_COMPLETE                       (1 << 5)
++#define STS_REMOTE_FAULT                            (1 << 4)
++#define STS_CAPABLE_NWAY_AUTONEGO                   (1 << 3)
++#define STS_LINK_ESTABLISHED                        (1 << 2)
++#define STS_JABBER_DETECTED                         (1 << 1)
++#define STS_CAPABLE_EXTENDED                        (1 << 0)
++/* PHY identifier 1 
++*/
++#define OUT_3_18_MASK                               (0xFFFF << 16)
++#define OUT_3_18_OFFSET                             16
++#define OUT_19_24_MASK                              (0x3F << 10)
++#define OUT_19_24_OFFSET                            10
++#define MODEL_NUMBER_MASK                           (0x3F << 4)
++#define MODEL_NUMBER_OFFSET                         4
++#define REVISION_NUMBER_MASK                        0x0F
++#define REVISION_NUMBER_OFFSET                      0
++/* PHY auto-negotiation advertisement and 
++link partner ability registers field definitions
++*/
++#define NEXT_PAGE_ENABLED                           (1 << 15)
++#define ACKNOWLEDGE                                 (1 << 14)
++#define REMOTE_FAULT                                (1 << 13)
++#define CAPABLE_PAUSE                               (1 << 10)
++#define CAPABLE_100BASE_T4                          (1 << 9)
++#define CAPABLE_100BASE_TX_FD                       (1 << 8)
++#define CAPABLE_100BASE_TX_HD                       (1 << 7)
++#define CAPABLE_100BASE_T_FD                        (1 << 6)
++#define CAPABLE_100BASE_T_HD                        (1 << 5)
++#define SELECTOR_MASK                               0x1F
++#define SELECTOR_OFFSET                             0
++
++
++
++/* CPU interface Tx/Rx packet registers 
++*/
++#define CPU_IFACE_BASE                      (SWCORE_BASE + 0x00004000)
++#define CPUICR                              (0x000 + CPU_IFACE_BASE)    /* Interface control */
++#define CPURPDCR                            (0x004 + CPU_IFACE_BASE)    /* Rx pkthdr descriptor control */
++#define CPURMDCR                            (0x008 + CPU_IFACE_BASE)    /* Rx mbuf descriptor control */
++#define CPUTPDCR                            (0x00C + CPU_IFACE_BASE)    /* Tx pkthdr descriptor control */
++#define CPUIIMR                             (0x010 + CPU_IFACE_BASE)    /* Interrupt mask control */
++#define CPUIISR                             (0x014 + CPU_IFACE_BASE)    /* Interrupt status control */
++/* CPU interface control register field definitions 
++*/
++#if 0
++#define TXCMD                               (1 << 31)       /* Enable Tx */
++#define RXCMD                               (1 << 30)       /* Enable Rx */
++#define TXFD                                (1 << 29)       /* Notify Tx descriptor fetch */
++#define SOFTRST                             (1 << 28)       /* Re-initialize all descriptors */
++#define STOPTX                              (1 << 27)       /* Stop Tx */
++#define SWINTSET                            (1 << 26)       /* Set software interrupt */
++#define BUSBURST_32WORDS                    0
++#define BUSBURST_64WORDS                    (1 << 24)
++#define BUSBURST_128WORDS                   (2 << 24)
++#define BUSBURST_256WORDS                   (3 << 24)
++#define MBUF_128BYTES                       0
++#define MBUF_256BYTES                       (1 << 21)
++#define MBUF_512BYTES                       (2 << 21)
++#define MBUF_1024BYTES                      (3 << 21)
++#define MBUF_2048BYTES                      (4 << 21)
++#else
++#define TXCMD                               (1 << 31)       /* Enable Tx */
++#define RXCMD                               (1 << 30)       /* Enable Rx */
++#define BUSBURST_32WORDS                    0
++#define BUSBURST_64WORDS                    (1 << 28)
++#define BUSBURST_128WORDS                   (2 << 28)
++#define BUSBURST_256WORDS                   (3 << 28)
++#define MBUF_128BYTES                       0
++#define MBUF_256BYTES                       (1 << 24)
++#define MBUF_512BYTES                       (2 << 24)
++#define MBUF_1024BYTES                      (3 << 24)
++#define MBUF_2048BYTES                      (4 << 24)
++#define TXFD                                (1 << 23)       /* Notify Tx descriptor fetch */
++#define SOFTRST                             (1 << 22)       /* Re-initialize all descriptors */
++#define STOPTX                              (1 << 21)       /* Stop Tx */
++#define SWINTSET                            (1 << 20)       /* Set software interrupt */
++#define LBMODE                              (1 << 19)       /* Loopback mode */
++#define LB10MHZ                             (1 << 18)       /* LB 10MHz */
++#define LB100MHZ                            (1 << 18)       /* LB 100MHz */
++#endif
++/* CPU interface descriptor field defintions 
++*/
++#define DESC_OWNED_BIT                      1
++#define DESC_RISC_OWNED                     0
++#define DESC_SWCORE_OWNED                   1
++#define DESC_WRAP                           (1 << 1)
++/* CPU interface interrupt mask register field definitions 
++*/
++#define LINK_CHANG_IE                       (1 << 31)    /* Link change interrupt enable */
++#define RX_ERR_IE                           (1 << 30)    /* Rx error interrupt enable */
++#define TX_ERR_IE                           (1 << 29)    /* Tx error interrupt enable */
++#define SW_INT_IE                           (1 << 28)    /* Software interrupt enable */
++#define L4_COL_REMOVAL_IE                   (1 << 27)    /* L4 collision removal interrupt enable */
++#define PKTHDR_DESC_RUNOUT_IE               (1 << 23)    /* Run out pkthdr descriptor interrupt enable */
++#define MBUF_DESC_RUNOUT_IE                 (1 << 22)    /* Run out mbuf descriptor interrupt enable */
++#define TX_DONE_IE                          (1 << 21)    /* Tx one packet done interrupt enable */
++#define RX_DONE_IE                          (1 << 20)    /* Rx one packet done interrupt enable */
++#define TX_ALL_DONE_IE                      (1 << 19)    /* Tx all packets done interrupt enable */
++/* CPU interface interrupt status register field definitions 
++*/
++#define LINK_CHANG_IP                       (1 << 31)   /* Link change interrupt pending */
++#define RX_ERR_IP                           (1 << 30)   /* Rx error interrupt pending */
++#define TX_ERR_IP                           (1 << 29)   /* Tx error interrupt pending */
++#define SW_INT_IP                           (1 << 28)   /* Software interrupt pending */
++#define L4_COL_REMOVAL_IP                   (1 << 27)   /* L4 collision removal interrupt pending */
++#define PKTHDR_DESC_RUNOUT_IP               (1 << 23)   /* Run out pkthdr descriptor interrupt pending */
++#define MBUF_DESC_RUNOUT_IP                 (1 << 22)   /* Run out mbuf descriptor interrupt pending */
++#define TX_DONE_IP                          (1 << 21)   /* Tx one packet done interrupt pending */
++#define RX_DONE_IP                          (1 << 20)   /* Rx one packet done interrupt pending */
++#define TX_ALL_DONE_IP                      (1 << 19)   /* Tx all packets done interrupt pending */
++#define INTPENDING_NIC_MASK     (RX_ERR_IP | TX_ERR_IP | PKTHDR_DESC_RUNOUT_IP | \
++                                    MBUF_DESC_RUNOUT_IP | TX_DONE_IP | RX_DONE_IP)
++
++
++
++/* System control registers 
++*/
++#define SYSTEM_BASE                         (SWCORE_BASE + 0x00003000)
++#define MACCR                               (0x000 + SYSTEM_BASE)   /* MAC control */
++#define MACMR                               (0x004 + SYSTEM_BASE)   /* MAC monitor */
++#define VLANTCR                             (0x008 + SYSTEM_BASE)   /* Vlan tag control */
++#define DSCR0                               (0x00C + SYSTEM_BASE)   /* Qos by DS control */
++#define DSCR1                               (0x010 + SYSTEM_BASE)   /* Qos by DS control */
++#define QOSCR                               (0x014 + SYSTEM_BASE)   /* Qos control */
++#define MISCCR                              (0x018 + SYSTEM_BASE)   /* Switch core misc control */
++#define SWTMCR                              (0x01C + SYSTEM_BASE)   /* Switch table misc control */
++#define TMRMR                               (0x020 + SYSTEM_BASE)   /* Test mode Rx mii-like */
++#define TMTMR                               (0x024 + SYSTEM_BASE)   /* Test mode Tx mii-like */
++#define TMCR                                (0x028 + SYSTEM_BASE)   /* Test mode control */
++#define GMHR                                (0x02C + SYSTEM_BASE)   /* Gateway MAC high */
++#define GMLR                                (0x030 + SYSTEM_BASE)   /* Gateway MAC low */
++/* MAC control register field definitions 
++*/
++#define DIS_IPG                             (1 << 31)   /* Set IFG */
++#define EN_INT_CAM                          (1 << 30)   /* Enable internal CAM */
++#define NORMAL_BACKOFF                      (1 << 29)   /* Normal back off slot timer */
++#define ACPT_MAXLEN_1536                    0           /* Accepted max length of packets */
++#define ACPT_MAXLEN_1552                    (1 << 26)
++#define FULL_RST                            (1 << 25)   /* Reset all tables & queues */
++#define SEMI_RST                            (1 << 24)   /* Reset queues */
++//#define BCAST_TO_CPU                        (1 << 23)   /* Broadcast to CPU */
++//#define DIS_ACPT_BCAST                      (1 << 22)   /* Disable accept broadcast packets */
++/* MAC monitor register field definitions 
++*/
++#define EN_MON_ID_BUS                       (1 << 31)   /* Enable monitor ID bus for ASIC debug */
++#define EN_MON_PKT_BUS                      (1 << 30)   /* Enable monitor packet bus for ASIC debug */
++/* VLAN tag control register field definitions 
++*/
++//#define NO_INS_REM_TAG                      3           /* Do not insert/remove tag */
++//#define INS_TAG                             2           /* Insert tag */
++//#define INS_TAG_HQ_ONLY                     1           /* Insert tag from high queue only */
++//#define REM_TAG                             0           /* Remove tag */
++//#define VLAN_TAG_P0_OFFSET                  30          /* Port 0 offset */
++//#define VLAN_TAG_P1_OFFSET                  28          /* Port 1 offset */
++//#define VLAN_TAG_P2_OFFSET                  26          /* Port 2 offset */
++//#define VLAN_TAG_P3_OFFSET                  24          /* Port 3 offset */
++//#define VLAN_TAG_P4_OFFSET                  22          /* Port 4 offset */
++//#define VLAN_TAG_P5_OFFSET                  20          /* Port 5 offset */
++#define VLAN_TAG_ONLY                       (1 << 19)   /* Only accept tagged packets */
++/* Qos by DS control register 
++*/
++#define DS0_7                               0xFF000000
++#define DS8_15                              0x00FF0000
++#define DS16_23                             0x0000FF00
++#define DS24_31                             0x000000FF
++#define DS32_39                             0xFF000000
++#define DS40_47                             0x00FF0000
++#define DS48_55                             0x0000FF00
++#define DS56_63                             0x000000FF
++/* Qos control register 
++*/
++#define QWEIGHT_MASK                        (3 << 30)
++#define QWEIGHT_ALWAYS_H                    (3 << 30)   /* Weighted round robin of priority always high first */
++#define QWEIGHT_16TO1                       (2 << 30)   /* Weighted round robin of priority queue 16:1 */
++#define QWEIGHT_8O1                         (1 << 30)   /* Weighted round robin of priority queue 8:1 */
++#define QWEIGHT_4TO1                        0           /* Weighted round robin of priority queue 4:1 */
++#define EN_FCA_AUTOOFF                      (1 << 29)   /* Enable flow control auto off */
++#define DIS_DS_PRI                          (1 << 28)   /* Disable DS priority */
++#define DIS_VLAN_PRI                        (1 << 27)   /* Disable 802.1p priority */
++#define PORT5_H_PRI                         (1 << 26)   /* Port 5 high priority */
++#define PORT4_H_PRI                         (1 << 25)   /* Port 4 high priority */
++#define PORT3_H_PRI                         (1 << 24)   /* Port 3 high priority */
++#define PORT2_H_PRI                         (1 << 23)   /* Port 2 high priority */
++#define PORT1_H_PRI                         (1 << 22)   /* Port 1 high priority */
++#define PORT0_H_PRI                         (1 << 21)   /* Port 0 high priority */
++#define QOS_PORT_OFFSET                     21
++/* Switch core misc control register field definitions 
++*/
++//#define SOFT_RST_CORE                       (1 << 31)   /* Soft reset */
++#define DIS_P5_LOOPBACK                     (1 << 30)   /* Disable port 5 loopback */
++#define P5_LINK_MII_MAC                     0           /* Port 5 MII MAC type */
++#define P5_LINK_MII_PHY                     1           /* Port 5 MII PHY type */
++#define P5_LINK_SNI_MAC                     2           /* Port 5 SNI MAC type */
++#define P5_LINK_OFFSET                      28          /* Port 5 link type offset */
++//#define P4_USB_SEL                          (1 << 25)   /* Select port USB interface */
++#define EN_P5_LINK_PHY                      (1 << 26)   /* Enable port 5 PHY provides link status to MAC */
++#define EN_P4_LINK_PHY                      (1 << 25)   /* Enable port 4 PHY provides link status to MAC */
++#define EN_P3_LINK_PHY                      (1 << 24)   /* Enable port 3 PHY provides link status to MAC */
++#define EN_P2_LINK_PHY                      (1 << 23)   /* Enable port 2 PHY provides link status to MAC */
++#define EN_P1_LINK_PHY                      (1 << 22)   /* Enable port 1 PHY provides link status to MAC */
++#define EN_P0_LINK_PHY                      (1 << 21)   /* Enable port 0 PHY provides link status to MAC */
++/* Switch table misc control register field definitions 
++*/
++#define NAPTR_NOT_FOUND_TO_CPU              0           /* Reverse NAPT not found to CPU */
++#define NAPTR_NOT_FOUND_DROP                (1 << 0)    /* Reverse NAPT not found to S_DROP */
++#define EN_NAPT_AUTO_LEARN                  (1 << 1)    /* Enable NAPT auto learn */
++#define EN_NAPT_AUTO_DELETE                 (1 << 2)    /* Enable NAPT auto delete */
++#define EN_VLAN_INGRESS_FILTER              (1 << 3)    /* Enable Vlan ingress filtering */
++#define EN_VLAN_EGRESS_FILTER               (1 << 4)    /* Enable Vlan egress filtering */
++#define WAN_ROUTE_MASK                      (3 << 5)
++#define WAN_ROUTE_FORWARD                   0           /* Route WAN packets */
++#define WAN_ROUTE_TO_CPU                    (1 << 5)    /* Forward WAN packets to CPU */
++#define WAN_ROUTE_DROP                      (2 << 5)    /* Drop WAN packets */
++#define MCAST_STP_STS_MASK                  (0x3ff << 7)
++#define MCAST_STP_STS_P0_OFFSET             7           /* Multicast spanning tree status port 0 */
++#define MCAST_STP_STS_P1_OFFSET             9           /* Multicast spanning tree status port 1 */
++#define MCAST_STP_STS_P2_OFFSET             11          /* Multicast spanning tree status port 2 */
++#define MCAST_STP_STS_P3_OFFSET             13          /* Multicast spanning tree status port 3 */
++#define MCAST_STP_STS_P4_OFFSET             15          /* Multicast spanning tree status port 4 */
++#define MCAST_STP_STS_P5_OFFSET             17          /* Multicast spanning tree status port 5 */
++#define MCAST_PORT_EXT_MODE_OFFSET          19          /* Multicast port mode offset */
++#define MCAST_PORT_EXT_MODE_MASK            (0x3f << 19)    /* Multicast port mode mask */
++#define NAPTF2CPU                           (1 << 25)   /* Trap packets not in TCP/UDP/ICMP format and 
++                                                        destined to the interface required to do NAPT */
++#define EN_MCAST                            (1 << 26)   /* Enable Multicast Table */
++#define BCAST_TO_CPU                        (1 << 28)   /* If EN_BCAST is not set, trap broadcast packets 
++                                                        to CPU */
++#define MCAST_TO_CPU                        (1 << 29)   /* If EN_MCAST is not set, trap multicast packets 
++                                                        to CPU */
++#define EN_BCAST                            (1 << 30)   /* Enable Broadcast Handling */
++/* Test mode Rx MII-like register field definitions 
++*/
++#define P5_RXDV                             (1 << 30)   /* Enable port 0 MII RXDV signal */
++#define P4_RXDV                             (1 << 29)   /* Enable port 1 MII RXDV signal */
++#define P3_RXDV                             (1 << 28)   /* Enable port 2 MII RXDV signal */
++#define P2_RXDV                             (1 << 27)   /* Enable port 3 MII RXDV signal */
++#define P1_RXDV                             (1 << 26)   /* Enable port 4 MII RXDV signal */
++#define P0_RXDV                             (1 << 25)   /* Enable port 5 MII RXDV signal */
++#define NIBBLE_MASK                         0x0F        /* Mask for a nibble */
++#define P5_RXD_OFFSET                       20          /* Port 0 RXD MII signal */
++#define P4_RXD_OFFSET                       16          /* Port 1 RXD MII signal */
++#define P3_RXD_OFFSET                       12          /* Port 2 RXD MII signal */
++#define P2_RXD_OFFSET                       8           /* Port 3 RXD MII signal */
++#define P1_RXD_OFFSET                       4           /* Port 4 RXD MII signal */
++#define P0_RXD_OFFSET                       0           /* Port 5 RXD MII signal */
++/* Test mode Tx MII-like register field definitions 
++*/
++#define P5_TXDV                             (1 << 30)   /* Enable port 0 MII TXDV signal */
++#define P4_TXDV                             (1 << 29)   /* Enable port 1 MII TXDV signal */
++#define P3_TXDV                             (1 << 28)   /* Enable port 2 MII TXDV signal */
++#define P2_TXDV                             (1 << 27)   /* Enable port 3 MII TXDV signal */
++#define P1_TXDV                             (1 << 26)   /* Enable port 4 MII TXDV signal */
++#define P0_TXDV                             (1 << 25)   /* Enable port 5 MII TXDV signal */
++#define P5_TXD_OFFSET                       20          /* Port 0 TXD MII signal */
++#define P4_TXD_OFFSET                       16          /* Port 1 TXD MII signal */
++#define P3_TXD_OFFSET                       12          /* Port 2 TXD MII signal */
++#define P2_TXD_OFFSET                       8           /* Port 3 TXD MII signal */
++#define P1_TXD_OFFSET                       4           /* Port 4 TXD MII signal */
++#define P0_TXD_OFFSET                       0           /* Port 5 TXD MII signal */
++/* Test mode enable register 
++*/
++#define TX_TEST_PORT_OFFSET                 26          /* Tx test mode enable port offset */
++#define RX_TEST_PORT_OFFSET                 18          /* Rx test mode enable port offset */
++/* Gateway MAC low register 
++*/
++#define GMACL_OFFSET                        20          /* Gateway MAC[15:4] offset */
++#define GMACL_MASK                          (0xFFFFFFFF << 20)  /* Gateway MAC[15:4] mask */
++
++
++
++/* Miscellaneous control registers 
++*/
++#define MISC_BASE                           (SWCORE_BASE + 0x00005000)
++#define LEDCR                               (0x000 + MISC_BASE)     /* LED control */
++#define PSCR                                (0x004 + MISC_BASE)     /* Power saving control */
++#define BISTCR                              (0x008 + MISC_BASE)     /* BIST control */
++#define BWCR                                (0x00C + MISC_BASE)     /* Bandwidth control */
++#define CSCR                                (0x010 + MISC_BASE)     /* Checksum control */
++#define FCREN                               (0x014 + MISC_BASE)     /* Flow control enable control */
++#define FCRTH                               (0x018 + MISC_BASE)     /* Flow control threshold */
++#define PTCR                                (0x01C + MISC_BASE)     /* Port trunk control */
++#define PPPCR                               (0x020 + MISC_BASE)     /* PPP control */
++#define PTRAPCR                             (0x024 + MISC_BASE)     /* Protocol trapping control */
++#define STCR                                (0x028 + MISC_BASE)     /* Spanning tree control */
++#define TTLCR                               (0x02C + MISC_BASE)     /* TTL control */
++#define MSCR                                (0x030 + MISC_BASE)     /* Module switch control */
++#define BSCR                                (0x038 + MISC_BASE)     /* Broadcast storm control */
++#define TEATCR                              (0x03C + MISC_BASE)     /* Table entry aging time control */
++#define PMCR                                (0x040 + MISC_BASE)     /* Port mirror control */
++#define PPMAR                               (0x044 + MISC_BASE)     /* Per port matching action */
++#define PATP0                               (0x048 + MISC_BASE)     /* Pattern for port 0 */
++#define PATP1                               (0x04C + MISC_BASE)     /* Pattern for port 1 */
++#define PATP2                               (0x050 + MISC_BASE)     /* Pattern for port 2 */
++#define PATP3                               (0x054 + MISC_BASE)     /* Pattern for port 3 */
++#define PATP4                               (0x058 + MISC_BASE)     /* Pattern for port 4 */
++#define PATP5                               (0x05C + MISC_BASE)     /* Pattern for port 5 */
++#define MASKP0                              (0x060 + MISC_BASE)     /* Mask for port 0 */
++#define MASKP1                              (0x064 + MISC_BASE)     /* Mask for port 1 */
++#define MASKP2                              (0x068 + MISC_BASE)     /* Mask for port 2 */
++#define MASKP3                              (0x06C + MISC_BASE)     /* Mask for port 3 */
++#define MASKP4                              (0x070 + MISC_BASE)     /* Mask for port 4 */
++#define MASKP5                              (0x074 + MISC_BASE)     /* Mask for port 5 */
++#define PVCR                                (0x078 + MISC_BASE)     /* Port based vlan config */
++#define GIDXMCR                             (0x07C + MISC_BASE)     /* GIDX mapping control */
++#define OCR                                 (0x080 + MISC_BASE)     /* Offset control */
++/* LED control register field definitions 
++*/
++#define LED_P0_COL                          (1 << 0)    /* LED port 0 collision */
++#define LED_P0_ACT                          (1 << 1)    /* LED port 0 active */
++#define LED_P0_100M                         (1 << 2)    /* LED port 0 speed 100M */
++#define LED_P1_COL                          (1 << 3)    /* LED port 1 collision */
++#define LED_P1_ACT                          (1 << 4)    /* LED port 1 active */
++#define LED_P1_100M                         (1 << 5)    /* LED port 1 speed 100M */
++#define LED_P2_COL                          (1 << 6)    /* LED port 2 collision */
++#define LED_P2_ACT                          (1 << 7)    /* LED port 2 active */
++#define LED_P2_100M                         (1 << 8)    /* LED port 2 speed 100M */
++#define LED_P3_COL                          (1 << 9)    /* LED port 3 collision */
++#define LED_P3_ACT                          (1 << 10)   /* LED port 3 active */
++#define LED_P3_100M                         (1 << 11)   /* LED port 3 speed 100M */
++#define LED_P4_COL                          (1 << 12)   /* LED port 4 collision */
++#define LED_P4_ACT                          (1 << 13)   /* LED port 4 active */
++#define LED_P4_100M                         (1 << 14)   /* LED port 4 speed 100M */
++#define LED_P5_COL                          (1 << 15)   /* LED port 5 collision */
++#define LED_P5_ACT                          (1 << 16)   /* LED port 5 active */
++#define LED_P5_100M                         (1 << 17)   /* LED port 5 speed 100M */
++#define LED_CPU_CTRL                        (1 << 18)   /* CPU control LED */
++/* Power saving control register field definitions 
++*/
++#define EN_POWER_SAVE                       (1 << 0)    /* Enable power saving mode */
++/* BIST control register field definitions 
++*/
++#define PAGE_BIST_ERR_MASK                  0x1F        /* Page error bit map mask */
++#define PAGE_BIST_ERR_OFFSET                0           /* Page error bit map offset */
++#define TXQ_BIST_ERR_MASK                   (0x1F << 5) /* Tx queue error bit map mask */
++#define TXQ_BIST_ERR_OFFSET                 5           /* Tx queue error bit map offset */
++#define L2_BIST_ERR_MASK                    (1 << 10)   /* L2 error bit map mask */
++#define L2_BIST_ERR_OFFSET                  10          /* L2 error bit map offset */
++#define L4_BIST_ERR_MASK                    (1 << 11)  /* L4 error bit map mask */
++#define L4_BIST_ERR_OFFSET                  11          /* L4 error bit map offset */
++/* Bandwidth control register field definitions 
++*/
++#define EN_BC_PORT_MASK                     0x3F        /* Bandwidth control port mask */
++#define BC_P0_OFFSET                        6           /* Bandwidth control port 0 offset */
++#define BC_P1_OFFSET                        9           /* Bandwidth control port 1 offset */
++#define BC_P2_OFFSET                        12          /* Bandwidth control port 2 offset */
++#define BC_P3_OFFSET                        15          /* Bandwidth control port 3 offset */
++#define BC_P4_OFFSET                        18          /* Bandwidth control port 4 offset */
++#define BC_P5_OFFSET                        21          /* Bandwidth control port 5 offset */
++#define BW_FULL_RATE                        0
++#define BW_128K                             1
++#define BW_256K                             2
++#define BW_512K                             3
++#define BW_1M                               4
++#define BW_2M                               5
++#define BW_4M                               6
++#define BW_8M                               7
++/* Checksum control register field definitions 
++*/
++#define ALLOW_L3_CHKSUM_ERR                 (1 << 0)    /* Allow L3 checksum error */
++#define ALLOW_L4_CHKSUM_ERR                 (1 << 1)    /* Allow L4 checksum error */
++#define EN_ETHER_L3_CHKSUM_REC              (1 << 2)    /* Enable L3 checksum recalculation for ethernet port */
++#define EN_ETHER_L4_CHKSUM_REC              (1 << 3)    /* Enable L4 checksum recalculation for ethernet port */
++#define EN_CPU_L3_CHKSUM_REC                (1 << 4)    /* Enable L3 checksum recalculation for CPU port */
++#define EN_CPU_L4_CHKSUM_REC                (1 << 5)    /* Enable L4 checksum recalculation for CPU port */
++/* Flow control enable register field defintions 
++*/
++#define EN_P0_IN_Q_FC                       (1 << 31)   /* Enable port 0 input flow control */
++#define EN_P1_IN_Q_FC                       (1 << 30)   /* Enable port 1 input flow control */
++#define EN_P2_IN_Q_FC                       (1 << 29)   /* Enable port 2 input flow control */
++#define EN_P3_IN_Q_FC                       (1 << 28)   /* Enable port 3 input flow control */
++#define EN_P4_IN_Q_FC                       (1 << 27)   /* Enable port 4 input flow control */
++#define EN_P5_IN_Q_FC                       (1 << 26)   /* Enable port 5 input flow control */
++#define EN_IN_Q_FC_PORT_OFFSET              26
++#define EN_P0_OUT_Q_FC                      (1 << 25)   /* Enable port 0 output flow control */
++#define EN_P1_OUT_Q_FC                      (1 << 24)   /* Enable port 1 output flow control */
++#define EN_P2_OUT_Q_FC                      (1 << 23)   /* Enable port 2 output flow control */
++#define EN_P3_OUT_Q_FC                      (1 << 22)   /* Enable port 3 output flow control */
++#define EN_P4_OUT_Q_FC                      (1 << 21)   /* Enable port 4 output flow control */
++#define EN_P5_OUT_Q_FC                      (1 << 20)   /* Enable port 5 output flow control */
++#define EN_OUT_Q_FC_PORT_OFFSET             20
++#define EN_CPU_OUT_Q_FC                     (1 << 19)   /* Enable CPU output flow control */
++#define FC_LAUNCH_PORT_OFFSET               13          /* CPU launches flow control on port offset */
++/* Flow control enable register field defintions 
++*/
++#define PER_PORT_BUF_FC_TH_MASK             0xFF        /* Per port buffer page flow control threshold mask */
++#define IN_Q_PER_PORT_BUF_FC_THH_OFFSET     24          /* InQ per port buffer page flow control high threshold offset */
++#define IN_Q_PER_PORT_BUF_FC_THL_OFFSET     16          /* InQ per port buffer page flow control low threshold offset */
++#define OUT_Q_PER_PORT_BUF_FC_THH_OFFSET    8           /* OutQ per port buffer page flow control high threshold offset */
++#define OUT_Q_PER_PORT_BUF_FC_THL_OFFSET    0           /* OutQ per port buffer page flow control low threshold offset */
++/* Port trunking control register field definitions 
++*/
++#define LMPR7_OFFSET                        27          /* Physical port index for logical port 7 */
++#define LMPR6_OFFSET                        24          /* Physical port index for logical port 6 */
++#define LMPR5_OFFSET                        21          /* Physical port index for logical port 5 */
++#define LMPR4_OFFSET                        18          /* Physical port index for logical port 4 */
++#define LMPR3_OFFSET                        15          /* Physical port index for logical port 3 */
++#define LMPR2_OFFSET                        12          /* Physical port index for logical port 2 */
++#define LMPR1_OFFSET                        9           /* Physical port index for logical port 1 */
++#define LMPR0_OFFSET                        6           /* Physical port index for logical port 0 */
++#define TRUNK1_PORT_MASK_OFFSET             0           /* Physical port mask of trunk 1 */
++/* Port trunking control register field definitions 
++*/
++#define EN_PPP_OP                           (1 << 31)   /* Enable PPPoE auto insert and remove */
++/* Protocol trapping control register field definitions 
++*/
++#define EN_ARP_TRAP                         (1 << 31)   /* Enable trapping ARP packets */
++#define EN_RARP_TRAP                        (1 << 30)   /* Enable trapping RARP packets */
++#define EN_PPPOE_TRAP                       (1 << 29)   /* Enable trapping PPPoE packets */
++#define EN_IGMP_TRAP                        (1 << 28)   /* Enable trapping IGMP packets */
++#define EN_DHCP_TRAP1                       (1 << 27)   /* Enable trapping DHCP 67 packets */
++#define EN_DHCP_TRAP2                       (1 << 26)   /* Enable trapping DHCP 68 packets */
++#define EN_OSPF_TRAP                        (1 << 25)   /* Enable trapping OSPF packets */
++#define EN_RIP_TRAP                         (1 << 24)   /* Enable trapping RIP packets */
++/* Spanning tree control register field definitions 
++*/
++#define EN_ESTP_S_DROP                      (1 << 31)   /* Enable egress spanning tree forward S_Drop */
++/* TTL control register field definitions 
++*/
++#define DIS_TTL1                            (1 << 31)   /* Disable TTL-1 operation */
++/* Module switch control register field definitions 
++*/
++#define MOD_MASK                            7
++#define EN_L2                               (1 << 0)    /* Enable L2 module */
++#define EN_L3                               (1 << 1)    /* Enable L3 module */
++#define EN_L4                               (1 << 2)    /* Enable L4 module */
++#define EN_OUT_ACL                          (1 << 3)    /* Enable egress ACL */
++#define EN_IN_ACL                           (1 << 4)    /* Enable ingress ACL */
++#define EN_STP                              (1 << 7)    /* Enable spanning tree */
++#define FORCE_TO_CPU                        (1 << 8)
++#define L2_COL_BCAST                        (1 << 9)    /* L2 collision broadcast */
++#define I8021D_TO_CPU                       (1 << 10)   /* 802.1D trap to CPU */
++#define GARP_TO_CPU                         (1 << 11)   /* GARP trap to CPU */
++/* Broadcast storm control register field definitions 
++*/
++#define EN_BCAST_STORM                      (1 << 0)    /* Enable broadcast storm control */
++#define BCAST_TH_MASK                       (0xFF << 1) /* Threshold within broadcast interval mask */
++#define BCAST_TH_OFFSET                     1           /* Threshold within broadcast interval offset */
++#define TI_100M_MASK                        (0x3F << 9) /* Time interval for 100M mask */
++#define TI_100M_OFFSET                      9           /* Time interval for 100M offset */
++#define TI_10M_MASK                         (0x3F << 15)/* Time interval for 10M mask */
++#define TI_10M_OFFSET                       15          /* Time interval for 10M offset */
++/* Table entry aging time control register field definitions 
++*/
++#define ICMP_TH_OFFSET                      26          /* ICMP timeout threshold offset */
++#define ICMP_TH_MASK                        (0x3f << ICMP_TH_OFFSET)
++#define UDP_TH_OFFSET                       20          /* UDP timeout threshold offset */
++#define UDP_TH_MASK                         (0x3f << UDP_TH_OFFSET)
++#define TCP_LONG_TH_OFFSET                  14          /* TCP long timeout threshold offset */
++#define TCP_LONG_TH_MASK                    (0x3f << TCP_LONG_TH_OFFSET)
++#define TCP_MED_TH_OFFSET                   8           /* TCP medium timeout threshold offset */
++#define TCP_MED_TH_MASK                     (0x3f << TCP_MED_TH_OFFSET)
++#define TCP_FAST_TH_OFFSET                  2           /* TCP fast timeout threshold offset */
++#define TCP_FAST_TH_MASK                    (0x3f << TCP_FAST_TH_OFFSET)
++/* Port mirror control register field definitions 
++*/
++#define MIRROR_TO_PORT_OFFSET               29          /* Port receiving the mirrored traffic offset */
++#define SRC_MIRROR                          (1 << 28)   /* Source mirror */
++#define DEST_MIRROR                         0           /* Destination mirror */
++#define MIRROR_FROM_PORT_LIST_OFFSET        22          /* Port list to be mirrored offset */
++#define EN_PPORT_PMATCH_MIRROR              (1 << 21)   /* Enable per port pattern match mirror */
++/* Per port matching action register field definitions 
++*/
++#define EN_PMATCH_PORT_LIST_OFFSET          0           /* Enable pattern match port list offset */
++#define MATCH_S_DROP                        0           /* S_DROP if matched */
++#define MATCH_MIRROR_TO_CPU                 (1 << 6)    /* Mirror to CPU if matched */
++#define MATCH_FORWARD_TO_CPU                (2 << 6)    /* Forward to CPU if matched */
++#define MATCH_TO_MIRROR_PORT                (3 << 6)    /* To mirror port if matched */
++#define MATCH_OP_MASK                       (3 << 6)    /* Operation if matched mask */
++#define MATCH_OP_OFFSET                     6           /* Operation if matched offset */
++/* Port based vlan config register field definitions 
++*/
++#define PVID_MASK                           7           /* MASK for PVID */
++#define VIDP0_OFFSET                        0           /* Vlan table index for port 0 */
++#define VIDP1_OFFSET                        3           /* Vlan table index for port 1 */
++#define VIDP2_OFFSET                        6           /* Vlan table index for port 2 */
++#define VIDP3_OFFSET                        9           /* Vlan table index for port 3 */
++#define VIDP4_OFFSET                        12          /* Vlan table index for port 4 */
++#define VIDP5_OFFSET                        15          /* Vlan table index for port 5 */
++/* GIDX mapping control register field definitions 
++*/
++#define GIDX_MASK                           7           /* MASK for GIDX */
++#define GIDX0_OFFSET                        0           /* Index to IP table */
++#define GIDX1_OFFSET                        3           /* Index to IP table */
++#define GIDX2_OFFSET                        6           /* Index to IP table */
++#define GIDX3_OFFSET                        9           /* Index to IP table */
++#define GIDX4_OFFSET                        12          /* Index to IP table */
++#define GIDX5_OFFSET                        15          /* Index to IP table */
++#define GIDX6_OFFSET                        18          /* Index to IP table */
++#define GIDX7_OFFSET                        21          /* Index to IP table */
++/* Offset control register field definitions 
++*/
++#define OCR_START_MASK                      (0x1f << 27)    /* Starting value of offset mask */
++#define OCR_START_OFFSET                    27              /* Starting value of offset offset */
++#define OCR_END_MASK                        (0x1f << 22)    /* End value of offset mask */
++#define OCR_END_OFFSET                      27              /* End value of offset offset */
++
++
++
++/* PPT registers 
++*/
++#define PPT_BASE                            0xBD010000
++#define PDTR                                (0x000 + PPT_BASE)      /* Data register */
++#define SSTR                                 (0x001 + PPT_BASE)      /* Status register */
++#define CTR                                 (0x002 + PPT_BASE)      /* Control register */
++#define EPPAR                               (0x003 + PPT_BASE)      /* EPP address register */
++#define EPPDR                               (0x004 + PPT_BASE)      /* EPP data register */
++#define PPCR                                (0x008 + PPT_BASE)      /* Printer port control register */
++#define DFIFO                               (0x400 + PPT_BASE)      /* Data FIFO */
++#define CFGRA                               (0x400 + PPT_BASE)      /* Configuration A */
++#define CFGRB                               (0x401 + PPT_BASE)      /* Configuration B */
++#define ECR                                 (0x402 + PPT_BASE)      /* Extended control register */
++/* Status register field definitions 
++*/
++#define TIME_OUT                            (1 << 0)
++#define IRQ_MASK                            (1 << 2)    /* Interrupt (low active) mask */
++#define ERR_MASK                            (1 << 3)    /* Error (low active) mask */
++#define SLCT                                (1 << 4)    /* Printer selected and online */
++#define PE                                  (1 << 5)    /* End of paper */
++#define ACK_MASK                            (1 << 6)    /* Char reception complete (low active) mask */
++#define BUSY_MASK                           (1 << 7)    /* Busy (low active) mask */
++/* Control register field definitions 
++*/
++#define DATA_STROBE                         (1 << 0)    /* Data strobe signal */
++#define AFD                                 (1 << 1)    /* Automatic line feed */
++#define INIT_MASK                           (1 << 2)    /* Initialize (low active) mask */
++#define SLIN                                (1 << 3)    /* Printer selected and online */
++#define IE                                  (1 << 4)    /* Interrupt enable */
++#define DIRC_INPUT                          (1 << 5)    /* Direction control input */
++#define DIRC_OUTPUT                         0           /* Direction control output */
++/* Extended control register field definitions 
++*/
++#define STANDARD_MODE                       0           /* Standard mode */
++#define PS2_MODE                            (1 << 5)    /* PS/2 mode */
++#define PARALLEL_FIFO_MODE                  (2 << 5)    /* Parallel port FIFO mode */
++#define ECP_FIFO_MODE                       (3 << 5)    /* ECP FIFO mode */
++#define EN_ECP_INTR                         (1 << 4)    /* Enable ECP interrupt */
++#define ECP_SERVICE                         (1 << 2)    /* ECP service bit */
++#define FIFO_FULL                           (1 << 1)    /* FIFO full */
++#define FIFO_EMPTY                          (1 << 0)    /* FIFO empty */
++/* Printer port control register 
++*/
++#define ENPPT                               (1 << 0)    /* Enable PPT */
++#define ENEPP                               (1 << 1)    /* Enable EPP */
++#define ENECP                               (1 << 2)    /* Enable ECP */
++#define EXTENDIF                            (1 << 3)    /* Extended mode */
++#define INTR_TRIG_1BYTE                     0           /* Interrupt trigger level 1 byte */
++#define INTR_TRIG_4BYTE                     (1 << 4)    /* Interrupt trigger level 4 byte */
++#define INTR_TRIG_8BYTE                     (2 << 4)    /* Interrupt trigger level 8 byte */
++#define INTR_TRIG_14BYTE                    (3 << 4)    /* Interrupt trigger level 14 byte */
++
++
++
++/* UART registers 
++*/
++#define UART1_BASE                          0xB9C00000
++//#define UART2_BASE                          0xBD011010
++#define RBR                                 0x000       /* Rx buffer */
++#define THR                                 0x000       /* Tx holding */
++#define DLL                                 0x000       /* Divisor latch LSB */
++#if 0
++#define IER                                 0x001       /* Interrupt enable */
++#define DLM                                 0x001       /* Divisor latch MSB */
++#define IIR                                 0x002       /* Interrupt identification */
++#define FCR                                 0x002       /* FIFO control */
++#define LCR                                 0x003       /* Line control */
++#define MCR                                 0x004       /* Modem control */
++#define LSR                                 0x005       /* Line status */
++#define MSR                                 0x006       /* Modem status */
++#define SCR                                 0x007       /* Scratchpad */
++#else
++#define IER                                 0x004       /* Interrupt enable */
++#define DLM                                 0x004       /* Divisor latch MSB */
++#define IIR                                 0x008       /* Interrupt identification */
++#define FCR                                 0x008       /* FIFO control */
++#define LCR                                 0x00C       /* Line control */
++#define MCR                                 0x010       /* Modem control */
++#define LSR                                 0x014       /* Line status */
++#define MSR                                 0x018       /* Modem status */
++#define SCR                                 0x01C       /* Scratchpad */
++#endif
++/* Line Control Register 
++*/
++#define LCR_WLN         0x03
++#define CHAR_LEN_5      0x00
++#define CHAR_LEN_6      0x01
++#define CHAR_LEN_7      0x02
++#define CHAR_LEN_8      0x03
++#define LCR_STB         0x04
++#define ONE_STOP        0x00
++#define TWO_STOP        0x04
++#define LCR_PEN         0x08
++#define LCR_EPS         0x30
++#define PARITY_ODD      0x00
++#define PARITY_EVEN     0x10
++#define PARITY_MARK     0x20
++#define PARITY_SPACE    0x30
++#define PARITY_NONE     0x80
++#define LCR_SBRK        0x40
++#define LCR_DLAB        0x80
++#define DLAB            LCR_DLAB
++/* Line Status Register 
++*/
++#define LSR_DR          0x01
++#define RxCHAR_AVAIL    LSR_DR
++#define LSR_OE          0x02
++#define LSR_PE          0x04
++#define LSR_FE          0x08
++#define LSR_BI          0x10
++#define LSR_THRE        0x20
++#define LSR_TEMT        0x40
++#define LSR_FERR        0x80
++/* Interrupt Identification Register 
++*/
++#define IIR_IP          0x01
++#define IIR_ID          0x0e
++#define IIR_RLS         0x06
++#define Rx_INT          IIR_RLS
++#define IIR_RDA         0x04
++#define RxFIFO_INT      IIR_RDA
++#define IIR_THRE        0x02
++#define TxFIFO_INT      IIR_THRE
++#define IIR_MSTAT       0x00
++#define IIR_TIMEOUT     0x0c
++/* Interrupt Enable Register 
++*/
++#define IER_ERBI        0x01
++#define IER_ETBEI       0x02
++#define IER_ELSI        0x04
++#define IER_EDSSI       0x08
++#define IER_ESLP        0x10
++#define IER_ELP         0x20
++/* Modem Control Register 
++*/
++#define MCR_DTR         0x01
++#define DTR             MCR_DTR
++#define MCR_RTS         0x02
++#define MCR_OUT1        0x04
++#define MCR_OUT2        0x08
++#define MCR_LOOP        0x10
++/* Modem Status Register 
++*/
++#define MSR_DCTS        0x01
++#define MSR_DDSR        0x02
++#define MSR_TERI        0x04
++#define MSR_DDCD        0x08
++#define MSR_CTS         0x10
++#define MSR_DSR         0x20
++#define MSR_RI          0x40
++#define MSR_DCD         0x80
++/* FIFO Control Register 
++*/
++#define FCR_EN          0x01
++#define FIFO_ENABLE     FCR_EN
++#define FCR_RXCLR       0x02
++#define RxCLEAR         FCR_RXCLR
++#define FCR_TXCLR       0x04
++#define TxCLEAR         FCR_TXCLR
++#define FCR_DMA         0x08
++#define FCR_RXTRIG_L    0x40
++#define FCR_RXTRIG_H    0x80
++
++
++
++#define MAX_ILEV                        10
++#define TICK_ILEV                        9  //->IRQ7
++#define UART_ILEV 	    	             8  //->IRQ6
++#define SAR_ILEV                         7  //->IRQ5
++#define Ethernet_ILEV                    6  //->IRQ4
++#define DMT_ILEV                         5  //->IRQ3
++#define USB_ILEV                         4  //->IRQ3
++#define PCI_ILEV                         3  //->IRQ3
++#define GPIO_ILEV                        2  //->IRQ2
++#define Time_Out_ILEV                    1  //->IRQ2
++
++/* Global interrupt control registers 
++*/
++#define GICR_BASE                           0xBD012000
++#define GIMR                                (0x00 + GICR_BASE)       /* Global interrupt mask */
++#define GISR                                (0x04 + GICR_BASE)       /* Global interrupt status */
++#define IRR1                                (0x08 + GICR_BASE)       /* Interrupt routing 1 */
++/* Global interrupt mask register field definitions 
++*/
++#define UART_IM                             (1 << 15)       /* UART interrupt enable */
++#define Timer_IM                            (1 << 14)       /* Timer interrupt enable */
++#define Time_Out_IM                         (1 << 13)       /* Time out interrupt enable */
++#define SAR_IM                              (1 << 12)       /* SAR interrupt enable */
++#define Ethernet_IM                         (1 << 11)       /* Ethernet interrupt enable */
++#define DMT_IM                              (1 << 10)       /* DMT interrupt enable */
++#define USB_IM                              (1 <<  9)       /* USB client interrupt enable */
++#define PCI_IM                              (1 <<  8)       /* PCI interrupt enable */
++#define GPIO_IM                             (1 <<  7)       /* GPIO port interrupt enable */
++/* Global interrupt status register field definitions 
++*/
++#define UART_IS                             (1 << 15)       /* UART interrupt pending */
++#define Timer_IS                            (1 << 14)       /* Timer/Counter interrupt pending */
++#define Time_Out_IS                         (1 << 13)       /* time out interrupt pending */
++#define SAR_IS                              (1 << 12)       /* SAR interrupt pending */
++#define Ethernet_IS                         (1 << 11)       /* Ethernet interrupt pending */
++#define DMT_IS                              (1 << 10)       /* DMT interrupt pending */
++#define USB_IS                              (1 <<  9)       /* USB client interrupt pending */
++#define PCI_IS                              (1 <<  8)       /* PCI interrupt pending */
++#define GPIO_IS                             (1 <<  7)       /* GPIO interrupt pending */
++/* Interrupt routing register 1 field definitions 
++*/
++#define UART_IPS                            28              /* UART interrupt routing select offset */
++#define Timer_IPS                           24              /* Timer interrupt routing select offset */
++#define Time_Out_IPS                        20              /* Time out interrupt routing select offset */
++#define SAR_IPS                             16              /* SAR interrupt routing select offset */
++#define Ethernet_IPS                        12              /* Ethernet interrupt routing select offset */
++#define DMT_IPS                              8              /* DMT interrupt routing select offset */
++#define USB_IPS                              4              /* USB interrupt routing select offset */
++#define PCI_IPS                              0              /* PCI interrupt routing select offset */
++/* Interrupt routing register 2 field definitions 
++*/
++#define GPIO_IPS                             7              /* GPIO interrupt routing select offset */
++
++
++/* Timer control registers 
++*/
++#define GPIOCR_BASE 0xBD012000
++#define TC0DATA                             (0x020 + GPIOCR_BASE)       /* Timer/Counter 0 data */
++#define TC1DATA                             (0x024 + GPIOCR_BASE)       /* Timer/Counter 1 data */
++#define TC0CNT                              (0x028 + GPIOCR_BASE)       /* Timer/Counter 0 count */
++#define TC1CNT                              (0x02C + GPIOCR_BASE)       /* Timer/Counter 1 count */
++#define TCCNR                               (0x030 + GPIOCR_BASE)       /* Timer/Counter control */
++#define TCIR                                (0x034 + GPIOCR_BASE)       /* Timer/Counter intertupt */
++#define CDBR                                (0x038 + GPIOCR_BASE)       /* Clock division base */
++#define WDTCNR                              (0x03C + GPIOCR_BASE)       /* Watchdog timer control */
++#define BSTMOUT                             (0x040 + GPIOCR_BASE)       /* bus time out interval */
++/* Timer/Counter data register field definitions 
++*/
++#define TCD_OFFSET                          8
++/* Timer/Counter control register field defintions 
++*/
++#define TC0EN                               (1 << 31)       /* Timer/Counter 0 enable */
++#define TC0MODE_COUNTER                     0               /* Timer/Counter 0 counter mode */
++#define TC0MODE_TIMER                       (1 << 30)       /* Timer/Counter 0 timer mode */
++#define TC1EN                               (1 << 29)       /* Timer/Counter 1 enable */
++#define TC1MODE_COUNTER                     0               /* Timer/Counter 1 counter mode */
++#define TC1MODE_TIMER                       (1 << 28)       /* Timer/Counter 1 timer mode */
++/* Timer/Counter interrupt register field definitions 
++*/
++#define TCIR_TC0IE                          (1 << 31)       /* Timer/Counter 0 interrupt enable */
++#define TCIR_TC1IE                          (1 << 30)       /* Timer/Counter 1 interrupt enable */
++#define TCIR_TC0IP                          (1 << 29)       /* Timer/Counter 0 interrupt pending */
++#define TCIR_TC1IP                          (1 << 28)       /* Timer/Counter 1 interrupt pending */
++/* Clock division base register field definitions 
++*/
++#define DIVF_OFFSET                         16
++/* Watchdog control register field definitions 
++*/
++#define WDTE_OFFSET                         24              /* Watchdog enable */
++#define WDSTOP_PATTERN                      0xA5            /* Watchdog stop pattern */
++#define WDTCLR                              (1 << 23)       /* Watchdog timer clear */
++#define OVSEL_13                            0               /* Overflow select count 2^13 */
++#define OVSEL_14                            (1 << 21)       /* Overflow select count 2^14 */
++#define OVSEL_15                            (2 << 21)       /* Overflow select count 2^15 */
++#define OVSEL_16                            (3 << 21)       /* Overflow select count 2^16 */
++
++/*Bus time out register
++*/
++#define BSTMOUT_OFFSET                       29              
++#define BSTMOUT_20us                         0               /* bus time out interval 20 us*/
++#define BSTMOUT_30us                         (1 << BSTMOUT_OFFSET)       /* bus time out interval 30 us*/
++#define BSTMOUT_40us                         (2 << BSTMOUT_OFFSET)       /* bus time out interval 40 us*/
++#define BSTMOUT_50us                         (3 << BSTMOUT_OFFSET)       /* bus time out interval 50 us*/
++
++
++/* GPIO control registers 
++*/
++#define PBCNR                               (0x00C + GPIOCR_BASE)     /* Port B control */
++#define PBDIR                               (0x010 + GPIOCR_BASE)     /* Port B direction */
++#define PBDAT                               (0x014 + GPIOCR_BASE)     /* Port B data */
++#define PBISR                               (0x018 + GPIOCR_BASE)     /* Port B interrupt status */
++#define PBIMR                               (0x01C + GPIOCR_BASE)     /* Port B interrupt mask */
++
++
++/* Memory config registers 
++*/
++#define MEMCFG_BASE                         0xBD013000
++#define MCFGR                               (0x000 + MEMCFG_BASE)       /* Memory config */
++#define MTCR                                (0x004 + MEMCFG_BASE)       /* Memory timing config */
++/* Memory config register field definitions 
++*/
++#define ROM_256K                            0               /* ROM size 256K */
++#define ROM_512K                            (1 << 30)       /* ROM size 512K */
++#define ROM_1M                              (2 << 30)       /* ROM size 1M */
++#define ROM_2M                              (3 << 30)       /* ROM size 2M */
++#define SDRAM_16M                           0               /* SDRAM size 512Kx16x2 */
++#define SDRAM_64M                           (1 << 28)       /* SDRAM size 1Mx16x4 */
++#define SDRAM_128M                          (2 << 28)       /* SDRAM size 2Mx16x4 */
++#define CAS_LAT_2                           0               /* CAS latency = 2 */
++#define CAS_LAT_3                           (1 << 27)       /* CAS latency = 3 */
++#define B0_BUSWIDTH_8BIT                    0               /* Bank 0 bus width 8 bits */
++#define B0_BUSWIDTH_16BIT                   (1 << 25)       /* Bank 0 bus width 16 bits */
++#define B0_BUSWIDTH_32BIT                   (2 << 25)       /* Bank 0 bus width 32 bits */
++#define B1_BUSWIDTH_8BIT                    0               /* Bank 1 bus width 8 bits */
++#define B1_BUSWIDTH_16BIT                   (1 << 23)       /* Bank 1 bus width 16 bits */
++#define B1_BUSWIDTH_32BIT                   (2 << 23)       /* Bank 1 bus width 32 bits */
++#define SDBUSWID_16BIT                      0               /* SDRAM bus width 16 bits */
++#define SDBUSWID_32BIT                      (1 << 24)       /* SDRAM bus width 32 bits */
++#define MEMCLK_2_LXCLK_1_1                  0               /* Memory clock to lexra bus clock 1:1 */
++#define MEMCLK_2_LXCLK_1_2                  (1 << 23)       /* Memory clock to lexra bus clock 1:2 */
++#define CLKRATE_200                         0               /* Bus clock 200 */
++#define CLKRATE_100                         (1 << 20)       /* Bus clock 100 */
++#define CLKRATE_50                          (2 << 20)       /* Bus clock 50 */
++#define CLKRATE_25                          (3 << 20)       /* Bus clock 25 */
++#define CLKRATE_12_5                        (4 << 20)       /* Bus clock 12.5 */
++#define CLKRATE_6_25                        (5 << 20)       /* Bus clock 6.25 */
++/* Memory timing config register field definitions 
++*/
++#define CE0T_CS_OFFSET                      28
++#define CE0T_WP_OFFSET                      24
++#define CE1T_CS_OFFSET                      20
++#define CE1T_WP_OFFSET                      16
++#define CE23T_RAS_OFFSET                    10
++#define CE23T_RFC_OFFSET                    6
++#define CE23T_RP_OFFSET                     4
++
++#define ICU_UNMASK(n) *((volatile u_int32_t *)0xbd012000) |=(1<<(31-n))
++#define ICU_MASK(n) *((volatile u_int32_t*)0xbd012000)&=~(1<<(31-n))
++#define ICU_STATUS(n) *((volatile u_int32_t *)0xbd012004)  & (1<<(31-n))
++#define ICU_ROUTE(n,r) \
++{\
++	*((volatile u_int32_t *)0xbd012008) &= ~(3<<(30-n)); \
++	*((volatile u_int32_t *)0xbd012008) |= ((r-1)<<(30-n)); \
++}
++
++
++
++#endif   /* _ASICREGS_H */
++
+Index: linux-2.4.27/drivers/net/wireless/Config.in
+===================================================================
+--- linux-2.4.27.orig/drivers/net/wireless/Config.in	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/wireless/Config.in	2008-03-25 00:22:56.000000000 +0300
+@@ -12,6 +12,16 @@
+    dep_tristate '    Apple Airport support (built-in)' CONFIG_APPLE_AIRPORT $CONFIG_HERMES
+ fi
+ 
++
++if [ "$CONFIG_NET_PCI" = "y" ]; then
++	dep_tristate '  RTL8185 802.11a/b/g PCI NIC support' CONFIG_RTL8185 $CONFIG_NET_PCI 
++      if [ "$CONFIG_RTL8185" = "y" -o "$CONFIG_RTL8185" = "m" ]; then
++         dep_bool '        Enable RTL865X L3/4 hw acceleration' CONFIG_RTL8185_HWACCEL  $CONFIG_RTL865X $CONFIG_EXPERIMENTAL
++	 if [ "$CONFIG_RTL8185_HWACCEL" = "y" ]; then
++	    hex '        vlan id used by RTL8185' CONFIG_RTL8185_VID
++	 fi
++      fi
++fi
+ if [ "$CONFIG_PCI" = "y" ]; then
+    dep_tristate '    Hermes in PLX9052 based PCI adaptor support (Netgear MA301 etc.) (EXPERIMENTAL)' CONFIG_PLX_HERMES $CONFIG_HERMES $CONFIG_EXPERIMENTAL
+    dep_tristate '    Hermes in TMD7160/NCP130 based PCI adaptor support (Pheecom WL-PCI etc.) (EXPERIMENTAL)' CONFIG_TMD_HERMES $CONFIG_HERMES $CONFIG_EXPERIMENTAL
+Index: linux-2.4.27/drivers/net/wireless/Makefile
+===================================================================
+--- linux-2.4.27.orig/drivers/net/wireless/Makefile	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/wireless/Makefile	2008-03-25 00:22:56.000000000 +0300
+@@ -25,4 +25,11 @@
+ obj-$(CONFIG_AIRO_CS)		+= airo_cs.o airo.o
+ obj-$(CONFIG_PCMCIA_ATMEL)	+= atmel_cs.o atmel.o
+ 
++
++subdir-$(CONFIG_RTL8185) += rtl8185
++ifeq ($(CONFIG_RTL8185),y)
++  obj-y += rtl8185/rtl8185.o
++endif
++
++
+ include $(TOPDIR)/Rules.make
+Index: linux-2.4.27/drivers/net/hrpci.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/drivers/net/hrpci.c	2008-03-25 00:22:56.000000000 +0300
+@@ -0,0 +1,404 @@
++#include <linux/types.h>
++#include  "rtl8650.h"
++//#include <csp/netdriverif.h>
++#include "pci.h"
++
++int  (*pci_interrupt_handler[PCI_SLOT_NUMBER][8])(pci_config_s*);
++
++void PCIBusIsr(void);
++
++pci_config_s *pci_slot[PCI_SLOT_NUMBER][8];
++
++#if 0 
++extern int *init_RTL8139nic(int slot, int func, pci_config_s *pcfg);
++
++//PCI Device Driver Table
++struct
++{
++    u32 VendorDeviceID;
++    int *(*pci_driver_init_entry)(int slot, int func, pci_config_s *pcfg);
++} PCIDriverList[] =
++{
++#if defined(CONFIG_8139TOO) || defined(CONFIG_8139CP)
++	0x813910EC, 			init_RTL8139nic,
++#endif 	
++	0
++};
++
++
++void pci_test(void)
++{
++	unsigned long io_data;
++	int i;
++	u32 tmp;
++
++    tmp = REG32(0xbc803000)&0xFFFF8FFF;
++    REG32(0xbc803000) = tmp|(4<<12);
++	
++	io_data = REG32(PCI_SLOT0_CONFIG_BASE+PCI_CONFIG_VENDER_DEV);
++	if (io_data!=0xFFFFFFFF) {
++	  printk("Slot 0 VENDER Device ID=%x\n", io_data);
++	  for(i=0;i<0x30;i+=4)
++	  {
++		io_data = REG32(PCI_SLOT0_CONFIG_BASE+PCI_CONFIG_VENDER_DEV+i);
++		printk("Slot 0 address %x=%x\n", i, io_data);
++	  }
++	};
++	
++	io_data = REG32(PCI_SLOT0_CONFIG_BASE+PCI_CONFIG_VENDER_DEV);
++	if (io_data!=0xFFFFFFFF) {
++	  printk("Slot 1 VENDER Device ID=%x\n", io_data);
++	  for(i=0;i<0x30;i+=4)
++	  {
++		io_data = REG32(PCI_SLOT0_CONFIG_BASE+PCI_CONFIG_VENDER_DEV+i);
++		printk("Slot 1 address %x=%x\n", i, io_data);
++	  }
++	}; 
++}
++#endif /* if 0 */
++
++/*
++scan the resource needed by PCI device
++*/
++void scan_resource(pci_config_s *pci_config, int slot_num, int dev_function, u32 config_base)
++{
++  int i;
++  u32 BaseAddr, data;
++
++    BaseAddr = config_base+PCI_CONFIG_BASE0;
++    for (i=0;i<6;i++) {  //detect resource usage
++    	REG32(BaseAddr) = 0xFFFFFFFF;
++    	data = REG32(BaseAddr);
++    	if (data!=0) {  //resource request exist
++    	    int j;
++    	    if (data&1) {  //IO space
++    	    	pci_config->BAR[i].Type = IO_SPACE;
++  	        //scan resource size
++  	        for (j=2;j<32;j++)
++  	            if (data&(1<<j)) break;
++  	        if (j<32) pci_config->BAR[i].Size = 1<<j;
++  	        else  pci_config->BAR[i].Size = 0;
++    	    } else {  //Memory space
++    	    	pci_config->BAR[i].Type = MEM_SPACE;
++    	    	//bus width
++    	    	if ((data&0x0006)==4) pci_config->BAR[i].Width = WIDTH64; //bus width 64
++    	    	else pci_config->BAR[i].Width = WIDTH32;  //bus width 32
++    	    	//prefetchable
++    	    	if (data&0x0008) pci_config->BAR[i].Prefetch = 1; //prefetchable
++    	    	else pci_config->BAR[i].Prefetch = 0;  //no prefetch
++  	        //scan resource size
++  	        if (pci_config->BAR[i].Width==WIDTH32) {
++  	          for (j=4;j<32;j++)
++  	            if (data&(1<<j)) break;
++  	          if (j<32) pci_config->BAR[i].Size = 1<<j;
++  	          else  pci_config->BAR[i].Size = 0;
++  	        } else //width64 is not support
++  	          pci_config->BAR[i].Size = 0;
++    	    };
++    	} else {  //no resource
++    	    memset(&(pci_config->BAR[i]), 0, sizeof(base_address_s));    		
++    	};
++	BaseAddr += 4;  //next base address
++    };
++}
++
++
++/*
++scan the PCI bus, save config information into pci_slot,
++return the number of PCI functions
++*/
++int pci_scan(void)
++{
++  u32 config_base, data;
++  int i, dev_function, dev_num;
++  
++    dev_num = 0;
++    for (i=0;i<PCI_SLOT_NUMBER;i++) {  //probe 2 pci slots
++      //if (i==0) config_base = PCI_SLOT0_CONFIG_BASE;
++      //else 
++      config_base = PCI_SLOT0_CONFIG_BASE;
++      dev_function=0;
++      while (0!=REG32(config_base+PCI_CONFIG_VENDER_DEV)) {  //pci device exist
++          pci_slot[i][dev_function] = kmalloc(sizeof(pci_config_s));
++          pci_slot[i][dev_function]->Config_Base = config_base;
++          pci_slot[i][dev_function]->Status = DISABLE;
++          pci_slot[i][dev_function]->Vendor_Device_ID = REG32(config_base+PCI_CONFIG_VENDER_DEV);
++          data = REG32(config_base+PCI_CONFIG_CLASS_REVISION);
++          pci_slot[i][dev_function]->Revision_ID = data&0x00FF;
++          pci_slot[i][dev_function]->Class_Code = data>>8;
++          pci_slot[i][dev_function]->Header_Type = (REG32(config_base+PCI_CONFIG_CACHE)>>16)&0x000000FF;
++          pci_slot[i][dev_function]->SubSystemVendor_ID = REG32(config_base+PCI_CONFIG_SUBSYSTEMVENDOR);
++          scan_resource(pci_slot[i][dev_function], i, dev_function, config_base);  //probe resource request
++          printk("\nPCI device exists: slot %d function %d VendorID %x DeviceID %x\n", i, dev_function, 
++              pci_slot[i][dev_function]->Vendor_Device_ID&0x0000FFFF,
++              pci_slot[i][dev_function]->Vendor_Device_ID>>16);
++          dev_num++;
++          dev_function++;
++          config_base += dev_function*64*4;  //next function's config base
++          if (!(pci_slot[i][0]->Header_Type&0x80)) goto stop_probe;  //single function card
++          if (dev_function>=8) goto stop_probe;  //only 8 functions allow in a PCI card
++      };
++stop_probe:      
++    };
++    return dev_num;
++}
++
++/*
++Check if vendor_device_id is in penable_list. If penable_list==NULL, all devices are enabled.
++rtn -1:in list, 0:not in list
++*/
++int is_device_enable(u32 *penable_list, int list_num, u32 vendor_device_id)
++{
++  int i;
++  
++    if (vendor_device_id==0) return 0;  //this config space is null
++    
++    if (penable_list==NULL) return -1;  //no list, return in list
++    
++    for (i=0;i<list_num;i++)
++      if (penable_list[i]==vendor_device_id) return -1;
++    return 0;
++}
++
++/*
++sort resource by its size
++*/
++void bubble_sort(int space_size[PCI_SLOT_NUMBER*8*6][2], int num)
++{
++  int i, j;
++  int tmp_swap[2];
++  
++    for (i=0;i<num-1;i++) {
++    	for (j=i;j<num-1;j++) {
++          if (space_size[j][1]>space_size[j+1][1]) {
++            tmp_swap[0] = space_size[j][0];
++            tmp_swap[1] = space_size[j][1];
++            space_size[j][0] = space_size[j+1][0];
++            space_size[j][1] = space_size[j+1][1];
++            space_size[j+1][0] = tmp_swap[0];
++            space_size[j+1][1] = tmp_swap[1];
++          };
++        };
++    };
++}
++
++/*
++assign memory location to MEM & IO space
++*penable_list: device resource assign list array of VENDOR_DEVICE number. Only devices 
++        with vendor_device_id in plist will assign resource.
++        All devices should assign resource if plist==NULL
++list_num: number of item in list
++rtn -1:OK, 0:fail
++*/
++int assign_resource(u32 *penable_list, int list_num)
++{
++  int i, slot, func, BARnum;
++  int mem_space_size[PCI_SLOT_NUMBER*8*6][2], io_space_size[PCI_SLOT_NUMBER*8*6][2];  //[0]:store device index, [1]:store resource size
++  int mem_idx, io_idx, total_size, tmp;
++  u16 config_command[PCI_SLOT_NUMBER][8];  //record config space resource usage, 1:use IO, 2:use memory, 3:both
++  
++    memset(mem_space_size, 0, sizeof(mem_space_size));
++    memset(io_space_size, 0, sizeof(io_space_size));
++    memset(config_command, 0, sizeof(config_command));
++    //collect resource
++    mem_idx = io_idx =0;
++    for (slot=0;slot<PCI_SLOT_NUMBER;slot++) {
++      if (pci_slot[slot][0]==0) continue;  //this slot is null      
++      if (pci_slot[slot][0]->Vendor_Device_ID==0) continue;  //this slot is null      
++      for (func=0;func<8;func++) {
++        if (pci_slot[slot][func]==0) break;
++        pci_slot[slot][func]->Status = DISABLE;
++        if (is_device_enable(penable_list, list_num, pci_slot[slot][func]->Vendor_Device_ID)) {   
++            pci_slot[slot][func]->Status = ENABLE;
++            for (BARnum=0;BARnum<6;BARnum++) {
++      		if (pci_slot[slot][func]->BAR[BARnum].Type==MEM_SPACE){  //memory space
++      		    config_command[slot][func] |= CMD_MEM_SPACE;  //this device use Memory
++      		    mem_space_size[mem_idx][0] = (slot<<16)|(func<<8)|(BARnum<<0);
++      		    mem_space_size[mem_idx][1] = pci_slot[slot][func]->BAR[BARnum].Size;
++      		    mem_idx++;
++      		} else if (pci_slot[slot][func]->BAR[BARnum].Type==IO_SPACE){  //io space
++      		    config_command[slot][func] |= CMD_IO_SPACE;  //this device use IO
++      		    io_space_size[io_idx][0] = (slot<<16)|(func<<8)|(BARnum<<0);
++      		    io_space_size[io_idx][1] = pci_slot[slot][func]->BAR[BARnum].Size;
++      		    io_idx++;
++      		};
++	    };  //for (BARnum=0;BARnum<6;BARnum++) 
++        };  //if (is_device_enable(
++      };  //for (func=0;func<8;func++)
++    };  //for (slot=0;slot<PCI_SLOT_NUMBER;slot++)
++    //sort by size
++    if (mem_idx>1) bubble_sort(mem_space_size, mem_idx);
++    if (io_idx>1)  bubble_sort(io_space_size, io_idx);
++    
++    //check mem total size
++    total_size = 0;
++    for (i=0;i<mem_idx;i++) {
++    	tmp = mem_space_size[i][1]-1;
++        total_size = (total_size+tmp)&(~tmp);
++        total_size = total_size + mem_space_size[i][1];
++    };
++    if (total_size>PCI_MEM_SPACE_SIZE) return 0;  //lack of memory space resource
++
++    //check io total size
++    total_size = 0;
++    for (i=0;i<io_idx;i++) {
++    	tmp = io_space_size[i][1]-1;
++        total_size = (total_size+tmp)&(~tmp);
++        total_size = total_size + io_space_size[i][1];
++    };
++    if (total_size>PCI_IO_SPACE_SIZE) return 0;  //lack of io space resource
++    
++    //assign memory space
++    total_size = 0;
++    for (i=0;i<mem_idx;i++) {
++    	tmp = mem_space_size[i][1]-1;
++        total_size = (total_size+tmp)&(~tmp);
++        tmp = mem_space_size[i][0];
++        //assign to struct
++        pci_slot[(tmp>>16)][(tmp>>8)&0x00FF]->BAR[tmp&0x00FF].Address = PCI_SLOT_MEM_BASE+total_size;
++        //get BAR address and assign to PCI device
++        tmp = ((tmp>>16)?PCI_SLOT0_CONFIG_BASE:PCI_SLOT0_CONFIG_BASE)   //SLOT
++              +((tmp>>8)&0x00FF)*64*4					//function
++              +((tmp&0x00FF)*4+PCI_CONFIG_BASE0);			//BAR bumber
++        REG32(tmp) = (PCI_SLOT_MEM_BASE+total_size)&0x1FFFFFFF;  //map to physical address
++        total_size = total_size + mem_space_size[i][1];  //next address
++    };
++    //assign IO space
++    total_size = 0;
++    for (i=0;i<io_idx;i++) {
++    	tmp = io_space_size[i][1]-1;
++        total_size = (total_size+tmp)&(~tmp);
++        tmp = io_space_size[i][0];
++        //assign to struct
++        pci_slot[(tmp>>16)][(tmp>>8)&0x00FF]->BAR[tmp&0x00FF].Address = PCI_SLOT_IO_BASE+total_size;
++        //get BAR address and assign to PCI device
++        tmp = ((tmp>>16)?PCI_SLOT0_CONFIG_BASE:PCI_SLOT0_CONFIG_BASE)   //SLOT
++              +((tmp>>8)&0x00FF)*64*4					//function
++              +((tmp&0x00FF)*4+PCI_CONFIG_BASE0);			//BAR bumber
++        REG32(tmp) = (PCI_SLOT_IO_BASE+total_size)&0x1FFFFFFF;  //map to physical address
++        total_size = total_size + io_space_size[i][1];  //next address
++    };
++    //enable device
++    for (slot=0;slot<PCI_SLOT_NUMBER;slot++) {
++      if (pci_slot[slot][0]==0) continue;  //this slot is null      
++      if (pci_slot[slot][0]->Vendor_Device_ID==0) continue;  //this slot is null      
++      for (func=0;func<8;func++) {
++        if (pci_slot[slot][func]==0) continue;  //this slot:function is null      
++        if (pci_slot[slot][func]->Vendor_Device_ID==0) continue;  //this slot:function is null      
++        //get config base address
++        tmp = (slot?PCI_SLOT0_CONFIG_BASE:PCI_SLOT0_CONFIG_BASE)   //SLOT
++              +func*64*4;					   //function
++        //set Max_Lat & Min_Gnt, irq
++	REG32(tmp+PCI_CONFIG_INT_LINE) = 0x40200100|(PCI_ILEV); //IRQ level
++
++	//enable cache line size, lantancy
++	REG32(tmp+PCI_CONFIG_CACHE) = (REG32(tmp+PCI_CONFIG_CACHE)&0xFFFF0000)|0x2004;  //32 byte cache, 20 latency
++        //set command register
++        //REG32(tmp+PCI_CONFIG_COMMAND) = (REG32(tmp+PCI_CONFIG_COMMAND)&0xFFFF0000)|config_command[slot][func]
++        //					|CMD_BUS_MASTER|CMD_WRITE_AND_INVALIDATE|CMD_PARITY_ERROR_RESPONSE;
++        REG16(tmp+PCI_CONFIG_COMMAND) = config_command[slot][func]
++        					|CMD_BUS_MASTER|CMD_PARITY_ERROR_RESPONSE;//|CMD_WRITE_AND_INVALIDATE;
++      };
++    };
++    
++    return -1;
++}
++
++/*
++scan pci bus, assign Memory & IO space to PCI card, and call init_XXXX to enable & register PCI device
++rtn -1:ok, 0:fail
++*/
++int init_pci(void)
++{
++  int function_num;
++  int i, j, idx;
++  u32 tmp;
++
++   
++  // REG32(GIMR) = REG32(GIMR)&(~PCIIE);  //disable int
++    //set PCI bus divisor
++    tmp = REG32(0xbc803000)&0xFFFF8FFF;
++    REG32(0xbc803000) = tmp|(2<<12);
++
++    memset(pci_slot, 0, 4*PCI_SLOT_NUMBER*8);
++    function_num = pci_scan();
++    if (function_num==0) {
++    	printk("No PCI device exist!\n");
++    	return 0;
++    };
++    //auto assign resource
++    if (!assign_resource(NULL, 0)) {
++    	printk("PCI Resource assignment failed!\n");
++    	return 0;
++    };
++    
++    printk("Find Total %d PCI function\n", function_num);
++    return 0;
++#if 0   
++    //register PCI general ISR
++    /*memset(pci_interrupt_handler, 0, sizeof(pci_interrupt_handler));
++    REG32(IRR) = REG32(IRR) | ((PCI_ILEV) << PCIIRS_OFFSET);
++    int_Register(PCI_ILEV, PCIBusIsr);*/
++    
++    //pci device init, do not put 2 same card in PCI slots!!!!!!!
++    for (i=0;i<PCI_SLOT_NUMBER;i++) {
++      if (pci_slot[i][0]==0) continue;  //this slot is null      
++      if (pci_slot[i][0]->Vendor_Device_ID==0) continue;  //this slot is null      
++      for (j=0;j<8;j++) {
++        if (pci_slot[i][j]==0) continue;  //this function is null
++        if (pci_slot[i][j]->Vendor_Device_ID==0) continue;  //this function is null
++        if (pci_slot[i][j]->Status==DISABLE) continue;  //this function is disabled
++        idx = 0;
++        while (PCIDriverList[idx].VendorDeviceID!=0) {  //find match ID
++          if (PCIDriverList[idx].VendorDeviceID==pci_slot[i][j]->Vendor_Device_ID)
++              (*PCIDriverList[idx].pci_driver_init_entry)(i, j, pci_slot[i][j]);
++          idx++;
++        };
++      };
++    };
++
++//code for 2 8139c+
++    //two_pci();
++    
++//code for 1 8139c/8139c+
++    //REG32(GIMR) = REG32(GIMR)|PCIIE;  //enable pci int
++    //splx(0);
++    while (1);
++    
++    return -1;
++#endif /* 0 */    
++}
++#if 0 
++/*
++for PCI device to register ISR
++*/
++u32 pci_int_Register(int slot_num, int func_num, int (*pci_int_Handler)(pci_config_s*))
++{
++    if ((slot_num >= PCI_SLOT_NUMBER)||(slot_num<0)||(func_num>=8)||(func_num<0))
++        return -1;
++    
++    pci_interrupt_handler[slot_num][func_num] = pci_int_Handler;
++
++    return 0;
++}
++
++/*
++main ISR for all PCI device
++*/
++void PCIBusIsr(void)
++{
++  int i, j, serviced;
++  
++    //if (serviced==1)
++   // REG32(GISR)=PCIIP;  //PCI IRQ pending clear
++    serviced = 0;
++    //polling each device ISR for PCI IRQ
++    for (i=0;i<PCI_SLOT_NUMBER;i++) 
++      for (j=0;j<8;j++)
++        if ( pci_interrupt_handler[i][j] != NULL ) {
++          if ((*pci_interrupt_handler[i][j])(pci_slot[i][j]))  {  //IRQ is handled
++                  serviced=1;
++          }
++        };
++}
++#endif /* if 0 */
+\ No newline at end of file
+Index: linux-2.4.27/drivers/pci/pci.c
+===================================================================
+--- linux-2.4.27.orig/drivers/pci/pci.c	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/pci/pci.c	2008-03-25 00:22:56.000000000 +0300
+@@ -575,6 +575,10 @@
+  */
+ int pci_request_regions(struct pci_dev *pdev, char *res_name)
+ {
++#ifdef CONFIG_RTL865X
++	printk("%s: PCI regions already reserved\n",__FUNCTION__);
++	return 0;
++#else	
+ 	int i;
+ 	
+ 	for (i = 0; i < 6; i++)
+@@ -592,6 +596,8 @@
+ 		pci_release_region(pdev, i);
+ 		
+ 	return -EBUSY;
++#endif
++
+ }
+ 
+ 
+@@ -1382,7 +1388,7 @@
+ 	dev->class = class;
+ 	class >>= 8;
+ 
+-	DBG("Found %02x:%02x [%04x/%04x] %06x %02x\n", dev->bus->number, dev->devfn, dev->vendor, dev->device, class, dev->hdr_type);
++	printk("Found %02x:%02x [%04x/%04x] %06x %02x\n", dev->bus->number, dev->devfn, dev->vendor, dev->device, class, dev->hdr_type);
+ 
+ 	/* "Unknown power state" */
+ 	dev->current_state = 4;
+@@ -1474,6 +1480,7 @@
+ 	int is_multi = 0;
+ 	u8 hdr_type;
+ 
++
+ 	for (func = 0; func < 8; func++, temp->devfn++) {
+ 		if (pci_read_config_byte(temp, PCI_HEADER_TYPE, &hdr_type))
+ 			continue;
+@@ -1535,7 +1542,6 @@
+ 		dev0.devfn = devfn;
+ 		pci_scan_slot(&dev0);
+ 	}
+-
+ 	/*
+ 	 * After performing arch-dependent fixup of the bus, look behind
+ 	 * all PCI-to-PCI bridges on this bus.
+@@ -2112,6 +2118,8 @@
+ void __devinit  pci_init(void)
+ {
+ 	struct pci_dev *dev;
++	rtl_pci_init();
++	//All resources are assigned after this call, before pcibios_init()
+ 
+ 	pcibios_init();
+ 
+Index: linux-2.4.27/drivers/char/serial.c
+===================================================================
+--- linux-2.4.27.orig/drivers/char/serial.c	2008-03-25 00:22:56.000000000 +0300
++++ linux-2.4.27/drivers/char/serial.c	2008-03-25 00:24:56.000000000 +0300
+@@ -1323,6 +1323,7 @@
+ 	/*
+ 	 * Allocate the IRQ if necessary
+ 	 */
++#if 0
+ 	if (state->irq && (!IRQ_ports[state->irq] ||
+ 			  !IRQ_ports[state->irq]->next_port)) {
+ 		if (IRQ_ports[state->irq]) {
+@@ -1339,10 +1340,19 @@
+ 			goto errout;
+ #endif /* CONFIG_SERIAL_SHARE_IRQ */
+ 		} else 
++#endif
+ 			handler = rs_interrupt_single;
+-
++#if 0
+ 		retval = request_irq(state->irq, handler, SA_SHIRQ,
+ 				     "serial", &IRQ_ports[state->irq]);
++#else
++		
++		retval = request_irq(state->irq, handler, 0,
++		"serial", 0);
++
++//		retval = request_irq(ICU_UART0, handler, 0,
++//		"serial", 0);
++#endif
+ 		if (retval) {
+ 			if (capable(CAP_SYS_ADMIN)) {
+ 				if (info->tty)
+@@ -1352,7 +1362,8 @@
+ 			}
+ 			goto errout;
+ 		}
+-	}
++
++/*	}*/
+ 
+ 	/*
+ 	 * Insert serial port into IRQ chain.
+@@ -1673,7 +1684,8 @@
+ 			/* Special case since 134 is really 134.5 */
+ 			quot = (2*baud_base / 269);
+ 		else if (baud)
+-			quot = baud_base / baud;
++			//quot = baud_base / baud;
++			quot = GetSysClockRate() / 16 / baud; /* yjlou: Divisor Latch is considered by SysClkRate. */
+ 	}
+ 	/* If the quotient is zero refuse the change */
+ 	if (!quot && old_termios) {
+@@ -5475,7 +5487,8 @@
+ 		panic("Couldn't register serial driver\n");
+ 	if (tty_register_driver(&callout_driver))
+ 		panic("Couldn't register callout driver\n");
+-	
++//+++Add by shiang for devfs support 2004/10/20
++#ifdef CONFIG_DEVFS_FS
+ 	for (i = 0, state = rs_table; i < NR_PORTS; i++,state++) {
+ 		state->magic = SSTATE_MAGIC;
+ 		state->line = i;
+@@ -5534,40 +5547,12 @@
+ #ifdef ENABLE_SERIAL_PNP
+        probe_serial_pnp();
+ #endif
++#endif  //shiang: CONFIG_DEVFS_FS
++//---Add by shiang for devfs support 2004/10/20
+ 	return 0;
+ }
+ 
+ /*
+- * This is for use by architectures that know their serial console 
+- * attributes only at run time. Not to be invoked after rs_init().
+- */
+-int __init early_serial_setup(struct serial_struct *req)
+-{
+-	int i = req->line;
+-
+-	if (i >= NR_IRQS)
+-		return(-ENOENT);
+-	rs_table[i].magic = 0;
+-	rs_table[i].baud_base = req->baud_base;
+-	rs_table[i].port = req->port;
+-	if (HIGH_BITS_OFFSET)
+-		rs_table[i].port += (unsigned long) req->port_high << 
+-							HIGH_BITS_OFFSET;
+-	rs_table[i].irq = req->irq;
+-	rs_table[i].flags = req->flags;
+-	rs_table[i].close_delay = req->close_delay;
+-	rs_table[i].io_type = req->io_type;
+-	rs_table[i].hub6 = req->hub6;
+-	rs_table[i].iomem_base = req->iomem_base;
+-	rs_table[i].iomem_reg_shift = req->iomem_reg_shift;
+-	rs_table[i].type = req->type;
+-	rs_table[i].xmit_fifo_size = req->xmit_fifo_size;
+-	rs_table[i].custom_divisor = req->custom_divisor;
+-	rs_table[i].closing_wait = req->closing_wait;
+-	return(0);
+-}
+-
+-/*
+  * register_serial and unregister_serial allows for 16x50 serial ports to be
+  * configured at run-time, to support PCMCIA modems.
+  */
+@@ -5862,7 +5847,7 @@
+ 	static struct async_struct *info;
+ 	struct serial_state *state;
+ 	unsigned cval;
+-	int	baud = 9600;
++	int	baud = UART_BASE_BAUD;
+ 	int	bits = 8;
+ 	int	parity = 'n';
+ 	int	doflow = 0;
+@@ -5950,7 +5935,7 @@
+ 	info->io_type = state->io_type;
+ 	info->iomem_base = state->iomem_base;
+ 	info->iomem_reg_shift = state->iomem_reg_shift;
+-	quot = state->baud_base / baud;
++	quot = GetSysClockRate() / 16 / baud; /* yjlou: Divisor Latch is considered by SysClkRate. */
+ 	cval = cflag & (CSIZE | CSTOPB);
+ #if defined(__powerpc__) || defined(__alpha__)
+ 	cval >>= 8;
+Index: linux-2.4.27/drivers/net/Config.in
+===================================================================
+--- linux-2.4.27.orig/drivers/net/Config.in	2008-03-25 00:19:41.000000000 +0300
++++ linux-2.4.27/drivers/net/Config.in	2008-03-25 00:22:56.000000000 +0300
+@@ -202,11 +202,30 @@
+       dep_tristate '    Novell/Eagle/Microdyne NE3210 EISA support (EXPERIMENTAL)' CONFIG_NE3210 $CONFIG_EISA $CONFIG_EXPERIMENTAL
+       dep_tristate '    Racal-Interlan EISA ES3210 support (EXPERIMENTAL)' CONFIG_ES3210 $CONFIG_EISA $CONFIG_EXPERIMENTAL
+       dep_tristate '    RealTek RTL-8139 C+ PCI Fast Ethernet Adapter support (EXPERIMENTAL)' CONFIG_8139CP $CONFIG_PCI $CONFIG_EXPERIMENTAL
++      dep_bool '      Support for External PHY' CONFIG_8139CP_EXTERNAL_PHY $CONFIG_8139CP $CONFIG_EXPERIMENTAL
++	  if [ "$CONFIG_8139CP_EXTERNAL_PHY" = "y" ]; then
++        int '        The CP uses this Phy' CONFIG_8139CP_PHY_NUM 32
++	  else
++		define_int CONFIG_8139CP_PHY_NUM 32
++	  fi
++      if [ "$CONFIG_8139CP" = "y" -o "$CONFIG_8139CP" = "m" ]; then
++         dep_bool '        Enable RTL865X L3/4 hw acceleration' CONFIG_8139CP_HWACCEL  $CONFIG_RTL865X
++	 if [ "$CONFIG_8139CP_HWACCEL" = "y" ]; then
++	    hex '        vlan id used by 8139C+' CONFIG_8139CP_VID
++	 fi
++      fi
+       dep_tristate '    RealTek RTL-8139 PCI Fast Ethernet Adapter support' CONFIG_8139TOO $CONFIG_PCI
+       dep_mbool '      Use PIO instead of MMIO' CONFIG_8139TOO_PIO $CONFIG_8139TOO
+       dep_mbool '      Support for uncommon RTL-8139 rev. K (automatic channel equalization)' CONFIG_8139TOO_TUNE_TWISTER $CONFIG_8139TOO
+       dep_mbool '      Support for older RTL-8129/8130 boards' CONFIG_8139TOO_8129 $CONFIG_8139TOO
+       dep_mbool '      Use older RX-reset method' CONFIG_8139_OLD_RX_RESET $CONFIG_8139TOO
++      if [ "$CONFIG_8139TOO" = "y" -o "$CONFIG_8139TOO" = "m" ]; then
++         dep_bool '        Enable RTL865X L3/4 hw acceleration' CONFIG_8139TOO_HWACCEL  $CONFIG_RTL865X
++	 if [ "$CONFIG_8139TOO_HWACCEL" = "y" ]; then
++	    hex '        vlan id used by 8139A/B/C/D' CONFIG_8139TOO_VID
++	 fi
++      fi
++	dep_tristate '    ORIGINAL RealTek RTL-8139 PCI Fast Ethernet Adapter support' CONFIG_RTL8139 $CONFIG_PCI
+       dep_tristate '    SiS 900/7016 PCI Fast Ethernet Adapter support' CONFIG_SIS900 $CONFIG_PCI
+       dep_tristate '    SMC EtherPower II' CONFIG_EPIC100 $CONFIG_PCI
+       dep_tristate '    Sundance Alta support' CONFIG_SUNDANCE $CONFIG_PCI
+Index: linux-2.4.27/drivers/mtd/maps/Makefile
+===================================================================
+--- linux-2.4.27.orig/drivers/mtd/maps/Makefile	2008-03-25 00:22:56.000000000 +0300
++++ linux-2.4.27/drivers/mtd/maps/Makefile	2008-03-25 00:22:56.000000000 +0300
+@@ -80,6 +80,10 @@
+ obj-$(CONFIG_MTD_BLACKFIN_533)	+= bf533-flash.o
+ obj-$(CONFIG_MTD_COBRA5282)	+= cobra5282.o
+ obj-$(CONFIG_MTD_FEITH)		+= feith.o
++#### +++ Modify by shiang 2004/08/27 for MTD
++#obj-$(CONFIG_MTD_RTL865X)      += rtl865x_flash.o
++obj-$(CONFIG_MTD_RTL865X)       += RealTek865x_flash.o
++#### --- Modify by shiang 2004/08/27 for MTD
+ 
+ include $(TOPDIR)/Rules.make
+ 

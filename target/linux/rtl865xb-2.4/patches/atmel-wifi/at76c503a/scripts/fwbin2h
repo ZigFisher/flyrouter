@@ -1,0 +1,96 @@
+#!/usr/bin/env python
+#
+# $Id: fwbin2h,v 1.1 2003/03/30 11:10:52 jal2 Exp $
+#
+# file: fwbin2h
+#
+# This file converts binary firmware files (e.g. extracted
+# from Windows drivers) into a C header file.
+#
+# invocation:
+# fwbin2h <internal fw> <external fw> <radio chipset>
+#
+# which expects the internal and external firmware part in the
+# two files <internal fw> <external fw>.
+# please use: <radio chipset> ::= 503rfmd | i3861 | i3863 | 505rfmd
+# output will be into the file: fw_<radio chipset>_<version>.h
+# where the version is extracted from the internal fw part.
+
+### imports
+import sys
+import string
+import os
+import re
+
+debug = 1
+known_radios = ["503rfmd","i3861","i3863","505rfmd"]
+### main ###
+if __name__ == '__main__':            
+    if len(sys.argv) != 4:
+        sys.stderr.write("call: %s <internal fw> <external fw> <radio name>\n" %
+                         sys.argv[0])
+        sys.exit(1)
+
+    radio = sys.argv[3]
+    if not (radio in known_radios):
+        sys.stderr.write("#WRG unknown radio name %s (not in %s)\n" %
+                         (radio,known_radios))
+        
+    f = open(sys.argv[1])
+    internal_image = f.read()
+    f.close()
+    f = open(sys.argv[2])
+    external_image = f.read()
+    f.close()
+    pos = string.find(internal_image,"ATMEL_AP")
+    if pos >= 0:
+        major = ord(internal_image[pos+0x34])
+        minor = ord(internal_image[pos+0x35])
+        sub = ord(internal_image[pos+0x36])
+        build = ord(internal_image[pos+0x37])
+        version = "%d.%d.%d-%d" % (major,minor,sub,build)
+    else:
+        version = "unknown"
+    if debug: print "#DBG got version " + version
+    
+    # write the output file
+    outname = "fw-" + radio + "-" + version + ".h"
+    f = open(outname,"w")
+    f.write("""
+/*
+The following firmware has been extracted from the binary files
+%s and %s (all licenses of these files remain valid for this one)
+
+Target:  AT76C503 with %s radio
+Version: %s
+*/
+""" % (sys.argv[1], sys.argv[2], radio, version))
+    
+    f.write("#define FW_%s_INTERNAL { \\\n" % string.upper(radio))
+    i=0
+    for b in internal_image:
+        f.write("0x%02X," % ord(b))
+        i = i + 1
+        if i % 16 == 0:
+            f.write(" \\\n")
+    f.write("}\n\n");
+    
+    f.write("#define FW_%s_EXTERNAL { \\\n" % string.upper(radio))
+    i=0
+    for b in external_image:
+        f.write("0x%02X," % ord(b))
+        i = i + 1
+        if i % 16 == 0:
+            f.write(" \\\n")
+    f.write("}\n\n");
+    
+    f.close()
+
+
+
+
+
+
+
+
+

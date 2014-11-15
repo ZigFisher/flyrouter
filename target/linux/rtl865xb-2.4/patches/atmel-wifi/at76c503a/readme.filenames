@@ -1,0 +1,11 @@
+fw-pkg-...	firmware header files in new (package) format
+		as used for firmware download class too for
+		static include
+fw-empty.h	empty static firmware header used when fw is
+		downloaded from user space
+fw-...		old firmware files (needed by gen_fw.c to
+		generate the new, binary fw files)
+at76c50[35]-*fw binary firmware files for download from user space
+gen_fw.c	C prog to generate at76c50[35]-*fw files
+		from fw-* files
+

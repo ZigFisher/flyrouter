@@ -1,0 +1,206 @@
+diff -urN linux-2.4.26-rp614v4v106/drivers/i2c/i2c-rtl865x.c linux-2.4.26-rp614v4v106_pa/drivers/i2c/i2c-rtl865x.c
+--- linux-2.4.26-rp614v4v106/drivers/i2c/i2c-rtl865x.c	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.26-rp614v4v106_pa/drivers/i2c/i2c-rtl865x.c	2009-03-02 23:44:08.000000000 +0200
+@@ -0,0 +1,190 @@
++/* linux/drivers/i2c/i2c-rtl865x.c 
++
++   Copyright (c) 2006 Steve Tsai <steve@synso.com>
++   Copyright (c) 2009 Vladislav Moskovets <dev@vlad.org.ua>
++
++   RTL865x I2C bus on GPIO pins
++
++   Based on i2c-velleman.c Copyright (C) 1995-96, 2000 Simon G. Vogl
++
++   This program is free software; you can redistribute it and/or modify
++   it under the terms of the GNU General Public License as published by
++   the Free Software Foundation; either version 2 of the License, or
++   (at your option) any later version.
++   
++   This program is distributed in the hope that it will be useful,
++   but WITHOUT ANY WARRANTY; without even the implied warranty of
++   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++   GNU General Public License for more details.
++   
++   You should have received a copy of the GNU General Public License
++   along with this program; if not, write to the Free Software
++   Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++
++Dez/2006 : dl4huf
++   Modified for correct open collector emulation on gpio
++   Add support for all gpio0 to gpio7
++   Add support for switch-led as gpio8 to gpio22
++
++*/
++
++#include <linux/config.h>
++#include <linux/module.h>
++#include <linux/errno.h>
++#include <linux/kernel.h>
++#include <linux/init.h>
++#include <linux/i2c.h>
++#include <linux/i2c-algo-bit.h>
++#include <asm/io.h>
++
++#include <linux/delay.h>
++
++#include <../drivers/net/re865x/gpio.h>
++
++
++#define dbg if(1)printk
++
++static int scl = GPIO_ID(GPIO_PORT_A, 2);
++static int sda = GPIO_ID(GPIO_PORT_A, 3);
++
++// #define GPIO_PORT0		(*(unsigned long *)0xb20000b8)
++// #define REG_BASE		(0xb2000000)
++
++static void rtl865x_gpio_set(unsigned int gpio_id, int state)
++{
++	_rtl865x_initGpioPin(gpio_id, GPIO_PERI_GPIO, GPIO_DIR_OUT, GPIO_INT_DISABLE);
++	_rtl865x_setGpioDataBit(gpio_id, state);
++}
++
++
++static int rtl865x_gpio_get(int gpio_id)
++{
++	unsigned int data;
++
++	_rtl865x_initGpioPin(gpio_id, GPIO_PERI_GPIO, GPIO_DIR_IN, GPIO_INT_DISABLE);
++	if (_rtl865x_getGpioDataBit( gpio_id, &data ) == SUCCESS)
++		return data;
++	
++	dbg("_rtl865x_getGpioDataBit() failed\n");
++	return -1;
++}
++
++static void bit_rtl865x_setscl(void *data, int state)
++{
++	rtl865x_gpio_set(scl, state);
++}
++
++static void bit_rtl865x_setsda(void *data, int state)
++{
++	rtl865x_gpio_set(sda, state);
++} 
++
++static int bit_rtl865x_getscl(void *data)
++{
++	return rtl865x_gpio_get(scl);
++}
++
++static int bit_rtl865x_getsda(void *data)
++{
++	return rtl865x_gpio_get(sda);
++}
++
++static int bit_rtl865x_reg(struct i2c_client *client)
++{
++	return 0;
++}
++
++static int bit_rtl865x_unreg(struct i2c_client *client)
++{
++	return 0;
++}
++
++static void bit_rtl865x_inc_use(struct i2c_adapter *adap)
++{
++	MOD_INC_USE_COUNT;
++}
++
++static void bit_rtl865x_dec_use(struct i2c_adapter *adap)
++{
++	MOD_DEC_USE_COUNT;
++}
++
++/* ------------------------------------------------------------------------
++ * Encapsulate the above functions in the correct operations structure.
++ * This is only done when more than one hardware adapter is supported.
++ */
++
++static struct i2c_algo_bit_data bit_rtl865x_data = {
++	NULL,
++	bit_rtl865x_setsda,
++	bit_rtl865x_setscl,
++	bit_rtl865x_getsda,
++	bit_rtl865x_getscl,
++	5, 5, 100,		/* waits, timeout, around 62,5KHz SCL-Clock */
++};
++
++static struct i2c_adapter bit_rtl865x_ops = {
++	.name      	= "RTL865x I2C",
++	.id		  	= I2C_HW_B_VELLE,
++	.algo_data	   = &bit_rtl865x_data,
++	.inc_use	   = bit_rtl865x_inc_use,
++	.dec_use	   = bit_rtl865x_dec_use,
++	.client_register   = bit_rtl865x_reg,
++	.client_unregister = bit_rtl865x_unreg,
++};
++
++int i2c_bitrtl865x_init(void)
++{
++	printk(KERN_INFO "i2c-rtl865x.o: %s Driver V1.1\n",bit_rtl865x_ops.name);
++	printk(KERN_INFO "i2c-rtl865x.o: SCL=GPIO-%02u, SDA=GPIO-%02u\n",scl,sda);
++
++	if (scl < 0 || sda < 0 || scl == sda || scl > 22 || sda > 22) {
++		printk(KERN_ERR "i2c-rtl865x.o: scl and sda must be specified between 0..22\n");
++		return -EINVAL;
++	}
++
++	if (i2c_bit_add_bus(&bit_rtl865x_ops) < 0) {
++		printk(KERN_ERR "i2c-rtl865x.o: adapter %s registration failed\n",
++														bit_rtl865x_ops.name);
++		return -ENODEV;
++	}
++
++/* Configure GPIOs as open collector outputs (input) */
++	rtl865x_gpio_set(scl, 1);
++	rtl865x_gpio_set(sda, 1);
++	return 0;
++}
++
++void i2c_bitrtl865x_cleanup(void)
++{
++	i2c_bit_del_bus(&bit_rtl865x_ops);
++}
++
++
++EXPORT_NO_SYMBOLS;
++
++module_init(i2c_bitrtl865x_init);
++module_exit(i2c_bitrtl865x_cleanup);
++
++#ifdef MODULE
++MODULE_AUTHOR("Vladislav Moskovets <dev@vlad.org.ua>");
++MODULE_DESCRIPTION("RTL865x I2C Driver");
++MODULE_LICENSE("GPL");
++
++
++MODULE_PARM(scl, "i");
++MODULE_PARM_DESC(scl, "GPIO line for SCL");
++MODULE_PARM(sda, "i");
++MODULE_PARM_DESC(sda, "GPIO line for SDA");
++ /*
++int init_module(void) 
++{
++	return i2c_bitrtl865x_init();
++}
++
++void cleanup_module(void) 
++{
++	i2c_bitrtl865x_cleanup();
++} */
++
++#endif
+Двоичные файлы linux-2.4.26-rp614v4v106/drivers/i2c/i2c-rtl865x.o и linux-2.4.26-rp614v4v106_pa/drivers/i2c/i2c-rtl865x.o различаются
+diff -urN linux-2.4.26-rp614v4v106/drivers/i2c/Makefile linux-2.4.26-rp614v4v106_pa/drivers/i2c/Makefile
+--- linux-2.4.26-rp614v4v106/drivers/i2c/Makefile	2005-12-21 04:30:36.000000000 +0200
++++ linux-2.4.26-rp614v4v106_pa/drivers/i2c/Makefile	2009-03-02 21:05:31.000000000 +0200
+@@ -9,6 +9,7 @@
+ 		   i2c-proc.o
+ 
+ obj-$(CONFIG_I2C)		+= i2c-core.o
++obj-$(CONFIG_I2C)		+= i2c-rtl865x.o
+ obj-$(CONFIG_I2C_CHARDEV)	+= i2c-dev.o
+ 
+ # Bit adapters

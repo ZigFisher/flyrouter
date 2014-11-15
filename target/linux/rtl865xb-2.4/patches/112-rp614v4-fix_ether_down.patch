@@ -1,0 +1,128 @@
+--- /drivers/net/re865x/re865x_nic.c	2009-01-17 17:10:21.000000000 +0200
++++ /drivers/net/re865x/re865x_nic.c	2009-01-17 16:51:39.000000000 +0200
+@@ -41,11 +41,12 @@
+ #include "rtl865x/rtl_types.h"
+ #include "rtl865x/rtl_queue.h"
+ #include "rtl865x/mbuf.h"
++#include "rtl865x/rtl8651_layer2.h"
+ #include "rtl865x/asicRegs.h"
+-#include "rtl865x/rtl8651_tblAsicDrv.h"
+-#include "rtl865x/rtl8651_tblDrvPatch.h"
+-#include "rtl865x/rtl8651_tblDrv.h"
+-#include "rtl865x/rtl8651_tblDrvProto.h"
++// #include "rtl865x/rtl8651_tblAsicDrv.h"
++// #include "rtl865x/rtl8651_tblDrvPatch.h"
++// #include "rtl865x/rtl8651_tblDrv.h"
++// #include "rtl865x/rtl8651_tblDrvProto.h"
+ #include "swNic2.h"
+ #ifdef CONFIG_RTL8305S
+ #include "rtl865x/rtl8305s.h"
+--- linux/drivers/net/re865x/rtl865x/rtl8651_layer2.c	2006-03-14 10:22:44.000000000 +0200
++++ linux/drivers/net/re865x/rtl865x/rtl8651_layer2.c	2009-01-17 17:13:22.000000000 +0200
+@@ -2613,9 +2613,9 @@
+ 
+ 
+ 
+-extern uint8 rtl8651_gPPPoEExternalVlanIndex;
+-extern ether_addr_t rtl8651_gPPPoEExternalGatewayMAC;
+-extern uint16 rtl8651_gPPPoEPassthruVlanID;
++// extern uint8 rtl8651_gPPPoEExternalVlanIndex;
++// extern ether_addr_t rtl8651_gPPPoEExternalGatewayMAC;
++// extern uint16 rtl8651_gPPPoEPassthruVlanID;
+ 
+ 
+ 
+@@ -2632,19 +2632,19 @@
+ 
+ 
+ 
+-extern uint8 rtl8651_gIPv6ExternalVlanIndex;
+-extern ether_addr_t rtl8651_gIPv6ExternalGatewayMAC;
+-extern uint16 rtl8651_gIPv6PassthruVlanID;
+-extern uint32 rtl8651_pbv_ipv6passthru;
++//extern uint8 rtl8651_gIPv6ExternalVlanIndex;
++//extern ether_addr_t rtl8651_gIPv6ExternalGatewayMAC;
++// extern uint16 rtl8651_gIPv6PassthruVlanID;
++// extern uint32 rtl8651_pbv_ipv6passthru;
+ 
+ 
+ 
+ 
+ 
+-extern uint8 rtl8651_gIPXExternalVlanIndex;
+-extern ether_addr_t rtl8651_gIPXExternalGatewayMAC;
+-extern uint16 rtl8651_gIPXPassthruVlanID;
+-extern uint32 rtl8651_pbv_ipxpassthru;
++//extern uint8 rtl8651_gIPXExternalVlanIndex;
++//extern ether_addr_t rtl8651_gIPXExternalGatewayMAC;
++//extern uint16 rtl8651_gIPXPassthruVlanID;
++// extern uint32 rtl8651_pbv_ipxpassthru;
+ 
+ 
+ 
+@@ -5052,13 +5052,14 @@
+ 
+ 
+ 
+-                if ( 0 && rtl8651_drvDropUnknownPppoePADT )
+-                        rtl8651_setProtocolBasedVLAN( 3, port, 0, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
+-                else
+-                        rtl8651_setProtocolBasedVLAN( 3, port, linkUp, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
++			printk("l2: pppoe passthru\n");
++                //if ( 0 && rtl8651_drvDropUnknownPppoePADT )
++                //        rtl8651_setProtocolBasedVLAN( 3, port, 0, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
++                //else
++                //        rtl8651_setProtocolBasedVLAN( 3, port, linkUp, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
+ 
+ 
+-                rtl8651_setProtocolBasedVLAN( 4, port, linkUp, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
++                //rtl8651_setProtocolBasedVLAN( 4, port, linkUp, (rtl8651_gPPPoEPassthruVlanID& (8 -1)) );
+         }
+ 
+ 
+@@ -5067,8 +5068,9 @@
+         if ( rtl8651_l2protoPassThrough & (1<<1) )
+         {
+ 
+-                if ( rtl8651_pbv_ipv6passthru != 7 )
+-                        rtl8651_setProtocolBasedVLAN( rtl8651_pbv_ipv6passthru, port, linkUp, (rtl8651_gIPv6PassthruVlanID& (8 -1)) );
++			printk("l2: ipv6 passthru\n");
++                //if ( rtl8651_pbv_ipv6passthru != 7 )
++                  //      rtl8651_setProtocolBasedVLAN( rtl8651_pbv_ipv6passthru, port, linkUp, (rtl8651_gIPv6PassthruVlanID& (8 -1)) );
+         }
+ 
+ 
+@@ -5077,8 +5079,9 @@
+         if ( rtl8651_l2protoPassThrough & (1<<2) )
+         {
+ 
+-                if ( rtl8651_pbv_ipxpassthru != 7 )
+-                        rtl8651_setProtocolBasedVLAN( rtl8651_pbv_ipxpassthru, port, linkUp, (rtl8651_gIPXPassthruVlanID& (8 -1)) );
++			printk("l2: ipx passthru\n");
++                //if ( rtl8651_pbv_ipxpassthru != 7 )
++                        //rtl8651_setProtocolBasedVLAN( rtl8651_pbv_ipxpassthru, port, linkUp, (rtl8651_gIPXPassthruVlanID& (8 -1)) );
+         }
+ 
+ 
+@@ -5087,8 +5090,9 @@
+         if ( rtl8651_l2protoPassThrough & (1<<3) )
+         {
+ 
+-                if ( rtl8651_pbv_netbiospassthru != 7 )
+-                        rtl8651_setProtocolBasedVLAN( rtl8651_pbv_netbiospassthru, port, linkUp, (rtl8651_gNetbiosPassthruVlanID& (8 -1)) );
++			printk("l2: netbios passthru\n");
++                //if ( rtl8651_pbv_netbiospassthru != 7 )
++                  //      rtl8651_setProtocolBasedVLAN( rtl8651_pbv_netbiospassthru, port, linkUp, (rtl8651_gNetbiosPassthruVlanID& (8 -1)) );
+         }
+ 
+ 
+@@ -5123,7 +5127,8 @@
+ 
+ 
+         if (linkUp == 0) {
+-                _rtl8651_delMulticastByPort(port);
++			//printk("l2: linkUp = 0\n");
++                //_rtl8651_delMulticastByPort(port);
+         }
+ 
+         rtlglue_drvMutexUnlock();

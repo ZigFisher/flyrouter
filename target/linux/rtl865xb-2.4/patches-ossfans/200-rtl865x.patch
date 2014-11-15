@@ -1,0 +1,3390 @@
+Index: linux-2.4.27/arch/mips/Makefile
+===================================================================
+--- linux-2.4.27.orig/arch/mips/Makefile	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/Makefile	2008-03-26 11:18:45.000000000 +0300
+@@ -603,6 +603,14 @@
+ LOADADDR	:= 0x80000000
+ endif
+ 
++ifdef CONFIG_RTL865XB
++CORE_FILES	+= arch/mips/realtek/rtl865x/rtl865x.o
++SUBDIRS		+= arch/mips/realtek/rtl865x
++LOADADDR	:= 0x80080000
++endif
++
++
++
+ #
+ # SGI IP22 (Indy/Indigo2)
+ #
+@@ -694,7 +702,7 @@
+ #
+ vmlinux: arch/$(ARCH)/ld.script
+ 
+-arch/$(ARCH)/ld.script: arch/$(ARCH)/ld.script.in arch/$(ARCH)/Makefile
++arch/$(ARCH)/ld.script: arch/$(ARCH)/ld.script.in arch/$(ARCH)/Makefile include/linux/autoconf.h
+ 	sed -e 's/@@LOADADDR@@/$(LOADADDR)/' <$< >$@
+ LINKFLAGS	+= -T arch/$(ARCH)/ld.script
+ 
+Index: linux-2.4.27/arch/mips/config-shared.in
+===================================================================
+--- linux-2.4.27.orig/arch/mips/config-shared.in	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/config-shared.in	2008-03-26 11:18:45.000000000 +0300
+@@ -1,4 +1,4 @@
+-mainmenu_name "Linux/MIPS Kernel Configuration"
++
+ 
+ mainmenu_option next_comment
+ comment 'Code maturity level options'
+@@ -19,6 +19,60 @@
+ #
+ mainmenu_option next_comment
+ comment 'Machine selection'
++
++
++dep_bool 'Support for Realtek RTL865X advanced gateway/router SoC' CONFIG_RTL865X  $CONFIG_MIPS32 $CONFIG_EXPERIMENTAL
++if [ "$CONFIG_RTL865X" = "y" ]; then
++   define_bool CONFIG_RTL865XB y
++   define_bool CONFIG_PCI y
++   bool '  Enable switch core and onchip NIC' CONFIG_RE865X
++
++   if [ "$CONFIG_RE865X" = "y" ]; then
++     choice 'Driver mode selection' \
++	"Multilayer	CONFIG_RTL865X_MULTILAYER_BSP" Multilayer
++     if [ "$CONFIG_RTL865XB" = "y" ]; then
++    bool '     WLAN HW acceleration' CONFIG_RTL865XB_EXP_WLAN
++    define_bool CONFIG_RTL865XB_PPTPL2TP y
++     fi
++     bool '  ROMEreal (etherreal-like tool)' CONFIG_RTL865X_ROMEREAL
++   fi
++   bool '  Enable PCI Slot 0' CONFIG_RTL865XB_PCI_SLOT0
++   bool '  Enable PCI Slot 1' CONFIG_RTL865XB_PCI_SLOT1
++   bool '  Enable PCI Slot 2' CONFIG_RTL865XB_PCI_SLOT2
++   bool '  Enable PCI Slot 3' CONFIG_RTL865XB_PCI_SLOT3
++   
++   bool '  IPSec (Cryptography engine) support ' CONFIG_RTL865XB_EXP_CRYPTOENGINE
++   if [  "$CONFIG_RTL865XB_EXP_CRYPTOENGINE" = "y" ];then 
++           define_bool CONFIG_RTL865X_IPSEC y
++   fi
++   bool '  Enable SW LSO and HW Checksum to Enhance Protocol-Stack Throughput' CONFIG_RTL865XB_SW_LSO
++   if [ "$CONFIG_RTL865XB_SW_LSO" = "y" ]; then
++	   int  '  Maximum MSS of Protocol-Stack to do LSO (4096~36864, multipe of 4096) ' CONFIG_RTL865XB_PS_MSS 36864
++   fi
++   bool '  Engineering CLE interface support' CONFIG_RTL865X_CLE
++   bool '  Software Public key support (DH/RSA) ' CONFIG_RTL865x_SWPUBKEY
++
++   bool '  Bi-Color LED Support' CONFIG_RTL865X_BICOLOR_LED
++   bool '  Diag LED Support' CONFIG_RTL865X_DIAG_LED
++   bool '  Init Button Support' CONFIG_RTL865X_INIT_BUTTON
++#bool '  External switch chip connected' CONFIG_RTL8305S
++#if [ "$CONFIG_RTL8305S" = "y" ]; then
++#	choice 'Switch Chip Selection:' \
++#	   "8305SB	CONFIG_RTL8305SB\
++#	    8305SC	CONFIG_RTL8305SC" 8305SC
++#  fi
++   bool '  (Experimental) Performance evaluation' CONFIG_RTL865XB_EXP_PERFORMANCE_EVALUATION
++
++   string ' Kernel command line options' CONFIG_CMDLINE 
++
++   # Don't touch these settings. ROME driver is built using
++   # these settings.
++   #define_bool CONFIG_RTL865X_CACHED_NETWORK_IO y
++   define_hex CONFIG_RTL865X_MBUF_HEADROOM		0x80
++   define_hex CONFIG_RTL865XB_WLAN1_PORT 0x6
++   define_hex CONFIG_RTL865XB_PPTPL2TP_PORT 0x7
++fi 
++
+ dep_bool 'Support for Acer PICA 1 chipset (EXPERIMENTAL)' CONFIG_ACER_PICA_61 $CONFIG_EXPERIMENTAL
+ dep_bool 'Support for Alchemy Bosporus board' CONFIG_MIPS_BOSPORUS $CONFIG_MIPS32
+ dep_bool 'Support for Alchemy Mirage board' CONFIG_MIPS_MIRAGE $CONFIG_MIPS32
+@@ -604,11 +658,25 @@
+    define_bool CONFIG_DUMMY_KEYB y
+    define_bool CONFIG_SCSI n
+ fi
++
+ if [ "$CONFIG_NINO" = "y" ]; then
++
+    define_bool CONFIG_NEW_TIME_C y
+    define_bool CONFIG_NONCOHERENT_IO y
+    define_bool CONFIG_PC_KEYB y
+ fi
++
++
++if [ "$CONFIG_RTL865X" = "y" ]; then
++
++   define_bool CONFIG_NEW_TIME_C y
++   define_bool CONFIG_NONCOHERENT_IO y
++   define_bool CONFIG_PC_KEYB y
++fi
++
++
++
++
+ if [ "$CONFIG_SGI_IP22" = "y" ]; then
+    define_bool CONFIG_ARC32 y
+    define_bool CONFIG_ARC_PROMLIB y
+@@ -876,6 +944,7 @@
+    define_bool CONFIG_CPU_LITTLE_ENDIAN y
+ else
+    if [ "$CONFIG_BAGET_MIPS" = "y" -o \
++     	"$CONFIG_RTL865X" = "y" -o \
+ 	"$CONFIG_MIPS_EV64120" = "y" -o \
+ 	"$CONFIG_MIPS_EV96100" = "y" -o \
+ 	"$CONFIG_MOMENCO_OCELOT" = "y" -o \
+Index: linux-2.4.27/arch/mips/kernel/Makefile
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/Makefile	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/Makefile	2008-03-26 11:18:45.000000000 +0300
+@@ -58,6 +58,7 @@
+ obj-y				+= pci-dma.o
+ endif
+ 
++obj-$(CONFIG_RTL865X)		+= lexra.o
+ entry.o: entry.S
+ head.o: head.S
+ 
+Index: linux-2.4.27/arch/mips/kernel/cpu-probe.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/cpu-probe.c	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/cpu-probe.c	2008-03-26 11:18:45.000000000 +0300
+@@ -5,6 +5,7 @@
+ #include <asm/cpu.h>
+ #include <asm/fpu.h>
+ #include <asm/mipsregs.h>
++#include <asm/processor.h>
+ 
+ /*
+  * Not all of the MIPS CPUs have the "wait" instruction available. Moreover,
+@@ -552,6 +553,13 @@
+ 	c->processor_id	= PRID_IMP_UNKNOWN;
+ 	c->fpu_id	= FPIR_IMP_NONE;
+ 	c->cputype	= CPU_UNKNOWN;
++/* add by rupert*/
++	c->cputype	= CPU_R3000;
++	c->isa_level	= MIPS_CPU_ISA_I;
++	c->options	= MIPS_CPU_TLB;
++	c->tlbsize	= 16;
++	return;
++
+ 
+ 	c->processor_id = read_c0_prid();
+ 	switch (c->processor_id & 0xff0000) {
+Index: linux-2.4.27/arch/mips/kernel/head.S
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/head.S	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/head.S	2008-03-26 11:18:45.000000000 +0300
+@@ -33,7 +33,8 @@
+ 		 * Reserved space for exception handlers.
+ 		 * Necessary for machines which link their kernels at KSEG0.
+ 		 */
+-		.fill	0x400
++		jal	kernel_entry
++		.balign  0x400
+ 
+ 		/* The following two symbols are used for kernel profiling. */
+ 		EXPORT(stext)
+@@ -165,6 +166,8 @@
+ 		 * the romvec and other important info is stored there
+ 		 * by prom_init().
+ 		 */
++		mtc0	zero, CP0_STATUS
++		nop
+ 		la	t0, _edata
+ 		sw	zero, (t0)
+ 		la	t1, (_end - 4)
+@@ -181,9 +184,113 @@
+ 		subu	sp, t0, 4*SZREG
+ 		sw	t0, kernelsp
+ 
++		jal		_rom_flush_cache
++		nop
++
++		/*--- flush the write buffer*/
++		jal		_rom_wbflush
++		nop
++
++
++
+ 		jal	init_arch
+ 		 nop
+ 		END(kernel_entry)
++		
++		.text
++
++		LEAF(_rom_flush_cache)
++		.set noreorder
++	/*--- transition to kseg1 from undetermined kernel segment*/
++	la	$9,2f
++	or	$9,0xa0000000
++	jr	$9
++
++	.set	noreorder
++	
++
++2:	
++	#--- initialize and start COP3
++	mfc0	$8,$12
++	nop
++	nop
++	or		$8,0x80000000
++	mtc0	$8,$12
++	nop
++	nop
++	
++	#--- invalidate the IRAM with a 0->1 transition
++	mtc0	$0, $20	# CCTL
++	nop
++	nop
++	li		$8,0x00000020 # IRAM Off
++	mtc0	$8, $20
++	nop
++	nop
++	
++	#--- invalidate the icache and dcache with a 0->1 transition
++	mtc0	$0, $20	# CCTL
++	nop
++	nop
++	li		$8,0x00000003 # Invalid ICACHE and DCACHE
++	mtc0	$8, $20
++	nop
++	nop
++
++	#--- load iram base and top
++	la		$8,__iram
++	la		$9,0x0ffffc00
++	and		$8,$8,$9
++	mtc3	$8,$0								# IW bas
++	nop
++	nop
++	addiu	$8,$8,0x1fff
++	mtc3	$8,$1								# IW top
++	nop
++	nop
++
++	#--- Refill the IRAM with a 0->1 transition
++	mtc0	$0, $20	# CCTL
++	nop
++	nop
++	li		$8,0x00000010 # IRAM Fill
++	mtc0	$8, $20
++	nop
++	nop
++
++	#--- load dram base and top
++	la		$8,__dram
++	la		$9,0x0ffffc00
++	and		$8,$8,$9
++	mtc3	$8,$4								# DW bas
++	nop
++	nop
++	addiu	$8,$8,0x0fff
++	mtc3	$8,$5								# DW top
++	nop
++	nop
++
++	#--- enable icache and dcache
++	mtc0	$0, $20	# CCTL
++	nop
++	nop
++
++	.set	reorder
++	j		$31
++
++
++	END(_rom_flush_cache)
++
++
++
++	LEAF(_rom_wbflush)
++_rom_wbflush:
++	li		$8, 0xa0000000				#/* load uncached address	*/
++	lw		$8, 0($8)					#/* read in order to flush 	*/
++	j		$31							#/* return to caller		*/
++	END(_rom_wbflush)
++
++
+ 
+ 
+ #ifdef CONFIG_SMP
+Index: linux-2.4.27/arch/mips/kernel/irq.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/irq.c	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/irq.c	2008-03-26 11:18:45.000000000 +0300
+@@ -298,8 +298,9 @@
+ 
+ 	status = 1;	/* Force the "do bottom halves" bit */
+ 
+-	if (!(action->flags & SA_INTERRUPT))
+-		__sti();
++//	rupert
++//	if (!(action->flags & SA_INTERRUPT))
++//		__sti();
+ 
+ 	do {
+ 		status |= action->flags;
+Index: linux-2.4.27/arch/mips/kernel/lexra.S
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/kernel/lexra.S	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,13 @@
++#/*-------------------------------------------------------------------
++#**
++#** void lx4180_WriteCCTL(uint32)
++#**
++#**-------------------------------------------------------------------
++#*/
++	.globl	lx4180_writeCacheCtrl
++	.ent	lx4180_writeCacheCtrl
++lx4180_writeCacheCtrl:
++	mtc0	$4,$20
++	jr		$31	
++	nop
++	.end lx4180_writeCacheCtrl
+\ No newline at end of file
+Index: linux-2.4.27/arch/mips/kernel/setup.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/setup.c	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/setup.c	2008-03-26 11:18:45.000000000 +0300
+@@ -95,7 +95,12 @@
+  * mips_io_port_base is the begin of the address space to which x86 style
+  * I/O ports are mapped.
+  */
++#ifdef CONFIG_RTL865X
++const unsigned long mips_io_port_base = 0;
++#else
+ const unsigned long mips_io_port_base = -1;
++#endif 
++
+ EXPORT_SYMBOL(mips_io_port_base);
+ 
+ 
+@@ -118,6 +123,16 @@
+ init_arch(int argc, char **argv, char **envp, int *prom_vec)
+ {
+ 	/* Determine which MIPS variant we are running on. */
++	unsigned int s;
++#ifdef CONFIG_RTL865X
++	char chipVersion[16]={0};
++	int rev;
++	rtl8651_getChipVersion(chipVersion,sizeof(chipVersion), &rev);
++	printk("************************************\n");
++	printk("Powered by Realtek RTL%s SoC, rev %d\n",chipVersion, rev);
++	printk("************************************\n");
++#endif
++
+ 	cpu_probe();
+ 
+ 	prom_init(argc, argv, envp, prom_vec);
+@@ -129,6 +144,9 @@
+ 	 * then flush the tlb and caches.  On the r4xx0
+ 	 * variants this also sets CP0_WIRED to zero.
+ 	 */
++#ifdef CONFIG_RTL865X
++	printk("Init MMU (16 entries)\n");
++#endif
+ 	load_mmu();
+ 
+ 	/* Disable coprocessors and set FPU for 16/32 FPR register model */
+@@ -264,7 +282,21 @@
+ 	 * Partially used pages are not usable - thus
+ 	 * we are rounding upwards.
+ 	 */
+-	start_pfn = PFN_UP(__pa(&_end));
++	{
++		unsigned long	*sp, len = 0;
++
++		sp = (unsigned long *) &_end;
++		
++		if (memcmp(&sp[0], "-rom1fs-", 8) == 0) { /* romfs */
++			len = be32_to_cpu(sp[2]);
++			printk("romfs reserved %d\n", len);
++		} else if (sp[0] == 0x28cd3d45) { /* cramfs */
++			len = sp[1];
++			printk("cramfs reserved %d\n", len);
++		} else
++			printk("NOFS reserved @ 0x%x\n", sp);
++		start_pfn = PFN_UP(__pa(&_end + len));
++	}
+ #endif	/* CONFIG_BLK_DEV_INITRD */
+ 
+ 	/* Find the highest page frame number we have available.  */
+@@ -652,6 +684,11 @@
+ 		it8172_setup();
+ 		break;
+ #endif
++#ifdef CONFIG_RTL865X
++	case MACH_GROUP_REALTEK:
++		rtl865x_setup();
++		break;
++#endif
+ #ifdef CONFIG_NINO
+ 	case MACH_GROUP_PHILIPS:
+ 		nino_setup();
+Index: linux-2.4.27/arch/mips/kernel/syscall.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/syscall.c	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/syscall.c	2008-03-26 11:18:45.000000000 +0300
+@@ -117,6 +117,7 @@
+ {
+ 	int error = -EBADF;
+ 	struct file * file = NULL;
++	int i;
+ 
+ 	flags &= ~(MAP_EXECUTABLE | MAP_DENYWRITE);
+ 	if (!(flags & MAP_ANONYMOUS)) {
+Index: linux-2.4.27/arch/mips/kernel/unaligned.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/kernel/unaligned.c	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/kernel/unaligned.c	2008-03-26 11:18:45.000000000 +0300
+@@ -5,7 +5,7 @@
+  * License.  See the file "COPYING" in the main directory of this archive
+  * for more details.
+  *
+- * Copyright (C) 1996, 1998, 1999, 2002 by Ralf Baechle
++ * Copyright (C) 1996, 1998 by Ralf Baechle
+  * Copyright (C) 1999 Silicon Graphics, Inc.
+  *
+  * This file contains exception handler for address error exception with the
+@@ -40,8 +40,8 @@
+  * Below a little program to play around with this feature.
+  *
+  * #include <stdio.h>
+- * #include <sys/sysmips.h>
+- *
++ * #include <asm/sysmips.h>
++ * 
+  * struct foo {
+  *         unsigned char bar[8];
+  * };
+@@ -88,26 +88,29 @@
+ #define STR(x)  __STR(x)
+ #define __STR(x)  #x
+ 
+-#ifdef CONFIG_PROC_FS
+-unsigned long unaligned_instructions;
+-#endif
++/*
++ * User code may only access USEG; kernel code may access the
++ * entire address space.
++ */
++#define check_axs(pc,a,s)				\
++	if ((long)(~(pc) & ((a) | ((a)+(s)))) < 0)	\
++		goto sigbus;
+ 
+-static inline int emulate_load_store_insn(struct pt_regs *regs,
+-	void *addr, unsigned long pc,
+-	unsigned long **regptr, unsigned long *newvalue)
++//static inline int emulate_load_store_insn(struct pt_regs *regs,
++static int emulate_load_store_insn(struct pt_regs *regs,
++	unsigned long addr, unsigned long pc)
+ {
+ 	union mips_instruction insn;
+ 	unsigned long value, fixup;
+ 	unsigned int res;
+-
++	unsigned long tmpvalue;
+ 	regs->regs[0] = 0;
+-	*regptr=NULL;
+-
+ 	/*
+ 	 * This load never faults.
+ 	 */
+ 	__get_user(insn.word, (unsigned int *)pc);
+ 
++	//printk("emulate opcode %d at %08x \n",insn.i_format.opcode,regs->cp0_epc);
+ 	switch (insn.i_format.opcode) {
+ 	/*
+ 	 * These are instructions that a compiler doesn't generate.  We
+@@ -142,10 +145,8 @@
+ 	 * The remaining opcodes are the ones that are really of interest.
+ 	 */
+ 	case lh_op:
+-		if (verify_area(VERIFY_READ, addr, 2))
+-			goto sigbus;
+-
+-		__asm__ __volatile__ (".set\tnoat\n"
++		check_axs(pc, addr, 2);
++		__asm__(".set\tnoat\n"
+ #ifdef __BIG_ENDIAN
+ 			"1:\tlb\t%0, 0(%2)\n"
+ 			"2:\tlbu\t$1, 1(%2)\n\t"
+@@ -170,45 +171,53 @@
+ 			: "r" (addr), "i" (-EFAULT));
+ 		if (res)
+ 			goto fault;
+-		*newvalue = value;
+-		*regptr = &regs->regs[insn.i_format.rt];
+-		break;
++		regs->regs[insn.i_format.rt] = value;
++		return 0;
+ 
+ 	case lw_op:
+-		if (verify_area(VERIFY_READ, addr, 4))
+-			goto sigbus;
+-
+-		__asm__ __volatile__ (
++		//printk("lw-here!\n");
++		check_axs(pc, addr, 4);
++		__asm__(
+ #ifdef __BIG_ENDIAN
++#if 0
+ 			"1:\tlwl\t%0, (%2)\n"
+ 			"2:\tlwr\t%0, 3(%2)\n\t"
+ #endif
+-#ifdef __LITTLE_ENDIAN
+-			"1:\tlwl\t%0, 3(%2)\n"
+-			"2:\tlwr\t%0, (%2)\n\t"
++			"1:\tlbu\t%2, (%3)\n"
++			"\tnop\n"
++			"sll\t%2, 24\n"
++			"move\t%0,	%2\n"
++			"\tlbu\t%2,	1(%3)\n"
++			"\tnop\n"
++			"sll\t%2,	16\n"
++			"or\t%0,	%2\n"
++			"2:\tlbu\t%2, 2(%3)\n"
++			"\tnop\n"
++			"sll\t%2, 	8\n"
++			"or\t%0,	%2\n"
++			"\tlbu\t%2,	3(%3)\n"
++			"\tnop\n"
++			"or\t%0,	%2\n"
+ #endif
+ 			"li\t%1, 0\n"
+ 			"3:\t.section\t.fixup,\"ax\"\n\t"
+-			"4:\tli\t%1, %3\n\t"
++			"4:\tli\t%1, %4\n\t"
+ 			"j\t3b\n\t"
+ 			".previous\n\t"
+ 			".section\t__ex_table,\"a\"\n\t"
+ 			STR(PTR)"\t1b, 4b\n\t"
+ 			STR(PTR)"\t2b, 4b\n\t"
+ 			".previous"
+-			: "=&r" (value), "=r" (res)
++			: "=&r" (value), "=r" (res), "=&r"(tmpvalue)
+ 			: "r" (addr), "i" (-EFAULT));
+ 		if (res)
+ 			goto fault;
+-		*newvalue = value;
+-		*regptr = &regs->regs[insn.i_format.rt];
+-		break;
++		regs->regs[insn.i_format.rt] = value;
++		return 0;
+ 
+ 	case lhu_op:
+-		if (verify_area(VERIFY_READ, addr, 2))
+-			goto sigbus;
+-
+-		__asm__ __volatile__ (
++		check_axs(pc, addr, 2);
++		__asm__(
+ 			".set\tnoat\n"
+ #ifdef __BIG_ENDIAN
+ 			"1:\tlbu\t%0, 0(%2)\n"
+@@ -234,102 +243,18 @@
+ 			: "r" (addr), "i" (-EFAULT));
+ 		if (res)
+ 			goto fault;
+-		*newvalue = value;
+-		*regptr = &regs->regs[insn.i_format.rt];
+-		break;
++		regs->regs[insn.i_format.rt] = value;
++		return 0;
+ 
+ 	case lwu_op:
+-#ifdef CONFIG_MIPS64
+-		/*
+-		 * A 32-bit kernel might be running on a 64-bit processor.  But
+-		 * if we're on a 32-bit processor and an i-cache incoherency
+-		 * or race makes us see a 64-bit instruction here the sdl/sdr
+-		 * would blow up, so for now we don't handle unaligned 64-bit
+-		 * instructions on 32-bit kernels.
+-		 */
+-		if (verify_area(VERIFY_READ, addr, 4))
+-			goto sigbus;
+-
+-		__asm__ __volatile__ (
+-#ifdef __BIG_ENDIAN
+-			"1:\tlwl\t%0, (%2)\n"
+-			"2:\tlwr\t%0, 3(%2)\n\t"
+-#endif
+-#ifdef __LITTLE_ENDIAN
+-			"1:\tlwl\t%0, 3(%2)\n"
+-			"2:\tlwr\t%0, (%2)\n\t"
+-#endif
+-			"dsll\t%0, %0, 32\n\t"
+-			"dsrl\t%0, %0, 32\n\t"
+-			"li\t%1, 0\n"
+-			"3:\t.section\t.fixup,\"ax\"\n\t"
+-			"4:\tli\t%1, %3\n\t"
+-			"j\t3b\n\t"
+-			".previous\n\t"
+-			".section\t__ex_table,\"a\"\n\t"
+-			STR(PTR)"\t1b, 4b\n\t"
+-			STR(PTR)"\t2b, 4b\n\t"
+-			".previous"
+-			: "=&r" (value), "=r" (res)
+-			: "r" (addr), "i" (-EFAULT));
+-		if (res)
+-			goto fault;
+-		*newvalue = value;
+-		*regptr = &regs->regs[insn.i_format.rt];
+-		break;
+-#endif /* CONFIG_MIPS64 */
+-
+-		/* Cannot handle 64-bit instructions in 32-bit kernel */
+-		goto sigill;
+-
+ 	case ld_op:
+-#ifdef CONFIG_MIPS64
+-		/*
+-		 * A 32-bit kernel might be running on a 64-bit processor.  But
+-		 * if we're on a 32-bit processor and an i-cache incoherency
+-		 * or race makes us see a 64-bit instruction here the sdl/sdr
+-		 * would blow up, so for now we don't handle unaligned 64-bit
+-		 * instructions on 32-bit kernels.
+-		 */
+-		if (verify_area(VERIFY_READ, addr, 8))
+-			goto sigbus;
+-
+-		__asm__ __volatile__ (
+-#ifdef __BIG_ENDIAN
+-			"1:\tldl\t%0, (%2)\n"
+-			"2:\tldr\t%0, 7(%2)\n\t"
+-#endif
+-#ifdef __LITTLE_ENDIAN
+-			"1:\tldl\t%0, 7(%2)\n"
+-			"2:\tldr\t%0, (%2)\n\t"
+-#endif
+-			"li\t%1, 0\n"
+-			"3:\t.section\t.fixup,\"ax\"\n\t"
+-			"4:\tli\t%1, %3\n\t"
+-			"j\t3b\n\t"
+-			".previous\n\t"
+-			".section\t__ex_table,\"a\"\n\t"
+-			STR(PTR)"\t1b, 4b\n\t"
+-			STR(PTR)"\t2b, 4b\n\t"
+-			".previous"
+-			: "=&r" (value), "=r" (res)
+-			: "r" (addr), "i" (-EFAULT));
+-		if (res)
+-			goto fault;
+-		*newvalue = value;
+-		*regptr = &regs->regs[insn.i_format.rt];
+-		break;
+-#endif /* CONFIG_MIPS64 */
+-
+ 		/* Cannot handle 64-bit instructions in 32-bit kernel */
+ 		goto sigill;
+ 
+ 	case sh_op:
+-		if (verify_area(VERIFY_WRITE, addr, 2))
+-			goto sigbus;
+-
++		check_axs(pc, addr, 2);
+ 		value = regs->regs[insn.i_format.rt];
+-		__asm__ __volatile__ (
++		__asm__(
+ #ifdef __BIG_ENDIAN
+ 			".set\tnoat\n"
+ 			"1:\tsb\t%1, 1(%2)\n\t"
+@@ -358,18 +283,26 @@
+ 			: "r" (value), "r" (addr), "i" (-EFAULT));
+ 		if (res)
+ 			goto fault;
+-		break;
++		return 0;
+ 
+ 	case sw_op:
+-		if (verify_area(VERIFY_WRITE, addr, 4))
+-			goto sigbus;
+-
++		check_axs(pc, addr, 4);
+ 		value = regs->regs[insn.i_format.rt];
+-		__asm__ __volatile__ (
++		__asm__(
+ #ifdef __BIG_ENDIAN
++#if 0
+ 			"1:\tswl\t%1,(%2)\n"
+ 			"2:\tswr\t%1, 3(%2)\n\t"
+ #endif
++			"1:\tsb\t%1, 3(%2)\n"
++			"  \tsrl\t%1, 8\n"
++			"  \tsb\t%1, 2(%2)\n"
++			"  \tsrl\t%1, 8\n"
++			"2:\tsb\t%1, 1(%2)\n"
++			"  \tsrl\t%1, 8\n"
++			"  \tsb\t%1, 0(%2)\n"
++			
++#endif
+ #ifdef __LITTLE_ENDIAN
+ 			"1:\tswl\t%1, 3(%2)\n"
+ 			"2:\tswr\t%1, (%2)\n\t"
+@@ -388,47 +321,9 @@
+ 		: "r" (value), "r" (addr), "i" (-EFAULT));
+ 		if (res)
+ 			goto fault;
+-		break;
++		return 0;
+ 
+ 	case sd_op:
+-#ifdef CONFIG_MIPS64
+-		/*
+-		 * A 32-bit kernel might be running on a 64-bit processor.  But
+-		 * if we're on a 32-bit processor and an i-cache incoherency
+-		 * or race makes us see a 64-bit instruction here the sdl/sdr
+-		 * would blow up, so for now we don't handle unaligned 64-bit
+-		 * instructions on 32-bit kernels.
+-		 */
+-		if (verify_area(VERIFY_WRITE, addr, 8))
+-			goto sigbus;
+-
+-		value = regs->regs[insn.i_format.rt];
+-		__asm__ __volatile__ (
+-#ifdef __BIG_ENDIAN
+-			"1:\tsdl\t%1,(%2)\n"
+-			"2:\tsdr\t%1, 7(%2)\n\t"
+-#endif
+-#ifdef __LITTLE_ENDIAN
+-			"1:\tsdl\t%1, 7(%2)\n"
+-			"2:\tsdr\t%1, (%2)\n\t"
+-#endif
+-			"li\t%0, 0\n"
+-			"3:\n\t"
+-			".section\t.fixup,\"ax\"\n\t"
+-			"4:\tli\t%0, %3\n\t"
+-			"j\t3b\n\t"
+-			".previous\n\t"
+-			".section\t__ex_table,\"a\"\n\t"
+-			STR(PTR)"\t1b, 4b\n\t"
+-			STR(PTR)"\t2b, 4b\n\t"
+-			".previous"
+-		: "=r" (res)
+-		: "r" (value), "r" (addr), "i" (-EFAULT));
+-		if (res)
+-			goto fault;
+-		break;
+-#endif /* CONFIG_MIPS64 */
+-
+ 		/* Cannot handle 64-bit instructions in 32-bit kernel */
+ 		goto sigill;
+ 
+@@ -459,11 +354,6 @@
+ 		 */
+ 		goto sigill;
+ 	}
+-
+-#ifdef CONFIG_PROC_FS
+-	unaligned_instructions++;
+-#endif
+-
+ 	return 0;
+ 
+ fault:
+@@ -492,36 +382,26 @@
+ sigill:
+ 	die_if_kernel("Unhandled kernel unaligned access or invalid instruction", regs);
+ 	send_sig(SIGILL, current, 1);
+-
+ 	return 0;
+ }
+ 
++#ifdef CONFIG_PROC_FS
++unsigned long unaligned_instructions;
++#endif
++
+ asmlinkage void do_ade(struct pt_regs *regs)
+ {
+-	unsigned long *regptr, newval;
+-	extern int do_dsemulret(struct pt_regs *);
+-	mm_segment_t seg;
+ 	unsigned long pc;
+ 
+ 	/*
+-	 * Address errors may be deliberately induced by the FPU emulator to
+-	 * retake control of the CPU after executing the instruction in the
+-	 * delay slot of an emulated branch.
+-	 */
+-	/* Terminate if exception was recognized as a delay slot return */
+-	if (do_dsemulret(regs))
+-		return;
+-
+-	/* Otherwise handle as normal */
+-
+-	/*
+ 	 * Did we catch a fault trying to load an instruction?
+-	 * Or are we running in MIPS16 mode?
+ 	 */
+-	if ((regs->cp0_badvaddr == regs->cp0_epc) || (regs->cp0_epc & 0x1))
++//	printk("do_ade badaddr=%08x, epc=%08x\n", regs->cp0_badvaddr,regs->cp0_epc);
++	if ((regs->cp0_badvaddr == regs->cp0_epc) ||
++	    (regs->cp0_badvaddr == (regs->cp0_epc & ~0x3)))
+ 		goto sigbus;
+ 
+-	pc = exception_epc(regs);
++	pc = regs->cp0_epc + ((regs->cp0_cause & CAUSEF_BD) ? 4 : 0);
+ 	if ((current->thread.mflags & MF_FIXADE) == 0)
+ 		goto sigbus;
+ 
+@@ -529,20 +409,12 @@
+ 	 * Do branch emulation only if we didn't forward the exception.
+ 	 * This is all so but ugly ...
+ 	 */
+-	seg = get_fs();
+-	if (!user_mode(regs))
+-		set_fs(KERNEL_DS);
+-	if (!emulate_load_store_insn(regs, (void *)regs->cp0_badvaddr, pc,
+-	                             &regptr, &newval)) {
++	if (!emulate_load_store_insn(regs, regs->cp0_badvaddr, pc))
+ 		compute_return_epc(regs);
+-		/*
+-		 * Now that branch is evaluated, update the dest
+-		 * register if necessary
+-		 */
+-		if (regptr)
+-			*regptr = newval;
+-	}
+-	set_fs(seg);
++
++#ifdef CONFIG_PROC_FS
++	unaligned_instructions++;
++#endif
+ 
+ 	return;
+ 
+@@ -553,4 +425,6 @@
+ 	/*
+ 	 * XXX On return from the signal handler we should advance the epc
+ 	 */
++
++	return;
+ }
+Index: linux-2.4.27/arch/mips/ld.script.in
+===================================================================
+--- linux-2.4.27.orig/arch/mips/ld.script.in	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/ld.script.in	2008-03-26 11:18:45.000000000 +0300
+@@ -14,6 +14,26 @@
+     /* .gnu.warning sections are handled specially by elf32.em.  */
+     *(.gnu.warning)
+   } =0
++
++   . = ALIGN(4096);
++   __iram = . ;
++   .iram	:
++   {
++		 *(.iram-rtkwlan)        /* realtek wlan driver */
++		 *(.iram-airgo)			 /* Airgo wlan driver   */
++         *(.iram)                /* other usage */
++         *(.iram.1)
++    }
++   . = ALIGN(4096);
++   __dram = . ;
++   .dram	:
++   {
++		*(.dram-rtkwlan)        /* realtek wlan driver */
++        *(.dram)                /* other usage */
++        *(.dram.1)
++   }
++   . = ALIGN(4096);
++
+   .kstrtab : { *(.kstrtab) }
+ 
+   . = ALIGN(16);		/* Exception table */
+Index: linux-2.4.27/arch/mips/lib/csum_partial.S
+===================================================================
+--- linux-2.4.27.orig/arch/mips/lib/csum_partial.S	2008-03-26 11:18:30.000000000 +0300
++++ linux-2.4.27/arch/mips/lib/csum_partial.S	2008-03-26 11:18:45.000000000 +0300
+@@ -53,7 +53,24 @@
+ 	 andi	t0, a1, 2
+ 
+ 	/* Still a full word to go  */
++#if 0
+ 	ulw	t1, (src)
++#endif
++#ifdef __MIPSEB__
++	lbu	t5, 0(src)
++	lbu	t6, 1(src)
++	sll t5, 24
++	sll	t6, 16
++	or	t5, t6
++	move	t1, t5
++	lbu  t5, 2(src)
++    lbu  t6, 3(src)
++	sll t5, 8
++	or  t5, t6
++	or	t1, t5
++#else
++#error "Modeif csum_partial.S
++#endif	
+ 	addiu	src, 4
+ 	ADDC(sum, t1)
+ 
+Index: linux-2.4.27/arch/mips/lib/memcpy.S
+===================================================================
+--- linux-2.4.27.orig/arch/mips/lib/memcpy.S	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/arch/mips/lib/memcpy.S	2008-03-26 11:18:45.000000000 +0300
+@@ -12,10 +12,10 @@
+  *
+  * Mnemonic names for arguments to memcpy/__copy_user
+  */
+-#include <linux/config.h>
+ #include <asm/asm.h>
+ #include <asm/offset.h>
+ #include <asm/regdef.h>
++#include <linux/autoconf.h>
+ 
+ #define dst a0
+ #define src a1
+@@ -77,55 +77,10 @@
+ 	.previous
+ 
+ /*
+- * Only on the 64-bit kernel we can made use of 64-bit registers.
++ * In the mips (not mips64) tree, so we can't use doubles
+  */
+-#ifdef CONFIG_MIPS64
+-#define USE_DOUBLE
+-#endif
+-
+-#ifdef USE_DOUBLE
+-
+-#define LOAD   ld
+-#define LOADL  ldl
+-#define LOADR  ldr
+-#define STOREL sdl
+-#define STORER sdr
+-#define STORE  sd
+-#define ADD    daddu
+-#define SUB    dsubu
+-#define SRL    dsrl
+-#define SRA    dsra
+-#define SLL    dsll
+-#define SLLV   dsllv
+-#define SRLV   dsrlv
+-#define NBYTES 8
+-#define LOG_NBYTES 3
+-
+-/* 
+- * As we are sharing code base with the mips32 tree (which use the o32 ABI
+- * register definitions). We need to redefine the register definitions from
+- * the n64 ABI register naming to the o32 ABI register naming.
+- */
+-#undef t0
+-#undef t1
+-#undef t2
+-#undef t3
+-#define t0	$8
+-#define t1	$9
+-#define t2	$10
+-#define t3	$11
+-#define t4	$12
+-#define t5	$13
+-#define t6	$14
+-#define t7	$15
+-	
+-#else
+ 
+ #define LOAD   lw
+-#define LOADL  lwl
+-#define LOADR  lwr
+-#define STOREL swl
+-#define STORER swr
+ #define STORE  sw
+ #define ADD    addu
+ #define SUB    subu
+@@ -137,19 +92,10 @@
+ #define NBYTES 4
+ #define LOG_NBYTES 2
+ 
+-#endif /* USE_DOUBLE */
+ 
+ #ifdef CONFIG_CPU_LITTLE_ENDIAN
+-#define LDFIRST LOADR
+-#define LDREST  LOADL
+-#define STFIRST STORER
+-#define STREST  STOREL
+ #define SHIFT_DISCARD SLLV
+ #else
+-#define LDFIRST LOADL
+-#define LDREST  LOADR
+-#define STFIRST STOREL
+-#define STREST  STORER
+ #define SHIFT_DISCARD SRLV
+ #endif
+ 
+@@ -187,19 +133,16 @@
+ 	 *
+ 	 * If len < NBYTES use byte operations.
+ 	 */
+-	PREF(	0, 0(src) )
+-	PREF(	1, 0(dst) )
+ 	sltu	t2, len, NBYTES
+ 	and	t1, dst, ADDRMASK
+-	PREF(	0, 1*32(src) )
+-	PREF(	1, 1*32(dst) )
+ 	bnez	t2, copy_bytes_checklen
+-	 and	t0, src, ADDRMASK
+-	PREF(	0, 2*32(src) )
+-	PREF(	1, 2*32(dst) )
+-	bnez	t1, dst_unaligned
+-	 nop
+-	bnez	t0, src_unaligned_dst_aligned
++	and t2, src, ADDRMASK
++	bnez t1, copy_bytes_checklen
++	nop
++	bnez t2, copy_bytes_checklen
++	nop
++
++
+ 	/*
+ 	 * use delay slot for fall-through
+ 	 * src and dst are aligned; need to compute rem
+@@ -208,8 +151,6 @@
+ 	 SRL	t0, len, LOG_NBYTES+3    # +3 for 8 units/iter
+ 	beqz	t0, cleanup_both_aligned # len < 8*NBYTES
+ 	 and	rem, len, (8*NBYTES-1)	 # rem = len % (8*NBYTES)
+-	PREF(	0, 3*32(src) )
+-	PREF(	1, 3*32(dst) )
+ 	.align	4
+ 1:
+ EXC(	LOAD	t0, UNIT(0)(src),	l_exc)
+@@ -231,8 +172,6 @@
+ EXC(	STORE	t7, UNIT(-3)(dst),	s_exc_p3u)
+ EXC(	STORE	t0, UNIT(-2)(dst),	s_exc_p2u)
+ EXC(	STORE	t1, UNIT(-1)(dst),	s_exc_p1u)
+-	PREF(	0, 8*32(src) )
+-	PREF(	1, 8*32(dst) )
+ 	bne	len, rem, 1b
+ 	 nop
+ 
+@@ -266,130 +205,27 @@
+ 	beq	rem, len, copy_bytes
+ 	 nop
+ 1:
+-EXC(	LOAD	t0, 0(src),		l_exc)
++EXC(	LOAD	 t0, 0(src),		l_exc)
+ 	ADD	src, src, NBYTES
+ 	SUB	len, len, NBYTES
+-EXC(	STORE	t0, 0(dst),		s_exc_p1u)
++EXC(	STORE	t0, 0(dst),		s_exc)
+ 	bne	rem, len, 1b
+ 	 ADD	dst, dst, NBYTES
+ 
+-	/*
+-	 * src and dst are aligned, need to copy rem bytes (rem < NBYTES)
+-	 * A loop would do only a byte at a time with possible branch
+-	 * mispredicts.  Can't do an explicit LOAD dst,mask,or,STORE
+-	 * because can't assume read-access to dst.  Instead, use
+-	 * STREST dst, which doesn't require read access to dst.
+-	 *
+-	 * This code should perform better than a simple loop on modern,
+-	 * wide-issue mips processors because the code has fewer branches and
+-	 * more instruction-level parallelism.
+-	 */
+-#define bits t2
+-	beqz	len, done
+-	 ADD	t1, dst, len	# t1 is just past last byte of dst
+-	li	bits, 8*NBYTES
+-	SLL	rem, len, 3	# rem = number of bits to keep
+-EXC(	LOAD	t0, 0(src),		l_exc)
+-	SUB	bits, bits, rem	# bits = number of bits to discard
+-	SHIFT_DISCARD t0, t0, bits
+-EXC(	STREST	t0, -1(t1),		s_exc)
+-	jr	ra
+-	 move	len, zero
+-dst_unaligned:
+-	/*
+-	 * dst is unaligned
+-	 * t0 = src & ADDRMASK
+-	 * t1 = dst & ADDRMASK; T1 > 0
+-	 * len >= NBYTES
+-	 *
+-	 * Copy enough bytes to align dst
+-	 * Set match = (src and dst have same alignment)
+-	 */
+-#define match rem
+-EXC(	LDFIRST	t3, FIRST(0)(src),	l_exc)
+-	ADD	t2, zero, NBYTES
+-EXC(	LDREST	t3, REST(0)(src),	l_exc_copy)
+-	SUB	t2, t2, t1	# t2 = number of bytes copied
+-	xor	match, t0, t1
+-EXC(	STFIRST t3, FIRST(0)(dst),	s_exc)
+-	beq	len, t2, done
+-	 SUB	len, len, t2
+-	ADD	dst, dst, t2
+-	beqz	match, both_aligned
+-	 ADD	src, src, t2
+-
+-src_unaligned_dst_aligned:
+-	SRL	t0, len, LOG_NBYTES+2    # +2 for 4 units/iter
+-	PREF(	0, 3*32(src) )
+-	beqz	t0, cleanup_src_unaligned
+-	 and	rem, len, (4*NBYTES-1)   # rem = len % 4*NBYTES
+-	PREF(	1, 3*32(dst) )
+-1:
+-/*
+- * Avoid consecutive LD*'s to the same register since some mips
+- * implementations can't issue them in the same cycle.
+- * It's OK to load FIRST(N+1) before REST(N) because the two addresses
+- * are to the same unit (unless src is aligned, but it's not).
+- */
+-EXC(	LDFIRST	t0, FIRST(0)(src),	l_exc)
+-EXC(	LDFIRST	t1, FIRST(1)(src),	l_exc_copy)
+-	SUB     len, len, 4*NBYTES
+-EXC(	LDREST	t0, REST(0)(src),	l_exc_copy)
+-EXC(	LDREST	t1, REST(1)(src),	l_exc_copy)
+-EXC(	LDFIRST	t2, FIRST(2)(src),	l_exc_copy)
+-EXC(	LDFIRST	t3, FIRST(3)(src),	l_exc_copy)
+-EXC(	LDREST	t2, REST(2)(src),	l_exc_copy)
+-EXC(	LDREST	t3, REST(3)(src),	l_exc_copy)
+-	PREF(	0, 9*32(src) )		# 0 is PREF_LOAD  (not streamed)
+-	ADD	src, src, 4*NBYTES
+-#ifdef CONFIG_CPU_SB1
+-	nop				# improves slotting
+-#endif
+-EXC(	STORE	t0, UNIT(0)(dst),	s_exc_p4u)
+-EXC(	STORE	t1, UNIT(1)(dst),	s_exc_p3u)
+-EXC(	STORE	t2, UNIT(2)(dst),	s_exc_p2u)
+-EXC(	STORE	t3, UNIT(3)(dst),	s_exc_p1u)
+-	PREF(	1, 9*32(dst) )     	# 1 is PREF_STORE (not streamed)
+-	bne	len, rem, 1b
+-	 ADD	dst, dst, 4*NBYTES
+-
+-cleanup_src_unaligned:
+-	beqz	len, done
+-	 and	rem, len, NBYTES-1  # rem = len % NBYTES
+-	beq	rem, len, copy_bytes
+-	 nop
+-1:
+-EXC(	LDFIRST t0, FIRST(0)(src),	l_exc)
+-EXC(	LDREST	t0, REST(0)(src),	l_exc_copy)
+-	ADD	src, src, NBYTES
+-	SUB	len, len, NBYTES
+-EXC(	STORE	t0, 0(dst),		s_exc_p1u)
+-	bne	len, rem, 1b
+-	 ADD	dst, dst, NBYTES
+-
+ copy_bytes_checklen:
+ 	beqz	len, done
+ 	 nop
+ copy_bytes:
+-	/* 0 < len < NBYTES  */
+-#define COPY_BYTE(N)			\
+-EXC(	lb	t0, N(src), l_exc);	\
+-	SUB	len, len, 1;		\
+-	beqz	len, done;		\
+-EXC(	 sb	t0, N(dst), s_exc_p1)
+-
+-	COPY_BYTE(0)
+-	COPY_BYTE(1)
+-#ifdef USE_DOUBLE
+-	COPY_BYTE(2)
+-	COPY_BYTE(3)
+-	COPY_BYTE(4)
+-	COPY_BYTE(5)
+-#endif
+-EXC(	lb	t0, NBYTES-2(src), l_exc)
+-	SUB	len, len, 1
+-	jr	ra
+-EXC(	 sb	t0, NBYTES-2(dst), s_exc_p1)
++1:
++	beqz	len, done
++	nop
++EXC(	lb  t0, 0(src), l_exc)
++	SUB len, len, 1
++EXC(	sb	t0, 0(dst), s_exc_p1)
++	ADD	dst,	dst, 1
++	ADD src,	src, 1
++	bnez	len, 1b 
++	nop
+ done:
+ 	jr	ra
+ 	 nop
+@@ -406,7 +242,7 @@
+ 	 *
+ 	 * Assumes src < THREAD_BUADDR($28)
+ 	 */
+-	LOAD	t0, THREAD_BUADDR($28)
++	lw	t0, THREAD_BUADDR($28)
+ 1:
+ EXC(	lb	t1, 0(src),	l_exc)
+ 	ADD	src, src, 1
+@@ -414,16 +250,16 @@
+ 	bne	src, t0, 1b
+ 	 ADD	dst, dst, 1
+ l_exc:
+-	LOAD	t0, THREAD_BUADDR($28)	# t0 is just past last good address
++	lw	t0, THREAD_BUADDR($28)	# t0 is just past last good address
+ 	 nop
+-	SUB	len, AT, t0		# len number of uncopied bytes
++	subu	len, AT, t0		# len number of uncopied bytes
+ 	/*
+ 	 * Here's where we rely on src and dst being incremented in tandem,
+ 	 *   See (3) above.
+ 	 * dst += (fault addr - src) to put dst at first byte to clear
+ 	 */
+-	ADD	dst, t0			# compute start address in a1
+-	SUB	dst, src
++	addu	dst, t0			# compute start address in a1
++	subu	dst, src
+ 	/*
+ 	 * Clear len bytes starting at dst.  Can't call __bzero because it
+ 	 * might modify len.  An inefficient loop for these rare times...
+@@ -461,8 +297,8 @@
+ 
+ 	.align	5
+ LEAF(memmove)
+-	ADD	t0, a0, a2
+-	ADD	t1, a1, a2
++	addu	t0, a0, a2
++	addu	t1, a1, a2
+ 	sltu	t0, a1, t0			# dst + len <= src -> memcpy
+ 	sltu	t1, a0, t1			# dst >= src + len -> memcpy
+ 	and	t0, t1
+@@ -476,16 +312,16 @@
+ 	 sltu	t0, a1, a0
+ 	beqz	t0, r_end_bytes_up		# src >= dst
+ 	 nop
+-	ADD	a0, a2				# dst = dst + len
+-	ADD	a1, a2				# src = src + len
++	addu	a0, a2				# dst = dst + len
++	addu	a1, a2				# src = src + len
+ 
+ r_end_bytes:
+ 	lb	t0, -1(a1)
+-	SUB	a2, a2, 0x1
++	subu	a2, a2, 0x1
+ 	sb	t0, -1(a0)
+-	SUB	a1, a1, 0x1
++	subu	a1, a1, 0x1
+ 	bnez	a2, r_end_bytes
+-	 SUB	a0, a0, 0x1
++	 subu	a0, a0, 0x1
+ 
+ r_out:
+ 	jr	ra
+@@ -493,11 +329,11 @@
+ 
+ r_end_bytes_up:
+ 	lb	t0, (a1)
+-	SUB	a2, a2, 0x1
++	subu	a2, a2, 0x1
+ 	sb	t0, (a0)
+-	ADD	a1, a1, 0x1
++	addu	a1, a1, 0x1
+ 	bnez	a2, r_end_bytes_up
+-	 ADD	a0, a0, 0x1
++	 addu	a0, a0, 0x1
+ 
+ 	jr	ra
+ 	 move	a2, zero
+Index: linux-2.4.27/arch/mips/lib/memset.S
+===================================================================
+--- linux-2.4.27.orig/arch/mips/lib/memset.S	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/arch/mips/lib/memset.S	2008-03-26 11:18:45.000000000 +0300
+@@ -54,26 +54,26 @@
+ 1:
+ 
+ EXPORT(__bzero)
++	.type   __bzero, @function
+ 	sltiu	t0, a2, 4			/* very small region? */
+ 	bnez	t0, small_memset
+ 	 andi	t0, a0, 3			/* aligned? */
+ 
+-	beqz	t0, 1f
++	beqz	t0, word_aligned 
+ 	 subu	t0, 4				/* alignment in bytes */
+ 
+-#ifdef __MIPSEB__
+-	EX(swl, a1, (a0), first_fixup)		/* make word aligned */
+-#endif
+-#ifdef __MIPSEL__
+-	EX(swr, a1, (a0), first_fixup)		/* make word aligned */
+-#endif
+-	subu	a0, t0				/* word align ptr */
+-	addu	a2, t0				/* correct size */
+-
+-1:	ori	t1, a2, 0x3f			/* # of full blocks */
++1:  /* fill bytewise */
++	EX(sb, a1, 0(a0), first_fixup)
++	addiu	a0, 1
++	subu	a2, 1
++	andi	t0, a0, 3	
++	bnez 	t0, 1b
++	nop
++word_aligned:
++	ori		t1, a2, 0x3f			/* # of full blocks */
+ 	xori	t1, 0x3f
+ 	beqz	t1, memset_partial		/* no block to fill */
+-	 andi	t0, a2, 0x3c
++	andi	t0, a2, 0x3c
+ 
+ 	addu	t1, a0				/* end address */
+ 	.set	reorder
+@@ -83,26 +83,25 @@
+ 	.set	noreorder
+ 
+ memset_partial:
+-	PTR_LA	t1, 2f				/* where to start */
++	la	t1, 2f				/* where to start */
+ 	subu	t1, t0
+ 	jr	t1
+ 	 addu	a0, t0				/* dest ptr */
+ 
+-	.set	push
+-	.set	noreorder
+-	.set	nomacro
+ 	F_FILL64(a0, -64, a1, partial_fixup)	/* ... but first do wrds ... */
+-2:	.set	pop
+-	andi	a2, 3				/* 0 <= n <= 3 to go */
++2:	andi	a2, 3				/* 0 <= n <= 3 to go */
+ 
+ 	beqz	a2, 1f
+-	 addu	a0, a2				/* What's left */
+-#ifdef __MIPSEB__
+-	EX(swr, a1, -1(a0), last_fixup)
+-#endif
+-#ifdef __MIPSEL__
+-	EX(swl, a1, -1(a0), last_fixup)
+-#endif
++	nop 
++//	addu	a0, a2				/* What's left */
++
++byte_write:  /* fill bytewise */
++    EX(sb, a1, 0(a0), last_fixup)
++    addiu   a0, 1
++    subu    a2, 1
++    bnez    a2, byte_write 
++    nop
++
+ 1:	jr	ra
+ 	 move	a2, zero
+ 
+Index: linux-2.4.27/arch/mips/mm/c-r3k.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/mm/c-r3k.c	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/arch/mips/mm/c-r3k.c	2008-03-26 11:18:45.000000000 +0300
+@@ -33,6 +33,7 @@
+ 	unsigned long flags, status, dummy, size;
+ 	volatile unsigned long *p;
+ 
++	return 0;
+ 	p = (volatile unsigned long *) KSEG0;
+ 
+ 	flags = read_c0_status();
+@@ -68,6 +69,7 @@
+ 	unsigned long flags, status, lsize, i;
+ 	volatile unsigned long *p;
+ 
++	return 0;
+ 	p = (volatile unsigned long *) KSEG0;
+ 
+ 	flags = read_c0_status();
+@@ -105,9 +107,36 @@
+ 
+ static void r3k_flush_icache_range(unsigned long start, unsigned long end)
+ {
++	/*Invalidate I-Cache*/
++	lx4180_writeCacheCtrl(0);
++	lx4180_writeCacheCtrl(2);
++	lx4180_writeCacheCtrl(0);
++#if 0
+ 	unsigned long size, i, flags;
+ 	volatile unsigned char *p;
+ 
++
++	//rupert
++    volatile unsigned int reg;
++    save_flags(flags);cli();
++    reg=read_c0_xcontext();
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg | 0x2)); //wirte '1' to bit 0, 1
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg &(~0x2))); //write '0' to bit 0,1
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg | 0x2)); //wirte '1' to bit 0, 1
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    restore_flags(flags);
++	return;
++
++
++
++
+ 	size = end - start;
+ 	if (size > icache_size || KSEGX(start) != KSEG0) {
+ 		start = KSEG0;
+@@ -158,12 +187,38 @@
+ 	}
+ 
+ 	write_c0_status(flags);
++#endif	
+ }
+ 
+ static void r3k_flush_dcache_range(unsigned long start, unsigned long end)
+ {
++	/*Invalidate D-Cache*/
++	lx4180_writeCacheCtrl(0);
++	lx4180_writeCacheCtrl(1);
++	lx4180_writeCacheCtrl(0);
++	return;
++
++#if 0
++
+ 	unsigned long size, i, flags;
+ 	volatile unsigned char *p;
++    volatile unsigned int reg;
++    save_flags(flags);cli();
++    reg=read_c0_xcontext();
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg & (~0x1))); //write '0' to bit 0,1
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg | (0x1))); //write '0' to bit 0,1
++    __asm__ volatile("nop");
++    write_c0_xcontext((reg & (~0x1))); //write '0' to bit 0,1
++    __asm__ volatile("nop");
++    restore_flags(flags);
++	return;
++
++
++
+ 
+ 	size = end - start;
+ 	if (size > dcache_size || KSEGX(start) != KSEG0) {
+@@ -215,6 +270,7 @@
+ 	}
+ 
+ 	write_c0_status(flags);
++#endif	
+ }
+ 
+ static inline unsigned long get_phys_page (unsigned long addr,
+@@ -287,6 +343,13 @@
+ {
+ 	unsigned long flags;
+ 
++	save_and_cli(flags);
++    
++	r3k___flush_cache_all();
++	restore_flags(flags);
++	return;
++
++
+ #ifdef DEBUG_CACHE
+ 	printk("csigtramp[%08lx]", addr);
+ #endif
+@@ -320,7 +383,10 @@
+ 	extern void build_clear_page(void);
+ 	extern void build_copy_page(void);
+ 
+-	r3k_probe_cache();
++//	r3k_probe_cache();
++	 r3k_flush_icache_range(0,0);
++
++	//printk("\n\n cp0 status %x\n ",read_c0_status());
+ 
+ 	_flush_cache_all = r3k_flush_cache_all;
+ 	___flush_cache_all = r3k___flush_cache_all;
+Index: linux-2.4.27/arch/mips/mm/fault.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/mm/fault.c	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/arch/mips/mm/fault.c	2008-03-26 11:18:45.000000000 +0300
+@@ -201,7 +201,7 @@
+ 	 * terminate things with extreme prejudice.
+ 	 */
+ 	printk(KERN_ALERT "Unable to handle kernel paging request at virtual "
+-	       "address %08lx, epc == %08lx, ra == %08lx\n",
++	       "address %08lx,\nepc == %08lx, ra == %08lx\n",
+ 	       address, regs->cp0_epc, regs->regs[31]);
+ 	die("Oops", regs);
+ 	/* Game over.  */
+Index: linux-2.4.27/arch/mips/mm/tlb-r3k.c
+===================================================================
+--- linux-2.4.27.orig/arch/mips/mm/tlb-r3k.c	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/arch/mips/mm/tlb-r3k.c	2008-03-26 11:18:45.000000000 +0300
+@@ -53,7 +53,8 @@
+ 	local_irq_save(flags);
+ 	old_ctx = read_c0_entryhi() & ASID_MASK;
+ 	write_c0_entrylo0(0);
+-	entry = r3k_have_wired_reg ? read_c0_wired() : 8;
++	//entry = r3k_have_wired_reg ? read_c0_wired() : 8;
++	entry=0;
+ 	for (; entry < current_cpu_data.tlbsize; entry++) {
+ 		write_c0_index(entry << 8);
+ 		write_c0_entryhi((entry | 0x80000) << 12);
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/Makefile
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/Makefile	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,28 @@
++#
++# Makefile for the Realtek 865x SoC specific parts of the kernel
++#
++# Note! Dependencies are done automagically by 'make dep', which also
++# removes any old dependencies. DON'T put your own dependencies here
++# unless it's something special (ie not a .c file).
++#
++
++.S.s:
++	$(CPP) $(AFLAGS) $< -o $@
++.S.o:
++	$(CC) $(AFLAGS) -c $< -o $@
++
++O_TARGET	:= rtl865x.o
++
++all: rtl865x.o
++
++#obj-y		:= int-handler.o irq.o setup.o prom.o power.o
++obj-y		:= int-handler.o irq.o setup.o prom.o 
++export-objs	:= pci.o
++obj-$(CONFIG_PCI)		+= pci.o 
++
++int-handler.o: int-handler.S
++
++clean:
++		rm -f *.o
++
++include $(TOPDIR)/Rules.make
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/TODO
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/TODO	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1 @@
++Nothing here yet
+\ No newline at end of file
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/enableLbcTimeout.S
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/enableLbcTimeout.S	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,24 @@
++	.globl	enableLbcTimeout
++	.ent	enableLbcTimeout
++enableLbcTimeout:
++	
++	.set noreorder
++	# get status register value
++	mfc0	$8,$12
++	nop
++	la		$9,0xffff00ff
++	and		$10,$8,$9
++
++	# only enable LBC timeout interrupt IM6
++	la		$8,0x4000
++	or		$8,$8,$10
++	
++	# write into status register
++#	mtc0	$8,$12
++	nop
++	nop
++	jr		$31	
++	nop
++	.set reorder
++	
++	.end enableLbcTimeout
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/int-handler.S
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/int-handler.S	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,75 @@
++/*
++ *  arch/mips/realtek/rtl865x/int-handler.S
++ *
++ *  Copyright (C) 2001 Steven J. Hill (sjhill@realitydiluted.com)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ *  Interrupt exception dispatch code for RTL865XB SoC
++ */
++#include <asm/asm.h>
++#include <asm/mipsregs.h>
++#include <asm/regdef.h>
++#include <asm/stackframe.h>
++
++	/* Very little of comments below are relevant. Copy-pasted from Nino code by Realtek Co.
++	 * Here is the table of interrupts for the Philips Nino
++	 * which uses the Philips PR31700/Toshiba TMPR3912 core.
++	 *
++	 *   MIPS IRQ             Description
++	 *   --------	--------------------------------
++	 *       0	SW0 interrupt (unused)
++	 *       1	SW1 interrupt (unused)
++	 *       2
++	 *       3
++	 *       4	PR31700 low priority interrupts
++	 *       5
++	 *       6	PR31700 high priority interrupts
++	 *       7
++	 */
++
++	.text
++	.set	noreorder
++	.set	noat
++	.align	5
++	NESTED(rtl865xIRQ, PT_SIZE, sp)
++	SAVE_ALL
++	CLI
++	.set	at
++	move	a0, sp
++	jal	irq_dispatch
++	nop				# delay slot
++	j	ret_from_irq
++	nop				# delay slot
++irq_bad:
++	j	irq_bad
++	nop
++
++#if 0
++	mfc0	s0, CP0_CAUSE		# determine cause
++
++	andi	a0, s0, CAUSEF_IP6
++	beq	a0, zero, 1f
++	andi	a0, s0, CAUSEF_IP4	# delay slot
++	move    a0, sp
++	jal	irq6_dispatch
++	nop				# delay slot
++	j	ret_from_irq
++	nop				# delay slot
++
++1:
++	beq	a0, zero, 1f
++	nop				# delay slot
++	move	a0, sp
++	jal	irq4_dispatch
++	nop				# delay slot
++	j	ret_from_irq
++	nop				# delay slot
++1:
++	/* We should never get here */
++	move	a0, sp
++
++#endif
++	END(rtl865xIRQ)
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/irq.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/irq.c	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,188 @@
++/*
++ *  arch/mips/realtek/rtl865x/irq.c
++ *
++ *  Copyright (C) 2001 Steven J. Hill (sjhill@realitydiluted.com)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ *  Interrupt service routines for RTL865XB SoC Copy-pasted from Philips Nino
++ */
++#include <linux/init.h>
++#include <linux/sched.h>
++#include <linux/interrupt.h>
++#include <asm/io.h>
++#include <asm/mipsregs.h>
++#include <asm/rtl865x/interrupt.h>
++//#include <asm/rtl8181.h>
++#include "rtl865x.h"
++//#define ALLINTS (IE_IRQ0 | IE_IRQ1 | IE_IRQ2 | IE_IRQ3 | IE_IRQ4 | IE_IRQ5)
++#define ALLINTS (IE_IRQ0 | IE_IRQ2 | IE_IRQ3 | IE_IRQ4 | IE_IRQ5)
++
++
++
++
++static struct {
++	int ext;
++	int base;
++	int idx;
++} irqRoute[10]={
++	{ 9,30, 3 }, //0:Timer
++	{ 8,28, 3 }, // 1:USB
++	{ 7,26, 3 }, // 2:PCMCIA
++	{ 6,24, 3 }, // 3:UART0
++	{ 5,22, 3 }, // 4:UART1
++	{ 4,20, 0 }, // 5:PCI
++	{ 3,18, 1 }, // 6:NIC
++	{ 2,16, 3 }, // 7:GPIO A,B,C
++	{ 1,14, 3 }, // 8:EXT
++	{ 0,10, 3},// 9: LBC
++};		
++
++static void  unmask_irq(unsigned int irq)
++{
++	REG32(GIMR) = (REG32(GIMR)) | (1 << (31-irq));
++	REG32(IRR)|= ((irqRoute[irq].idx &3)<<irqRoute[irq].base) | (((irqRoute[irq].idx >>2)&1)<<irqRoute[irq].base);
++	printk("IRR(%d)=%08x\n", irq, REG32(IRR));
++}
++static void  mask_irq(unsigned int irq)
++{
++	//printk("irq %d\n",irq);
++	REG32(GIMR)=(REG32(GIMR)) & (~(1 << (31-irq)));
++}
++
++
++static void enable_irq(unsigned int irq)
++{
++//+++Add by shiang. 2005/11/04
++	unmask_irq(irq);
++//---Add by shiang. 2005/11/04
++	return 0;
++}
++
++static unsigned int startup_irq(unsigned int irq)
++{
++	unmask_irq(irq);
++	return 0;		/* Never anything pending  */
++}
++
++static void disable_irq(unsigned int irq)
++{
++
++	mask_irq(irq);
++	return 0;
++}
++
++#define shutdown_irq		disable_irq
++
++static void mask_and_ack_irq(unsigned int irq)
++{
++
++	return 0;
++}
++static void end_irq(unsigned int irq)
++{
++	return 0;
++}
++
++static struct hw_interrupt_type irq_type = {
++	"RTL865x",
++	startup_irq,
++	shutdown_irq,
++	enable_irq,
++	disable_irq,
++	mask_and_ack_irq,
++	end_irq,
++	NULL
++};
++
++__IRAM void irq_dispatch(struct pt_regs *regs)
++{
++	unsigned int gimr, gisr,irq_x;  
++	gimr = REG32(GIMR);
++	REG32(GIMR)&= ~0x06000000;
++
++#ifdef CONFIG_RTL865X_ROMEPERF
++	rtl8651_romeperfEnterPoint(20/*ROMEPERF_INDEX_UNTIL_RXTHREAD*/);
++#endif
++
++	gisr = REG32(GISR);
++	irq_x = (gimr & gisr);
++
++	do{
++		if( irq_x & 0x80000000)
++			do_IRQ(0, regs); //Timer
++		else if( irq_x & 0x04000000)
++			do_IRQ(5, regs); //PCI
++		else if( irq_x & 0x02000000)
++			do_IRQ(6, regs); //NIC
++		else if( irq_x & 0x40000000)
++			do_IRQ(1, regs); //USB
++		else if( irq_x & 0x01000000)
++			do_IRQ(7, regs); //GPIO A,B,C
++		else if( irq_x & 0x10000000)
++			do_IRQ(3, regs); //uart0
++		else if( irq_x & 0x08000000)
++			do_IRQ(4, regs); //uart1
++		gisr = REG32(GISR);
++		irq_x = (gimr & gisr);
++	}while(irq_x);
++	REG32(GIMR)=gimr;
++}
++
++void __init rtl865x_irq_setup(void)
++{
++	extern asmlinkage void rtl865xIRQ(void);
++
++	unsigned int i;
++	
++	REG32(GIMR)=0;
++	REG32(IRR)=0;
++	/* Disable all hardware interrupts */
++//	change_cp0_status(ST0_IM, 0x00);
++//	cil();
++
++	/* Initialize IRQ vector table */
++	//init_generic_irq();
++
++	/* Initialize IRQ action handlers */
++	for (i = 0; i < 16; i++) {
++		hw_irq_controller *handler = NULL;
++		handler		= &irq_type;
++
++		irq_desc[i].status	= IRQ_DISABLED;
++		irq_desc[i].action	= 0;
++		irq_desc[i].depth	= 1;
++		irq_desc[i].handler	= handler;
++	}
++
++	/* Set up the external interrupt exception vector */
++	set_except_vector(0, rtl865xIRQ);
++
++	/* Enable all interrupts */
++//	change_cp0_status(ST0_IM, ALLINTS);
++}
++
++void (*irq_setup)(void);
++
++void __init init_IRQ(void)
++{
++	int flags;
++//	printk("\nfile %s cp0 status %x\n",__FILE__,read_c0_status());
++	flags = read_c0_status();
++	flags |= CAUSEF_IP4|CAUSEF_IP3|CAUSEF_IP5|0xfc00;
++	write_c0_status(flags);	
++	//printk("\nfile %s cp0 status %x\n",__FILE__,read_c0_status());
++#ifdef CONFIG_REMOTE_DEBUG
++	extern void breakpoint(void);
++	extern void set_debug_traps(void);
++
++	printk("Wait for gdb client connection ...\n");
++	set_debug_traps();
++	breakpoint();
++#endif
++
++	/* Invoke board-specific irq setup */
++	irq_setup();
++}
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/power.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/power.c	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,39 @@
++/*
++ *  arch/mips/realtek/rtl865x/power.c
++ *
++ *  Copyright (C) 2000 Jim Pick <jim@jimpick.com>
++ *  Copyright (C) 2001 Steven J. Hill (sjhill@realitydiluted.com)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ *  Power management routines for the RTL865XB SoC Copy-pasted from Philips Nino
++ */
++#include <asm/io.h>
++#include <asm/tx3912.h>
++
++void rtl865x_wait(void)
++{
++	/* We stop the CPU to conserve power */
++	outl(inl(TX3912_POWER_CTRL) | TX3912_POWER_CTRL_STOPCPU,
++		 TX3912_POWER_CTRL);
++
++	/* 
++	 * We wait until an interrupt happens...
++	 */
++
++	/* We resume here */
++	outl(inl(TX3912_POWER_CTRL) & ~TX3912_POWER_CTRL_STOPCPU,
++		 TX3912_POWER_CTRL);
++
++	/* Give ourselves a little delay */
++	__asm__ __volatile__(
++		"nop\n\t"
++		"nop\n\t"
++		"nop\n\t"
++		"nop\n\t"
++		"nop\n\t"
++		"nop\n\t"
++		"nop\n\t");
++}
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/prom.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/prom.c	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,188 @@
++/*
++ *  arch/mips/realtek/rtl865x/prom.c
++ *
++ *  Copyright (C) 2001 Steven J. Hill (sjhill@realitydiluted.com)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *  
++ *  Early initialization code for RTL865xB SoC
++ *  Copy-pasted from Philips Nino
++ */
++#include <linux/config.h>
++#include <linux/init.h>
++#include <linux/kernel.h>
++#include <linux/string.h>
++#include <asm/bootinfo.h>
++#include <asm/addrspace.h>
++#include <asm/page.h>
++#include "rtl865x.h"
++
++// +++ Modify by shiang for create MTD partitions dynamically 2004/08/30
++#if 0
++char arcs_cmdline[CL_SIZE];
++#else
++/* Kernel command line */
++char arcs_cmdline[CL_SIZE] __initdata = CONFIG_CMDLINE;
++#endif
++// --- Modify by shiang for create MTD partitions dynamically 2004/08/30
++
++
++#ifdef CONFIG_FB_TX3912
++extern unsigned long tx3912fb_paddr;
++extern unsigned long tx3912fb_vaddr;
++extern unsigned long tx3912fb_size;
++#endif
++
++const char *get_system_type(void)
++{
++	return "RTL865XB SoC based device";
++}
++
++
++/* Do basic initialization */
++// +++ Modify by shiang for create MTD partitions dynamically 2004/08/30
++#ifdef CONFIG_MTD
++
++int prom_argc;
++int *_prom_argv, *_prom_envp;
++
++/*
++ * YAMON (32-bit PROM) pass arguments and environment as 32-bit pointer.
++ * This macro take care of sign extension, if running in 64-bit mode.
++ */
++#define prom_envp(index) ((char *)(((int *)(int)_prom_envp)[(index)]))
++#define prom_argv(index) ((char *)(((int *)(int)_prom_argv)[(index)]))
++
++
++#if 0
++//Add by shiang for initialize the argv
++void  __init prom_init_cmdline(void)
++{
++	char *cp;
++	int actr;
++
++	//actr = 1; /* Always ignore argv[0] */
++	
++	actr = 0;
++	
++	cp = arcs_cmdline;
++	while(actr < prom_argc) {
++	        strcpy(cp, prom_argv(actr));
++		cp += strlen(prom_argv(actr));
++		*cp++ = ' ';
++		//printk("cp=%s\n", arcs_cmdline);
++		actr++;
++	}
++	if (cp != &(arcs_cmdline[0])) /* get rid of trailing space */
++		--cp;
++	*cp = '\0';
++}
++#endif
++
++char *prom_getargv(char *envname)
++{
++	/*
++	 * Return a pointer to the given environment variable.
++	 * In 64-bit mode: we're using 64-bit pointers, but all pointers
++	 * in the PROM structures are only 32-bit, so we need some
++	 * workarounds, if we are running in 64-bit mode.
++	 */
++	int i, index=0;
++	
++	i = strlen(envname);
++	//printk("Into prom_getenv!\n"); //For debug
++#if 0
++	while (prom_envp(index)) {
++		if(strncmp(envname, prom_envp(index), i) == 0) {
++			printk("prom_envp(index+1)=%s\n", prom_envp(index+1));  //Add by shiang for debug
++			return(prom_envp(index+1));
++		}
++		index += 2;
++	}
++
++	return NULL;
++#else
++	while (prom_argv(index)) {	
++		if(strncmp(envname, prom_argv(index), i) == 0) {
++			//printk("prom_argv(index)=%s\n", prom_argv(index));  //Add by shiang for debug
++			return(prom_argv(index));
++		}
++		index ++;
++	}
++
++	return NULL;
++#endif
++
++}
++
++void __init prom_init(int argc, char **argv, char **envp, int *prom_vec)
++{
++	unsigned long mem_size;
++
++#ifdef CONFIG_MTD
++	prom_argc = argc;
++	_prom_argv = (int *)argv;
++	_prom_envp = (int *)(*envp);
++	//printk("envp =%s\n", *envp);
++	//printk("*_prom_envp=%s\n", (char *)_prom_envp);
++	//prom_init_cmdline();
++	//strcpy(arcs_cmdline, "root=/dev/mtdblock5 rootfstype=squashfs");
++#endif
++
++	mips_machgroup = MACH_GROUP_REALTEK;
++	mips_machtype = MACH_REALTEK_RTL865X;
++
++	//mem_size = 8 << 20;
++//+++ add by siyou 2005/1/20 07:16¤U¤È
++//	Get SDRAM size from register 0xbd013000
++	//mem_size = 16 << 20;
++	switch ( REG32(0xbd013000) & 0x30100000 )
++	{
++	case 0x30000000: // 32MB x1
++			 mem_size = 32 << 20;
++			 break;
++	case 0x30100000: // 32MB x2
++			 mem_size = 64 << 20;
++			 break;
++	case 0x20100000: // 16MB x2
++			 mem_size = 32 << 20;
++			 break;
++	case 0x20000000: // 16MB x1
++			 mem_size = 16 << 20;
++			 break;
++	default: // 16MB x1
++			 mem_size = 16 << 20;
++			 break;
++	}
++//--- add by siyou 2005/1/20 07:16¤U¤È
++
++	add_memory_region(0, mem_size, BOOT_MEM_RAM); 
++
++}
++
++#else  //Shiang: else of CONFIG_MTD
++
++//The RealTek original source code
++void __init prom_init(int argc, char **argv, unsigned long magic, int *prom_vec)
++{
++	unsigned long mem_size;
++#ifdef CONFIG_MTD
++	strcpy(arcs_cmdline, "root=/dev/mtdblock2");
++#endif
++
++	mips_machgroup = MACH_GROUP_REALTEK;
++	mips_machtype = MACH_REALTEK_RTL865X;
++
++	//mem_size = 8 << 20;
++	mem_size = 16 << 20;
++	add_memory_region(0, mem_size, BOOT_MEM_RAM); 
++
++}
++#endif
++// +++ Modify by shiang for create MTD partitions dynamically 2004/08/30
++
++void __init prom_free_prom_memory (void)
++{
++}
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/rtl865x.h
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/rtl865x.h	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,1067 @@
++
++#ifndef _ASICREGS_H
++#define _ASICREGS_H
++
++
++
++#undef SWTABLE_NO_HW
++
++/* Basic features
++*/
++#define MAX_PORT_NUMBER                 6
++#define PORT_NUM_MASK                   7
++#define ALL_PORT_MASK                   0x3F
++
++
++
++/* Memory mapping of tables 
++*/
++enum {
++    TYPE_L2_SWITCH_TABLE = 0,
++    TYPE_ARP_TABLE,
++    TYPE_L3_ROUTING_TABLE,
++    TYPE_MULTICAST_TABLE,
++    TYPE_PROTOCOL_TRAP_TABLE,
++    TYPE_VLAN_TABLE,
++    TYPE_EXT_INT_IP_TABLE,
++    TYPE_ALG_TABLE,
++    TYPE_SERVER_PORT_TABLE,
++    TYPE_L4_TCP_UDP_TABLE,
++    TYPE_L4_ICMP_TABLE,
++    TYPE_PPPOE_TABLE,
++    TYPE_ACL_RULE_TABLE
++};
++
++
++
++/* Register access macro
++*/
++#define	TIMER_CLK_DIV_BASE	2
++#define	DIVISOR	4000    //Louis: change DIVISOR from 4096 to 4000
++			//cfliu: change DIVISOR from 0xe to 4096 for watchdog */
++#define TCD_OFFSET		8
++//#define TICK_FREQ	100
++#define REG32(reg)	(*(volatile unsigned int *)(reg))
++#define REG16(reg)	(*(volatile unsigned short *)(reg))
++#define REG8(reg)	(*(volatile unsigned char *)(reg))
++
++
++#ifndef SWTABLE_NO_HW
++#define SWCORE_BASE                 0xBC800000
++#else
++#define SWCORE_BASE                 0x80600000
++#endif /*SWTABLE_NO_HW*/
++/* Table access and CPU interface control registers
++*/
++#define TACI_BASE                   (SWCORE_BASE + 0x00000000)
++#define SWTACR                      (0x000 + TACI_BASE)     /* Table Access Control */
++#define SWTASR                      (0x004 + TACI_BASE)     /* Table Access Status */
++#define SWTAA                       (0x008 + TACI_BASE)     /* Table Access Address */
++#define TCR0                        (0x020 + TACI_BASE)     /* Table Access Control 0 */
++#define TCR1                        (0x024 + TACI_BASE)     /* Table Access Control 1 */
++#define TCR2                        (0x028 + TACI_BASE)     /* Table Access Control 2 */
++#define TCR3                        (0x02C + TACI_BASE)     /* Table Access Control 3 */
++#define TCR4                        (0x030 + TACI_BASE)     /* Table Access Control 4 */
++#define TCR5                        (0x034 + TACI_BASE)     /* Table Access Control 5 */
++#define TCR6                        (0x038 + TACI_BASE)     /* Table Access Control 6 */
++#define TCR7                        (0x03C + TACI_BASE)     /* Table Access Control 7 */
++/* Table access control register field definitions
++*/
++#define ACTION_MASK                 1
++#define ACTION_DONE                 0
++#define ACTION_START                1
++#define CMD_MASK                    (7 << 1)
++#define CMD_ADD                     (1 << 1)
++#define CMD_MODIFY                  (2 << 1)
++#define CMD_FORCE                   (4 << 1)
++/* Table access status register field definitions 
++*/
++#define TABSTS_MASK                 1
++#define TABSTS_SUCCESS              0
++#define TABSTS_FAIL                 1
++/* Vlan table access definitions 
++*/
++#define STP_DISABLE                 0
++#define STP_BLOCK                   1
++#define STP_LEARN                   2
++#define STP_FORWARD                 3
++/* Protocol trapping table access definitions
++*/
++#define TYPE_TRAP_ETHERNET          0x00
++#define TYPE_TRAP_IP                0x02
++#define TYPE_TRAP_TCP               0x05
++#define TYPE_TRAP_UDP               0x06
++/* L3 Routing table access definitions
++*/
++#define PROCESS_PPPOE               0x00
++#define PROCESS_DIRECT              0x01
++#define PROCESS_INDIRECT            0x02
++#define PROCESS_S_CPU               0x04
++#define PROCESS_N_CPU               0x05
++#define PROCESS_S_DROP              0x06
++#define PROCESS_N_DROP              0x07
++/* ACL table access definitions
++*/
++#define RULE_ETHERNET               0x00
++#define RULE_IP                     0x02
++#define RULE_IFSEL                  0x03
++#define RULE_ICMP                   0x04
++#define RULE_IGMP                   0x05
++#define RULE_TCP                    0x06
++#define RULE_UDP                    0x07
++#define ACTION_PERMIT               0x00
++#define ACTION_REDIRECT             0x01
++#define ACTION_S_CPU                0x02
++#define ACTION_N_CPU                0x03
++#define ACTION_S_DROP               0x04
++#define ACTION_N_DROP               0x05
++#define ACTION_MIRROR               0x06
++#define ACTION_PPPOE_REDIRECT       0x07
++
++
++
++/* MIB counter registers
++*/
++#define MIB_COUNTER_BASE                            (SWCORE_BASE + 0x00001000)
++#define ETHER_STATS_OCTETS                          (0x000 + MIB_COUNTER_BASE)
++#define ETHER_STATS_DROP_EVENTS                     (0x004 + MIB_COUNTER_BASE)
++#define ETHER_STATS_CRC_ALIGN_ERRORS                (0x008 + MIB_COUNTER_BASE)
++#define ETHER_STATS_FRAGMENTS                       (0x00C + MIB_COUNTER_BASE)
++#define ETHER_STATS_JABBERS                         (0x010 + MIB_COUNTER_BASE)
++#define IF_IN_UCAST_PKTS                            (0x014 + MIB_COUNTER_BASE)
++#define ETHER_STATS_MULTICAST_PKTS                  (0x018 + MIB_COUNTER_BASE)
++#define ETHER_STATS_BROADCAST_PKTS                  (0x01C + MIB_COUNTER_BASE)
++#define ETHER_STATS_UNDERSIZE_PKTS                  (0x020 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_64_OCTETS                  (0x024 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_65_TO_127_OCTETS           (0x028 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_128_TO_255_OCTETS          (0x02C + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_256_TO_511_OCTETS          (0x030 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_512_TO_1023_OCTETS         (0x034 + MIB_COUNTER_BASE)
++#define ETHER_STATS_PKTS_1024_TO_1518_OCTETS        (0x038 + MIB_COUNTER_BASE)
++#define ETHER_STATS_OVERSIZE_PKTS                   (0x03C + MIB_COUNTER_BASE)
++#define DOT3_CONTROL_IN_UNKNOWN_OPCODES             (0x040 + MIB_COUNTER_BASE)
++#define DOT3_IN_PAUSE_FRAMES                        (0x044 + MIB_COUNTER_BASE)
++#define IF_OUT_OCTETS                               (0x048 + MIB_COUNTER_BASE)
++#define IF_OUT_UCAST_PKTS                           (0x04C + MIB_COUNTER_BASE)
++#define IF_OUT_MULTICASTCAST_PKTS                   (0x050 + MIB_COUNTER_BASE)
++#define IF_OUT_BROADCASTCAST_PKTS                   (0x054 + MIB_COUNTER_BASE)
++#define DOT3_STATS_LATE_COLLISIONS                  (0x05C + MIB_COUNTER_BASE)
++#define DOT3_STATS_DEFERRED_TRANSMISSIONS           (0x05C + MIB_COUNTER_BASE)
++#define ETHER_STATS_COLLISIONS                      (0x060 + MIB_COUNTER_BASE)
++#define DOT3_STATS_SINGLE_COLLISION_FRAMES          (0x064 + MIB_COUNTER_BASE)
++#define DOT3_STATS_MULTIPLE_COLLISION_FRAMES        (0x068 + MIB_COUNTER_BASE)
++#define DOT3_OUT_PAUSE_FRAMES                       (0x06C + MIB_COUNTER_BASE)
++#define MIB_CONTROL                                 (0x070 + MIB_COUNTER_BASE)
++/* MIB control register field definitions 
++*/
++#define IN_COUNTER_RESTART                          (1 << 31)
++#define OUT_COUNTER_RESTART                         (1 << 30)
++#define PORT_FOR_COUNTING_MASK                      0x3F000000
++#define PORT_FOR_COUNTING_OFFSET                    24
++
++
++
++/* PHY control registers 
++*/
++#define PHY_BASE                                    (SWCORE_BASE + 0x00002000)
++#define PORT0_PHY_CONTROL                           (0x000 + PHY_BASE)
++#define PORT0_PHY_STATUS                            (0x004 + PHY_BASE)
++#define PORT0_PHY_IDENTIFIER_1                      (0x008 + PHY_BASE)
++#define PORT0_PHY_IDENTIFIER_2                      (0x00C + PHY_BASE)
++#define PORT0_PHY_AUTONEGO_ADVERTISEMENT            (0x010 + PHY_BASE)
++#define PORT0_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x014 + PHY_BASE)
++#define PORT1_PHY_CONTROL                           (0x020 + PHY_BASE)
++#define PORT1_PHY_STATUS                            (0x024 + PHY_BASE)
++#define PORT1_PHY_IDENTIFIER_1                      (0x028 + PHY_BASE)
++#define PORT1_PHY_IDENTIFIER_2                      (0x02C + PHY_BASE)
++#define PORT1_PHY_AUTONEGO_ADVERTISEMENT            (0x030 + PHY_BASE)
++#define PORT1_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x034 + PHY_BASE)
++#define PORT2_PHY_CONTROL                           (0x040 + PHY_BASE)
++#define PORT2_PHY_STATUS                            (0x044 + PHY_BASE)
++#define PORT2_PHY_IDENTIFIER_1                      (0x048 + PHY_BASE)
++#define PORT2_PHY_IDENTIFIER_2                      (0x04C + PHY_BASE)
++#define PORT2_PHY_AUTONEGO_ADVERTISEMENT            (0x050 + PHY_BASE)
++#define PORT2_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x054 + PHY_BASE)
++#define PORT3_PHY_CONTROL                           (0x060 + PHY_BASE)
++#define PORT3_PHY_STATUS                            (0x064 + PHY_BASE)
++#define PORT3_PHY_IDENTIFIER_1                      (0x068 + PHY_BASE)
++#define PORT3_PHY_IDENTIFIER_2                      (0x06C + PHY_BASE)
++#define PORT3_PHY_AUTONEGO_ADVERTISEMENT            (0x070 + PHY_BASE)
++#define PORT3_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x074 + PHY_BASE)
++#define PORT4_PHY_CONTROL                           (0x080 + PHY_BASE)
++#define PORT4_PHY_STATUS                            (0x084 + PHY_BASE)
++#define PORT4_PHY_IDENTIFIER_1                      (0x088 + PHY_BASE)
++#define PORT4_PHY_IDENTIFIER_2                      (0x08C + PHY_BASE)
++#define PORT4_PHY_AUTONEGO_ADVERTISEMENT            (0x090 + PHY_BASE)
++#define PORT4_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x094 + PHY_BASE)
++#define PORT5_PHY_CONTROL                           (0x0A0 + PHY_BASE)
++#define PORT5_PHY_STATUS                            (0x0A4 + PHY_BASE)
++#define PORT5_PHY_IDENTIFIER_1                      (0x0A8 + PHY_BASE)
++#define PORT5_PHY_IDENTIFIER_2                      (0x0AC + PHY_BASE)
++#define PORT5_PHY_AUTONEGO_ADVERTISEMENT            (0x0B0 + PHY_BASE)
++#define PORT5_PHY_AUTONEGO_LINK_PARTNER_ABILITY     (0x0B4 + PHY_BASE)
++/* PHY control register field definitions 
++*/
++#define PHY_RESET                                   (1 << 15)
++#define ENABLE_LOOPBACK                             (1 << 14)
++#define SPEED_SELECT_100M                           (1 << 13)
++#define SPEED_SELECT_10M                            0
++#define ENABLE_AUTONEGO                             (1 << 12)
++#define POWER_DOWN                                  (1 << 11)
++#define ISOLATE_PHY                                 (1 << 10)
++#define RESTART_AUTONEGO                            (1 << 9)
++#define SELECT_FULL_DUPLEX                          (1 << 8)
++#define SELECT_HALF_DUPLEX                          0
++/* PHY status register field definitions 
++*/
++#define STS_CAPABLE_100BASE_T4                      (1 << 15)
++#define STS_CAPABLE_100BASE_TX_FD                   (1 << 14)
++#define STS_CAPABLE_100BASE_TX_HD                   (1 << 13)
++#define STS_CAPABLE_100BASE_T_FD                    (1 << 12)
++#define STS_CAPABLE_100BASE_T_HD                    (1 << 11)
++#define STS_MF_PREAMBLE_SUPPRESSION                 (1 << 6)
++#define STS_AUTONEGO_COMPLETE                       (1 << 5)
++#define STS_REMOTE_FAULT                            (1 << 4)
++#define STS_CAPABLE_NWAY_AUTONEGO                   (1 << 3)
++#define STS_LINK_ESTABLISHED                        (1 << 2)
++#define STS_JABBER_DETECTED                         (1 << 1)
++#define STS_CAPABLE_EXTENDED                        (1 << 0)
++/* PHY identifier 1 
++*/
++#define OUT_3_18_MASK                               (0xFFFF << 16)
++#define OUT_3_18_OFFSET                             16
++#define OUT_19_24_MASK                              (0x3F << 10)
++#define OUT_19_24_OFFSET                            10
++#define MODEL_NUMBER_MASK                           (0x3F << 4)
++#define MODEL_NUMBER_OFFSET                         4
++#define REVISION_NUMBER_MASK                        0x0F
++#define REVISION_NUMBER_OFFSET                      0
++/* PHY auto-negotiation advertisement and 
++link partner ability registers field definitions
++*/
++#define NEXT_PAGE_ENABLED                           (1 << 15)
++#define ACKNOWLEDGE                                 (1 << 14)
++#define REMOTE_FAULT                                (1 << 13)
++#define CAPABLE_PAUSE                               (1 << 10)
++#define CAPABLE_100BASE_T4                          (1 << 9)
++#define CAPABLE_100BASE_TX_FD                       (1 << 8)
++#define CAPABLE_100BASE_TX_HD                       (1 << 7)
++#define CAPABLE_100BASE_T_FD                        (1 << 6)
++#define CAPABLE_100BASE_T_HD                        (1 << 5)
++#define SELECTOR_MASK                               0x1F
++#define SELECTOR_OFFSET                             0
++
++
++
++/* CPU interface Tx/Rx packet registers 
++*/
++#define CPU_IFACE_BASE                      (SWCORE_BASE + 0x00004000)
++#define CPUICR                              (0x000 + CPU_IFACE_BASE)    /* Interface control */
++#define CPURPDCR                            (0x004 + CPU_IFACE_BASE)    /* Rx pkthdr descriptor control */
++#define CPURMDCR                            (0x008 + CPU_IFACE_BASE)    /* Rx mbuf descriptor control */
++#define CPUTPDCR                            (0x00C + CPU_IFACE_BASE)    /* Tx pkthdr descriptor control */
++#define CPUIIMR                             (0x010 + CPU_IFACE_BASE)    /* Interrupt mask control */
++#define CPUIISR                             (0x014 + CPU_IFACE_BASE)    /* Interrupt status control */
++/* CPU interface control register field definitions 
++*/
++#if 0
++#define TXCMD                               (1 << 31)       /* Enable Tx */
++#define RXCMD                               (1 << 30)       /* Enable Rx */
++#define TXFD                                (1 << 29)       /* Notify Tx descriptor fetch */
++#define SOFTRST                             (1 << 28)       /* Re-initialize all descriptors */
++#define STOPTX                              (1 << 27)       /* Stop Tx */
++#define SWINTSET                            (1 << 26)       /* Set software interrupt */
++#define BUSBURST_32WORDS                    0
++#define BUSBURST_64WORDS                    (1 << 24)
++#define BUSBURST_128WORDS                   (2 << 24)
++#define BUSBURST_256WORDS                   (3 << 24)
++#define MBUF_128BYTES                       0
++#define MBUF_256BYTES                       (1 << 21)
++#define MBUF_512BYTES                       (2 << 21)
++#define MBUF_1024BYTES                      (3 << 21)
++#define MBUF_2048BYTES                      (4 << 21)
++#else
++#define TXCMD                               (1 << 31)       /* Enable Tx */
++#define RXCMD                               (1 << 30)       /* Enable Rx */
++#define BUSBURST_32WORDS                    0
++#define BUSBURST_64WORDS                    (1 << 28)
++#define BUSBURST_128WORDS                   (2 << 28)
++#define BUSBURST_256WORDS                   (3 << 28)
++#define MBUF_128BYTES                       0
++#define MBUF_256BYTES                       (1 << 24)
++#define MBUF_512BYTES                       (2 << 24)
++#define MBUF_1024BYTES                      (3 << 24)
++#define MBUF_2048BYTES                      (4 << 24)
++#define TXFD                                (1 << 23)       /* Notify Tx descriptor fetch */
++#define SOFTRST                             (1 << 22)       /* Re-initialize all descriptors */
++#define STOPTX                              (1 << 21)       /* Stop Tx */
++#define SWINTSET                            (1 << 20)       /* Set software interrupt */
++#define LBMODE                              (1 << 19)       /* Loopback mode */
++#define LB10MHZ                             (1 << 18)       /* LB 10MHz */
++#define LB100MHZ                            (1 << 18)       /* LB 100MHz */
++#endif
++/* CPU interface descriptor field defintions 
++*/
++#define DESC_OWNED_BIT                      1
++#define DESC_RISC_OWNED                     0
++#define DESC_SWCORE_OWNED                   1
++#define DESC_WRAP                           (1 << 1)
++/* CPU interface interrupt mask register field definitions 
++*/
++#define LINK_CHANG_IE                       (1 << 31)    /* Link change interrupt enable */
++#define RX_ERR_IE                           (1 << 30)    /* Rx error interrupt enable */
++#define TX_ERR_IE                           (1 << 29)    /* Tx error interrupt enable */
++#define SW_INT_IE                           (1 << 28)    /* Software interrupt enable */
++#define L4_COL_REMOVAL_IE                   (1 << 27)    /* L4 collision removal interrupt enable */
++#define PKTHDR_DESC_RUNOUT_IE               (1 << 23)    /* Run out pkthdr descriptor interrupt enable */
++#define MBUF_DESC_RUNOUT_IE                 (1 << 22)    /* Run out mbuf descriptor interrupt enable */
++#define TX_DONE_IE                          (1 << 21)    /* Tx one packet done interrupt enable */
++#define RX_DONE_IE                          (1 << 20)    /* Rx one packet done interrupt enable */
++#define TX_ALL_DONE_IE                      (1 << 19)    /* Tx all packets done interrupt enable */
++/* CPU interface interrupt status register field definitions 
++*/
++#define LINK_CHANG_IP                       (1 << 31)   /* Link change interrupt pending */
++#define RX_ERR_IP                           (1 << 30)   /* Rx error interrupt pending */
++#define TX_ERR_IP                           (1 << 29)   /* Tx error interrupt pending */
++#define SW_INT_IP                           (1 << 28)   /* Software interrupt pending */
++#define L4_COL_REMOVAL_IP                   (1 << 27)   /* L4 collision removal interrupt pending */
++#define PKTHDR_DESC_RUNOUT_IP               (1 << 23)   /* Run out pkthdr descriptor interrupt pending */
++#define MBUF_DESC_RUNOUT_IP                 (1 << 22)   /* Run out mbuf descriptor interrupt pending */
++#define TX_DONE_IP                          (1 << 21)   /* Tx one packet done interrupt pending */
++#define RX_DONE_IP                          (1 << 20)   /* Rx one packet done interrupt pending */
++#define TX_ALL_DONE_IP                      (1 << 19)   /* Tx all packets done interrupt pending */
++
++
++/* System control registers 
++*/
++#define SYSTEM_BASE                         (SWCORE_BASE + 0x00003000)
++#define MACCR                               (0x000 + SYSTEM_BASE)   /* MAC control */
++#define MACMR                               (0x004 + SYSTEM_BASE)   /* MAC monitor */
++#define VLANTCR                             (0x008 + SYSTEM_BASE)   /* Vlan tag control */
++#define DSCR0                               (0x00C + SYSTEM_BASE)   /* Qos by DS control */
++#define DSCR1                               (0x010 + SYSTEM_BASE)   /* Qos by DS control */
++#define QOSCR                               (0x014 + SYSTEM_BASE)   /* Qos control */
++#define MISCCR                              (0x018 + SYSTEM_BASE)   /* Switch core misc control */
++#define SWTMCR                              (0x01C + SYSTEM_BASE)   /* Switch table misc control */
++#define TMRMR                               (0x020 + SYSTEM_BASE)   /* Test mode Rx mii-like */
++#define TMTMR                               (0x024 + SYSTEM_BASE)   /* Test mode Tx mii-like */
++#define TMCR                                (0x028 + SYSTEM_BASE)   /* Test mode control */
++#define GMHR                                (0x02C + SYSTEM_BASE)   /* Gateway MAC high */
++#define GMLR                                (0x030 + SYSTEM_BASE)   /* Gateway MAC low */
++/* MAC control register field definitions 
++*/
++#define DIS_IPG                             (1 << 31)   /* Set IFG */
++#define EN_INT_CAM                          (1 << 30)   /* Enable internal CAM */
++#define NORMAL_BACKOFF                      (1 << 29)   /* Normal back off slot timer */
++#define ACPT_MAXLEN_1536                    0           /* Accepted max length of packets */
++#define ACPT_MAXLEN_1552                    (1 << 26)
++#define FULL_RST                            (1 << 25)   /* Reset all tables & queues */
++#define SEMI_RST                            (1 << 24)   /* Reset queues */
++//#define BCAST_TO_CPU                        (1 << 23)   /* Broadcast to CPU */
++//#define DIS_ACPT_BCAST                      (1 << 22)   /* Disable accept broadcast packets */
++/* MAC monitor register field definitions 
++*/
++#define EN_MON_ID_BUS                       (1 << 31)   /* Enable monitor ID bus for ASIC debug */
++#define EN_MON_PKT_BUS                      (1 << 30)   /* Enable monitor packet bus for ASIC debug */
++/* VLAN tag control register field definitions 
++*/
++//#define NO_INS_REM_TAG                      3           /* Do not insert/remove tag */
++//#define INS_TAG                             2           /* Insert tag */
++//#define INS_TAG_HQ_ONLY                     1           /* Insert tag from high queue only */
++//#define REM_TAG                             0           /* Remove tag */
++//#define VLAN_TAG_P0_OFFSET                  30          /* Port 0 offset */
++//#define VLAN_TAG_P1_OFFSET                  28          /* Port 1 offset */
++//#define VLAN_TAG_P2_OFFSET                  26          /* Port 2 offset */
++//#define VLAN_TAG_P3_OFFSET                  24          /* Port 3 offset */
++//#define VLAN_TAG_P4_OFFSET                  22          /* Port 4 offset */
++//#define VLAN_TAG_P5_OFFSET                  20          /* Port 5 offset */
++#define VLAN_TAG_ONLY                       (1 << 19)   /* Only accept tagged packets */
++/* Qos by DS control register 
++*/
++#define DS0_7                               0xFF000000
++#define DS8_15                              0x00FF0000
++#define DS16_23                             0x0000FF00
++#define DS24_31                             0x000000FF
++#define DS32_39                             0xFF000000
++#define DS40_47                             0x00FF0000
++#define DS48_55                             0x0000FF00
++#define DS56_63                             0x000000FF
++/* Qos control register 
++*/
++#define QWEIGHT_MASK                        (3 << 30)
++#define QWEIGHT_ALWAYS_H                    (3 << 30)   /* Weighted round robin of priority always high first */
++#define QWEIGHT_16TO1                       (2 << 30)   /* Weighted round robin of priority queue 16:1 */
++#define QWEIGHT_8O1                         (1 << 30)   /* Weighted round robin of priority queue 8:1 */
++#define QWEIGHT_4TO1                        0           /* Weighted round robin of priority queue 4:1 */
++#define EN_FCA_AUTOOFF                      (1 << 29)   /* Enable flow control auto off */
++#define DIS_DS_PRI                          (1 << 28)   /* Disable DS priority */
++#define DIS_VLAN_PRI                        (1 << 27)   /* Disable 802.1p priority */
++#define PORT5_H_PRI                         (1 << 26)   /* Port 5 high priority */
++#define PORT4_H_PRI                         (1 << 25)   /* Port 4 high priority */
++#define PORT3_H_PRI                         (1 << 24)   /* Port 3 high priority */
++#define PORT2_H_PRI                         (1 << 23)   /* Port 2 high priority */
++#define PORT1_H_PRI                         (1 << 22)   /* Port 1 high priority */
++#define PORT0_H_PRI                         (1 << 21)   /* Port 0 high priority */
++#define QOS_PORT_OFFSET                     21
++/* Switch core misc control register field definitions 
++*/
++//#define SOFT_RST_CORE                       (1 << 31)   /* Soft reset */
++#define DIS_P5_LOOPBACK                     (1 << 30)   /* Disable port 5 loopback */
++#define P5_LINK_MII_MAC                     0           /* Port 5 MII MAC type */
++#define P5_LINK_MII_PHY                     1           /* Port 5 MII PHY type */
++#define P5_LINK_SNI_MAC                     2           /* Port 5 SNI MAC type */
++#define P5_LINK_OFFSET                      28          /* Port 5 link type offset */
++//#define P4_USB_SEL                          (1 << 25)   /* Select port USB interface */
++#define EN_P5_LINK_PHY                      (1 << 26)   /* Enable port 5 PHY provides link status to MAC */
++#define EN_P4_LINK_PHY                      (1 << 25)   /* Enable port 4 PHY provides link status to MAC */
++#define EN_P3_LINK_PHY                      (1 << 24)   /* Enable port 3 PHY provides link status to MAC */
++#define EN_P2_LINK_PHY                      (1 << 23)   /* Enable port 2 PHY provides link status to MAC */
++#define EN_P1_LINK_PHY                      (1 << 22)   /* Enable port 1 PHY provides link status to MAC */
++#define EN_P0_LINK_PHY                      (1 << 21)   /* Enable port 0 PHY provides link status to MAC */
++/* Switch table misc control register field definitions 
++*/
++#define NAPTR_NOT_FOUND_TO_CPU              0           /* Reverse NAPT not found to CPU */
++#define NAPTR_NOT_FOUND_DROP                (1 << 0)    /* Reverse NAPT not found to S_DROP */
++#define EN_NAPT_AUTO_LEARN                  (1 << 1)    /* Enable NAPT auto learn */
++#define EN_NAPT_AUTO_DELETE                 (1 << 2)    /* Enable NAPT auto delete */
++#define EN_VLAN_INGRESS_FILTER              (1 << 3)    /* Enable Vlan ingress filtering */
++#define EN_VLAN_EGRESS_FILTER               (1 << 4)    /* Enable Vlan egress filtering */
++#define WAN_ROUTE_MASK                      (3 << 5)
++#define WAN_ROUTE_FORWARD                   0           /* Route WAN packets */
++#define WAN_ROUTE_TO_CPU                    (1 << 5)    /* Forward WAN packets to CPU */
++#define WAN_ROUTE_DROP                      (2 << 5)    /* Drop WAN packets */
++#define MCAST_STP_STS_MASK                  (0x3ff << 7)
++#define MCAST_STP_STS_P0_OFFSET             7           /* Multicast spanning tree status port 0 */
++#define MCAST_STP_STS_P1_OFFSET             9           /* Multicast spanning tree status port 1 */
++#define MCAST_STP_STS_P2_OFFSET             11          /* Multicast spanning tree status port 2 */
++#define MCAST_STP_STS_P3_OFFSET             13          /* Multicast spanning tree status port 3 */
++#define MCAST_STP_STS_P4_OFFSET             15          /* Multicast spanning tree status port 4 */
++#define MCAST_STP_STS_P5_OFFSET             17          /* Multicast spanning tree status port 5 */
++#define MCAST_PORT_EXT_MODE_OFFSET          19          /* Multicast port mode offset */
++#define MCAST_PORT_EXT_MODE_MASK            (0x3f << 19)    /* Multicast port mode mask */
++#define NAPTF2CPU                           (1 << 25)   /* Trap packets not in TCP/UDP/ICMP format and 
++                                                        destined to the interface required to do NAPT */
++#define EN_MCAST                            (1 << 26)   /* Enable Multicast Table */
++#define BCAST_TO_CPU                        (1 << 28)   /* If EN_BCAST is not set, trap broadcast packets 
++                                                        to CPU */
++#define MCAST_TO_CPU                        (1 << 29)   /* If EN_MCAST is not set, trap multicast packets 
++                                                        to CPU */
++#define EN_BCAST                            (1 << 30)   /* Enable Broadcast Handling */
++/* Test mode Rx MII-like register field definitions 
++*/
++#define P5_RXDV                             (1 << 30)   /* Enable port 0 MII RXDV signal */
++#define P4_RXDV                             (1 << 29)   /* Enable port 1 MII RXDV signal */
++#define P3_RXDV                             (1 << 28)   /* Enable port 2 MII RXDV signal */
++#define P2_RXDV                             (1 << 27)   /* Enable port 3 MII RXDV signal */
++#define P1_RXDV                             (1 << 26)   /* Enable port 4 MII RXDV signal */
++#define P0_RXDV                             (1 << 25)   /* Enable port 5 MII RXDV signal */
++#define NIBBLE_MASK                         0x0F        /* Mask for a nibble */
++#define P5_RXD_OFFSET                       20          /* Port 0 RXD MII signal */
++#define P4_RXD_OFFSET                       16          /* Port 1 RXD MII signal */
++#define P3_RXD_OFFSET                       12          /* Port 2 RXD MII signal */
++#define P2_RXD_OFFSET                       8           /* Port 3 RXD MII signal */
++#define P1_RXD_OFFSET                       4           /* Port 4 RXD MII signal */
++#define P0_RXD_OFFSET                       0           /* Port 5 RXD MII signal */
++/* Test mode Tx MII-like register field definitions 
++*/
++#define P5_TXDV                             (1 << 30)   /* Enable port 0 MII TXDV signal */
++#define P4_TXDV                             (1 << 29)   /* Enable port 1 MII TXDV signal */
++#define P3_TXDV                             (1 << 28)   /* Enable port 2 MII TXDV signal */
++#define P2_TXDV                             (1 << 27)   /* Enable port 3 MII TXDV signal */
++#define P1_TXDV                             (1 << 26)   /* Enable port 4 MII TXDV signal */
++#define P0_TXDV                             (1 << 25)   /* Enable port 5 MII TXDV signal */
++#define P5_TXD_OFFSET                       20          /* Port 0 TXD MII signal */
++#define P4_TXD_OFFSET                       16          /* Port 1 TXD MII signal */
++#define P3_TXD_OFFSET                       12          /* Port 2 TXD MII signal */
++#define P2_TXD_OFFSET                       8           /* Port 3 TXD MII signal */
++#define P1_TXD_OFFSET                       4           /* Port 4 TXD MII signal */
++#define P0_TXD_OFFSET                       0           /* Port 5 TXD MII signal */
++/* Test mode enable register 
++*/
++#define TX_TEST_PORT_OFFSET                 26          /* Tx test mode enable port offset */
++#define RX_TEST_PORT_OFFSET                 18          /* Rx test mode enable port offset */
++/* Gateway MAC low register 
++*/
++#define GMACL_OFFSET                        20          /* Gateway MAC[15:4] offset */
++#define GMACL_MASK                          (0xFFFFFFFF << 20)  /* Gateway MAC[15:4] mask */
++
++
++
++/* Miscellaneous control registers 
++*/
++#define MISC_BASE                           (SWCORE_BASE + 0x00005000)
++#define LEDCR                               (0x000 + MISC_BASE)     /* LED control */
++#define PSCR                                (0x004 + MISC_BASE)     /* Power saving control */
++#define BISTCR                              (0x008 + MISC_BASE)     /* BIST control */
++#define BWCR                                (0x00C + MISC_BASE)     /* Bandwidth control */
++#define CSCR                                (0x010 + MISC_BASE)     /* Checksum control */
++#define FCREN                               (0x014 + MISC_BASE)     /* Flow control enable control */
++#define FCRTH                               (0x018 + MISC_BASE)     /* Flow control threshold */
++#define PTCR                                (0x01C + MISC_BASE)     /* Port trunk control */
++#define PPPCR                               (0x020 + MISC_BASE)     /* PPP control */
++#define PTRAPCR                             (0x024 + MISC_BASE)     /* Protocol trapping control */
++#define STCR                                (0x028 + MISC_BASE)     /* Spanning tree control */
++#define TTLCR                               (0x02C + MISC_BASE)     /* TTL control */
++#define MSCR                                (0x030 + MISC_BASE)     /* Module switch control */
++#define BSCR                                (0x038 + MISC_BASE)     /* Broadcast storm control */
++#define TEATCR                              (0x03C + MISC_BASE)     /* Table entry aging time control */
++#define PMCR                                (0x040 + MISC_BASE)     /* Port mirror control */
++#define PPMAR                               (0x044 + MISC_BASE)     /* Per port matching action */
++#define PATP0                               (0x048 + MISC_BASE)     /* Pattern for port 0 */
++#define PATP1                               (0x04C + MISC_BASE)     /* Pattern for port 1 */
++#define PATP2                               (0x050 + MISC_BASE)     /* Pattern for port 2 */
++#define PATP3                               (0x054 + MISC_BASE)     /* Pattern for port 3 */
++#define PATP4                               (0x058 + MISC_BASE)     /* Pattern for port 4 */
++#define PATP5                               (0x05C + MISC_BASE)     /* Pattern for port 5 */
++#define MASKP0                              (0x060 + MISC_BASE)     /* Mask for port 0 */
++#define MASKP1                              (0x064 + MISC_BASE)     /* Mask for port 1 */
++#define MASKP2                              (0x068 + MISC_BASE)     /* Mask for port 2 */
++#define MASKP3                              (0x06C + MISC_BASE)     /* Mask for port 3 */
++#define MASKP4                              (0x070 + MISC_BASE)     /* Mask for port 4 */
++#define MASKP5                              (0x074 + MISC_BASE)     /* Mask for port 5 */
++#define PVCR                                (0x078 + MISC_BASE)     /* Port based vlan config */
++#define GIDXMCR                             (0x07C + MISC_BASE)     /* GIDX mapping control */
++#define OCR                                 (0x080 + MISC_BASE)     /* Offset control */
++/* LED control register field definitions 
++*/
++#define LED_P0_COL                          (1 << 0)    /* LED port 0 collision */
++#define LED_P0_ACT                          (1 << 1)    /* LED port 0 active */
++#define LED_P0_100M                         (1 << 2)    /* LED port 0 speed 100M */
++#define LED_P1_COL                          (1 << 3)    /* LED port 1 collision */
++#define LED_P1_ACT                          (1 << 4)    /* LED port 1 active */
++#define LED_P1_100M                         (1 << 5)    /* LED port 1 speed 100M */
++#define LED_P2_COL                          (1 << 6)    /* LED port 2 collision */
++#define LED_P2_ACT                          (1 << 7)    /* LED port 2 active */
++#define LED_P2_100M                         (1 << 8)    /* LED port 2 speed 100M */
++#define LED_P3_COL                          (1 << 9)    /* LED port 3 collision */
++#define LED_P3_ACT                          (1 << 10)   /* LED port 3 active */
++#define LED_P3_100M                         (1 << 11)   /* LED port 3 speed 100M */
++#define LED_P4_COL                          (1 << 12)   /* LED port 4 collision */
++#define LED_P4_ACT                          (1 << 13)   /* LED port 4 active */
++#define LED_P4_100M                         (1 << 14)   /* LED port 4 speed 100M */
++#define LED_P5_COL                          (1 << 15)   /* LED port 5 collision */
++#define LED_P5_ACT                          (1 << 16)   /* LED port 5 active */
++#define LED_P5_100M                         (1 << 17)   /* LED port 5 speed 100M */
++#define LED_CPU_CTRL                        (1 << 18)   /* CPU control LED */
++/* Power saving control register field definitions 
++*/
++#define EN_POWER_SAVE                       (1 << 0)    /* Enable power saving mode */
++/* BIST control register field definitions 
++*/
++#define PAGE_BIST_ERR_MASK                  0x1F        /* Page error bit map mask */
++#define PAGE_BIST_ERR_OFFSET                0           /* Page error bit map offset */
++#define TXQ_BIST_ERR_MASK                   (0x1F << 5) /* Tx queue error bit map mask */
++#define TXQ_BIST_ERR_OFFSET                 5           /* Tx queue error bit map offset */
++#define L2_BIST_ERR_MASK                    (1 << 10)   /* L2 error bit map mask */
++#define L2_BIST_ERR_OFFSET                  10          /* L2 error bit map offset */
++#define L4_BIST_ERR_MASK                    (1 << 11)  /* L4 error bit map mask */
++#define L4_BIST_ERR_OFFSET                  11          /* L4 error bit map offset */
++/* Bandwidth control register field definitions 
++*/
++#define EN_BC_PORT_MASK                     0x3F        /* Bandwidth control port mask */
++#define BC_P0_OFFSET                        6           /* Bandwidth control port 0 offset */
++#define BC_P1_OFFSET                        9           /* Bandwidth control port 1 offset */
++#define BC_P2_OFFSET                        12          /* Bandwidth control port 2 offset */
++#define BC_P3_OFFSET                        15          /* Bandwidth control port 3 offset */
++#define BC_P4_OFFSET                        18          /* Bandwidth control port 4 offset */
++#define BC_P5_OFFSET                        21          /* Bandwidth control port 5 offset */
++#define BW_FULL_RATE                        0
++#define BW_128K                             1
++#define BW_256K                             2
++#define BW_512K                             3
++#define BW_1M                               4
++#define BW_2M                               5
++#define BW_4M                               6
++#define BW_8M                               7
++/* Checksum control register field definitions 
++*/
++#define ALLOW_L3_CHKSUM_ERR                 (1 << 0)    /* Allow L3 checksum error */
++#define ALLOW_L4_CHKSUM_ERR                 (1 << 1)    /* Allow L4 checksum error */
++#define EN_ETHER_L3_CHKSUM_REC              (1 << 2)    /* Enable L3 checksum recalculation for ethernet port */
++#define EN_ETHER_L4_CHKSUM_REC              (1 << 3)    /* Enable L4 checksum recalculation for ethernet port */
++#define EN_CPU_L3_CHKSUM_REC                (1 << 4)    /* Enable L3 checksum recalculation for CPU port */
++#define EN_CPU_L4_CHKSUM_REC                (1 << 5)    /* Enable L4 checksum recalculation for CPU port */
++/* Flow control enable register field defintions 
++*/
++#define EN_P0_IN_Q_FC                       (1 << 31)   /* Enable port 0 input flow control */
++#define EN_P1_IN_Q_FC                       (1 << 30)   /* Enable port 1 input flow control */
++#define EN_P2_IN_Q_FC                       (1 << 29)   /* Enable port 2 input flow control */
++#define EN_P3_IN_Q_FC                       (1 << 28)   /* Enable port 3 input flow control */
++#define EN_P4_IN_Q_FC                       (1 << 27)   /* Enable port 4 input flow control */
++#define EN_P5_IN_Q_FC                       (1 << 26)   /* Enable port 5 input flow control */
++#define EN_IN_Q_FC_PORT_OFFSET              26
++#define EN_P0_OUT_Q_FC                      (1 << 25)   /* Enable port 0 output flow control */
++#define EN_P1_OUT_Q_FC                      (1 << 24)   /* Enable port 1 output flow control */
++#define EN_P2_OUT_Q_FC                      (1 << 23)   /* Enable port 2 output flow control */
++#define EN_P3_OUT_Q_FC                      (1 << 22)   /* Enable port 3 output flow control */
++#define EN_P4_OUT_Q_FC                      (1 << 21)   /* Enable port 4 output flow control */
++#define EN_P5_OUT_Q_FC                      (1 << 20)   /* Enable port 5 output flow control */
++#define EN_OUT_Q_FC_PORT_OFFSET             20
++#define EN_CPU_OUT_Q_FC                     (1 << 19)   /* Enable CPU output flow control */
++#define FC_LAUNCH_PORT_OFFSET               13          /* CPU launches flow control on port offset */
++/* Flow control enable register field defintions 
++*/
++#define PER_PORT_BUF_FC_TH_MASK             0xFF        /* Per port buffer page flow control threshold mask */
++#define IN_Q_PER_PORT_BUF_FC_THH_OFFSET     24          /* InQ per port buffer page flow control high threshold offset */
++#define IN_Q_PER_PORT_BUF_FC_THL_OFFSET     16          /* InQ per port buffer page flow control low threshold offset */
++#define OUT_Q_PER_PORT_BUF_FC_THH_OFFSET    8           /* OutQ per port buffer page flow control high threshold offset */
++#define OUT_Q_PER_PORT_BUF_FC_THL_OFFSET    0           /* OutQ per port buffer page flow control low threshold offset */
++/* Port trunking control register field definitions 
++*/
++#define LMPR7_OFFSET                        27          /* Physical port index for logical port 7 */
++#define LMPR6_OFFSET                        24          /* Physical port index for logical port 6 */
++#define LMPR5_OFFSET                        21          /* Physical port index for logical port 5 */
++#define LMPR4_OFFSET                        18          /* Physical port index for logical port 4 */
++#define LMPR3_OFFSET                        15          /* Physical port index for logical port 3 */
++#define LMPR2_OFFSET                        12          /* Physical port index for logical port 2 */
++#define LMPR1_OFFSET                        9           /* Physical port index for logical port 1 */
++#define LMPR0_OFFSET                        6           /* Physical port index for logical port 0 */
++#define TRUNK1_PORT_MASK_OFFSET             0           /* Physical port mask of trunk 1 */
++/* Port trunking control register field definitions 
++*/
++#define EN_PPP_OP                           (1 << 31)   /* Enable PPPoE auto insert and remove */
++/* Protocol trapping control register field definitions 
++*/
++#define EN_ARP_TRAP                         (1 << 31)   /* Enable trapping ARP packets */
++#define EN_RARP_TRAP                        (1 << 30)   /* Enable trapping RARP packets */
++#define EN_PPPOE_TRAP                       (1 << 29)   /* Enable trapping PPPoE packets */
++#define EN_IGMP_TRAP                        (1 << 28)   /* Enable trapping IGMP packets */
++#define EN_DHCP_TRAP1                       (1 << 27)   /* Enable trapping DHCP 67 packets */
++#define EN_DHCP_TRAP2                       (1 << 26)   /* Enable trapping DHCP 68 packets */
++#define EN_OSPF_TRAP                        (1 << 25)   /* Enable trapping OSPF packets */
++#define EN_RIP_TRAP                         (1 << 24)   /* Enable trapping RIP packets */
++/* Spanning tree control register field definitions 
++*/
++#define EN_ESTP_S_DROP                      (1 << 31)   /* Enable egress spanning tree forward S_Drop */
++/* TTL control register field definitions 
++*/
++#define DIS_TTL1                            (1 << 31)   /* Disable TTL-1 operation */
++/* Module switch control register field definitions 
++*/
++#define MOD_MASK                            7
++#define EN_L2                               (1 << 0)    /* Enable L2 module */
++#define EN_L3                               (1 << 1)    /* Enable L3 module */
++#define EN_L4                               (1 << 2)    /* Enable L4 module */
++#define EN_OUT_ACL                          (1 << 3)    /* Enable egress ACL */
++#define EN_IN_ACL                           (1 << 4)    /* Enable ingress ACL */
++#define EN_STP                              (1 << 7)    /* Enable spanning tree */
++#define FORCE_TO_CPU                        (1 << 8)
++#define L2_COL_BCAST                        (1 << 9)    /* L2 collision broadcast */
++#define I8021D_TO_CPU                       (1 << 10)   /* 802.1D trap to CPU */
++#define GARP_TO_CPU                         (1 << 11)   /* GARP trap to CPU */
++/* Broadcast storm control register field definitions 
++*/
++#define EN_BCAST_STORM                      (1 << 0)    /* Enable broadcast storm control */
++#define BCAST_TH_MASK                       (0xFF << 1) /* Threshold within broadcast interval mask */
++#define BCAST_TH_OFFSET                     1           /* Threshold within broadcast interval offset */
++#define TI_100M_MASK                        (0x3F << 9) /* Time interval for 100M mask */
++#define TI_100M_OFFSET                      9           /* Time interval for 100M offset */
++#define TI_10M_MASK                         (0x3F << 15)/* Time interval for 10M mask */
++#define TI_10M_OFFSET                       15          /* Time interval for 10M offset */
++/* Table entry aging time control register field definitions 
++*/
++#define ICMP_TH_OFFSET                      26          /* ICMP timeout threshold offset */
++#define ICMP_TH_MASK                        (0x3f << ICMP_TH_OFFSET)
++#define UDP_TH_OFFSET                       20          /* UDP timeout threshold offset */
++#define UDP_TH_MASK                         (0x3f << UDP_TH_OFFSET)
++#define TCP_LONG_TH_OFFSET                  14          /* TCP long timeout threshold offset */
++#define TCP_LONG_TH_MASK                    (0x3f << TCP_LONG_TH_OFFSET)
++#define TCP_MED_TH_OFFSET                   8           /* TCP medium timeout threshold offset */
++#define TCP_MED_TH_MASK                     (0x3f << TCP_MED_TH_OFFSET)
++#define TCP_FAST_TH_OFFSET                  2           /* TCP fast timeout threshold offset */
++#define TCP_FAST_TH_MASK                    (0x3f << TCP_FAST_TH_OFFSET)
++/* Port mirror control register field definitions 
++*/
++#define MIRROR_TO_PORT_OFFSET               29          /* Port receiving the mirrored traffic offset */
++#define SRC_MIRROR                          (1 << 28)   /* Source mirror */
++#define DEST_MIRROR                         0           /* Destination mirror */
++#define MIRROR_FROM_PORT_LIST_OFFSET        22          /* Port list to be mirrored offset */
++#define EN_PPORT_PMATCH_MIRROR              (1 << 21)   /* Enable per port pattern match mirror */
++/* Per port matching action register field definitions 
++*/
++#define EN_PMATCH_PORT_LIST_OFFSET          0           /* Enable pattern match port list offset */
++#define MATCH_S_DROP                        0           /* S_DROP if matched */
++#define MATCH_MIRROR_TO_CPU                 (1 << 6)    /* Mirror to CPU if matched */
++#define MATCH_FORWARD_TO_CPU                (2 << 6)    /* Forward to CPU if matched */
++#define MATCH_TO_MIRROR_PORT                (3 << 6)    /* To mirror port if matched */
++#define MATCH_OP_MASK                       (3 << 6)    /* Operation if matched mask */
++#define MATCH_OP_OFFSET                     6           /* Operation if matched offset */
++/* Port based vlan config register field definitions 
++*/
++#define PVID_MASK                           7           /* MASK for PVID */
++#define VIDP0_OFFSET                        0           /* Vlan table index for port 0 */
++#define VIDP1_OFFSET                        3           /* Vlan table index for port 1 */
++#define VIDP2_OFFSET                        6           /* Vlan table index for port 2 */
++#define VIDP3_OFFSET                        9           /* Vlan table index for port 3 */
++#define VIDP4_OFFSET                        12          /* Vlan table index for port 4 */
++#define VIDP5_OFFSET                        15          /* Vlan table index for port 5 */
++/* GIDX mapping control register field definitions 
++*/
++#define GIDX_MASK                           7           /* MASK for GIDX */
++#define GIDX0_OFFSET                        0           /* Index to IP table */
++#define GIDX1_OFFSET                        3           /* Index to IP table */
++#define GIDX2_OFFSET                        6           /* Index to IP table */
++#define GIDX3_OFFSET                        9           /* Index to IP table */
++#define GIDX4_OFFSET                        12          /* Index to IP table */
++#define GIDX5_OFFSET                        15          /* Index to IP table */
++#define GIDX6_OFFSET                        18          /* Index to IP table */
++#define GIDX7_OFFSET                        21          /* Index to IP table */
++/* Offset control register field definitions 
++*/
++#define OCR_START_MASK                      (0x1f << 27)    /* Starting value of offset mask */
++#define OCR_START_OFFSET                    27              /* Starting value of offset offset */
++#define OCR_END_MASK                        (0x1f << 22)    /* End value of offset mask */
++#define OCR_END_OFFSET                      27              /* End value of offset offset */
++
++
++
++/* PPT registers 
++*/
++#define PPT_BASE                            0xBD010000
++#define PDTR                                (0x000 + PPT_BASE)      /* Data register */
++#define SSTR                                 (0x001 + PPT_BASE)      /* Status register */
++#define CTR                                 (0x002 + PPT_BASE)      /* Control register */
++#define EPPAR                               (0x003 + PPT_BASE)      /* EPP address register */
++#define EPPDR                               (0x004 + PPT_BASE)      /* EPP data register */
++#define PPCR                                (0x008 + PPT_BASE)      /* Printer port control register */
++#define DFIFO                               (0x400 + PPT_BASE)      /* Data FIFO */
++#define CFGRA                               (0x400 + PPT_BASE)      /* Configuration A */
++#define CFGRB                               (0x401 + PPT_BASE)      /* Configuration B */
++#define ECR                                 (0x402 + PPT_BASE)      /* Extended control register */
++/* Status register field definitions 
++*/
++#define TIME_OUT                            (1 << 0)
++#define IRQ_MASK                            (1 << 2)    /* Interrupt (low active) mask */
++#define ERR_MASK                            (1 << 3)    /* Error (low active) mask */
++#define SLCT                                (1 << 4)    /* Printer selected and online */
++#define PE                                  (1 << 5)    /* End of paper */
++#define ACK_MASK                            (1 << 6)    /* Char reception complete (low active) mask */
++#define BUSY_MASK                           (1 << 7)    /* Busy (low active) mask */
++/* Control register field definitions 
++*/
++#define DATA_STROBE                         (1 << 0)    /* Data strobe signal */
++#define AFD                                 (1 << 1)    /* Automatic line feed */
++#define INIT_MASK                           (1 << 2)    /* Initialize (low active) mask */
++#define SLIN                                (1 << 3)    /* Printer selected and online */
++#define IE                                  (1 << 4)    /* Interrupt enable */
++#define DIRC_INPUT                          (1 << 5)    /* Direction control input */
++#define DIRC_OUTPUT                         0           /* Direction control output */
++/* Extended control register field definitions 
++*/
++#define STANDARD_MODE                       0           /* Standard mode */
++#define PS2_MODE                            (1 << 5)    /* PS/2 mode */
++#define PARALLEL_FIFO_MODE                  (2 << 5)    /* Parallel port FIFO mode */
++#define ECP_FIFO_MODE                       (3 << 5)    /* ECP FIFO mode */
++#define EN_ECP_INTR                         (1 << 4)    /* Enable ECP interrupt */
++#define ECP_SERVICE                         (1 << 2)    /* ECP service bit */
++#define FIFO_FULL                           (1 << 1)    /* FIFO full */
++#define FIFO_EMPTY                          (1 << 0)    /* FIFO empty */
++/* Printer port control register 
++*/
++#define ENPPT                               (1 << 0)    /* Enable PPT */
++#define ENEPP                               (1 << 1)    /* Enable EPP */
++#define ENECP                               (1 << 2)    /* Enable ECP */
++#define EXTENDIF                            (1 << 3)    /* Extended mode */
++#define INTR_TRIG_1BYTE                     0           /* Interrupt trigger level 1 byte */
++#define INTR_TRIG_4BYTE                     (1 << 4)    /* Interrupt trigger level 4 byte */
++#define INTR_TRIG_8BYTE                     (2 << 4)    /* Interrupt trigger level 8 byte */
++#define INTR_TRIG_14BYTE                    (3 << 4)    /* Interrupt trigger level 14 byte */
++
++
++
++/* UART registers 
++*/
++#define UART1_BASE                          0xB9C00000
++//#define UART2_BASE                          0xBD011010
++#define RBR                                 0x000       /* Rx buffer */
++#define THR                                 0x000       /* Tx holding */
++#define DLL                                 0x000       /* Divisor latch LSB */
++#if 0
++#define IER                                 0x001       /* Interrupt enable */
++#define DLM                                 0x001       /* Divisor latch MSB */
++#define IIR                                 0x002       /* Interrupt identification */
++#define FCR                                 0x002       /* FIFO control */
++#define LCR                                 0x003       /* Line control */
++#define MCR                                 0x004       /* Modem control */
++#define LSR                                 0x005       /* Line status */
++#define MSR                                 0x006       /* Modem status */
++#define SCR                                 0x007       /* Scratchpad */
++#else
++#define IER                                 0x004       /* Interrupt enable */
++#define DLM                                 0x004       /* Divisor latch MSB */
++#define IIR                                 0x008       /* Interrupt identification */
++#define FCR                                 0x008       /* FIFO control */
++#define LCR                                 0x00C       /* Line control */
++#define MCR                                 0x010       /* Modem control */
++#define LSR                                 0x014       /* Line status */
++#define MSR                                 0x018       /* Modem status */
++#define SCR                                 0x01C       /* Scratchpad */
++#endif
++/* Line Control Register 
++*/
++#define LCR_WLN         0x03
++#define CHAR_LEN_5      0x00
++#define CHAR_LEN_6      0x01
++#define CHAR_LEN_7      0x02
++#define CHAR_LEN_8      0x03
++#define LCR_STB         0x04
++#define ONE_STOP        0x00
++#define TWO_STOP        0x04
++#define LCR_PEN         0x08
++#define LCR_EPS         0x30
++#define PARITY_ODD      0x00
++#define PARITY_EVEN     0x10
++#define PARITY_MARK     0x20
++#define PARITY_SPACE    0x30
++#define PARITY_NONE     0x80
++#define LCR_SBRK        0x40
++#define LCR_DLAB        0x80
++#define DLAB            LCR_DLAB
++/* Line Status Register 
++*/
++#define LSR_DR          0x01
++#define RxCHAR_AVAIL    LSR_DR
++#define LSR_OE          0x02
++#define LSR_PE          0x04
++#define LSR_FE          0x08
++#define LSR_BI          0x10
++#define LSR_THRE        0x20
++#define LSR_TEMT        0x40
++#define LSR_FERR        0x80
++/* Interrupt Identification Register 
++*/
++#define IIR_IP          0x01
++#define IIR_ID          0x0e
++#define IIR_RLS         0x06
++#define Rx_INT          IIR_RLS
++#define IIR_RDA         0x04
++#define RxFIFO_INT      IIR_RDA
++#define IIR_THRE        0x02
++#define TxFIFO_INT      IIR_THRE
++#define IIR_MSTAT       0x00
++#define IIR_TIMEOUT     0x0c
++/* Interrupt Enable Register 
++*/
++#define IER_ERBI        0x01
++#define IER_ETBEI       0x02
++#define IER_ELSI        0x04
++#define IER_EDSSI       0x08
++#define IER_ESLP        0x10
++#define IER_ELP         0x20
++/* Modem Control Register 
++*/
++#define MCR_DTR         0x01
++#define DTR             MCR_DTR
++#define MCR_RTS         0x02
++#define MCR_OUT1        0x04
++#define MCR_OUT2        0x08
++#define MCR_LOOP        0x10
++/* Modem Status Register 
++*/
++#define MSR_DCTS        0x01
++#define MSR_DDSR        0x02
++#define MSR_TERI        0x04
++#define MSR_DDCD        0x08
++#define MSR_CTS         0x10
++#define MSR_DSR         0x20
++#define MSR_RI          0x40
++#define MSR_DCD         0x80
++/* FIFO Control Register 
++*/
++#define FCR_EN          0x01
++#define FIFO_ENABLE     FCR_EN
++#define FCR_RXCLR       0x02
++#define RxCLEAR         FCR_RXCLR
++#define FCR_TXCLR       0x04
++#define TxCLEAR         FCR_TXCLR
++#define FCR_DMA         0x08
++#define FCR_RXTRIG_L    0x40
++#define FCR_RXTRIG_H    0x80
++
++
++
++#define MAX_ILEV                        10
++#define TICK_ILEV                        9  //->IRQ7
++#define UART_ILEV 	    	             8  //->IRQ6
++#define SAR_ILEV                         7  //->IRQ5
++#define Ethernet_ILEV                    6  //->IRQ4
++#define DMT_ILEV                         5  //->IRQ3
++#define USB_ILEV                         4  //->IRQ3
++#define PCI_ILEV                         3  //->IRQ3
++#define GPIO_ILEV                        2  //->IRQ2
++#define Time_Out_ILEV                    1  //->IRQ2
++
++/* Global interrupt control registers 
++*/
++#define GICR_BASE                           0xBD012000
++#define GIMR                                (0x00 + GICR_BASE)       /* Global interrupt mask */
++#define GISR                                (0x04 + GICR_BASE)       /* Global interrupt status */
++#define IRR1                                (0x08 + GICR_BASE)       /* Interrupt routing 1 */
++/* Global interrupt mask register field definitions 
++*/
++#define UART_IM                             (1 << 15)       /* UART interrupt enable */
++#define Timer_IM                            (1 << 14)       /* Timer interrupt enable */
++#define Time_Out_IM                         (1 << 13)       /* Time out interrupt enable */
++#define SAR_IM                              (1 << 12)       /* SAR interrupt enable */
++#define Ethernet_IM                         (1 << 11)       /* Ethernet interrupt enable */
++#define DMT_IM                              (1 << 10)       /* DMT interrupt enable */
++#define USB_IM                              (1 <<  9)       /* USB client interrupt enable */
++#define PCI_IM                              (1 <<  8)       /* PCI interrupt enable */
++#define GPIO_IM                             (1 <<  7)       /* GPIO port interrupt enable */
++/* Global interrupt status register field definitions 
++*/
++#define UART_IS                             (1 << 15)       /* UART interrupt pending */
++#define Timer_IS                            (1 << 14)       /* Timer/Counter interrupt pending */
++#define Time_Out_IS                         (1 << 13)       /* time out interrupt pending */
++#define SAR_IS                              (1 << 12)       /* SAR interrupt pending */
++#define Ethernet_IS                         (1 << 11)       /* Ethernet interrupt pending */
++#define DMT_IS                              (1 << 10)       /* DMT interrupt pending */
++#define USB_IS                              (1 <<  9)       /* USB client interrupt pending */
++#define PCI_IS                              (1 <<  8)       /* PCI interrupt pending */
++#define GPIO_IS                             (1 <<  7)       /* GPIO interrupt pending */
++/* Interrupt routing register 1 field definitions 
++*/
++#define UART_IPS                            28              /* UART interrupt routing select offset */
++#define Timer_IPS                           24              /* Timer interrupt routing select offset */
++#define Time_Out_IPS                        20              /* Time out interrupt routing select offset */
++#define SAR_IPS                             16              /* SAR interrupt routing select offset */
++#define Ethernet_IPS                        12              /* Ethernet interrupt routing select offset */
++#define DMT_IPS                              8              /* DMT interrupt routing select offset */
++#define USB_IPS                              4              /* USB interrupt routing select offset */
++#define PCI_IPS                              0              /* PCI interrupt routing select offset */
++/* Interrupt routing register 2 field definitions 
++*/
++#define GPIO_IPS                             7              /* GPIO interrupt routing select offset */
++
++
++/* Timer control registers 
++*/
++#define GPIOCR_BASE 0xBD012000
++#define TC0DATA                             (0x020 + GPIOCR_BASE)       /* Timer/Counter 0 data */
++#define TC1DATA                             (0x024 + GPIOCR_BASE)       /* Timer/Counter 1 data */
++#define TC0CNT                              (0x028 + GPIOCR_BASE)       /* Timer/Counter 0 count */
++#define TC1CNT                              (0x02C + GPIOCR_BASE)       /* Timer/Counter 1 count */
++#define TCCNR                               (0x030 + GPIOCR_BASE)       /* Timer/Counter control */
++#define TCIR                                (0x034 + GPIOCR_BASE)       /* Timer/Counter intertupt */
++#define CDBR                                (0x038 + GPIOCR_BASE)       /* Clock division base */
++#define WDTCNR                              (0x03C + GPIOCR_BASE)       /* Watchdog timer control */
++#define BSTMOUT                             (0x040 + GPIOCR_BASE)       /* bus time out interval */
++/* Timer/Counter data register field definitions 
++*/
++#define TCD_OFFSET                          8
++/* Timer/Counter control register field defintions 
++*/
++#define TC0EN                               (1 << 31)       /* Timer/Counter 0 enable */
++#define TC0MODE_COUNTER                     0               /* Timer/Counter 0 counter mode */
++#define TC0MODE_TIMER                       (1 << 30)       /* Timer/Counter 0 timer mode */
++#define TC1EN                               (1 << 29)       /* Timer/Counter 1 enable */
++#define TC1MODE_COUNTER                     0               /* Timer/Counter 1 counter mode */
++#define TC1MODE_TIMER                       (1 << 28)       /* Timer/Counter 1 timer mode */
++/* Timer/Counter interrupt register field definitions 
++*/
++#define TCIR_TC0IE                          (1 << 31)       /* Timer/Counter 0 interrupt enable */
++#define TCIR_TC1IE                          (1 << 30)       /* Timer/Counter 1 interrupt enable */
++#define TCIR_TC0IP                          (1 << 29)       /* Timer/Counter 0 interrupt pending */
++#define TCIR_TC1IP                          (1 << 28)       /* Timer/Counter 1 interrupt pending */
++/* Clock division base register field definitions 
++*/
++#define DIVF_OFFSET                         16
++/* Watchdog control register field definitions 
++*/
++#define WDTE_OFFSET                         24              /* Watchdog enable */
++#define WDSTOP_PATTERN                      0xA5            /* Watchdog stop pattern */
++#define WDTCLR                              (1 << 23)       /* Watchdog timer clear */
++#define OVSEL_13                            0               /* Overflow select count 2^13 */
++#define OVSEL_14                            (1 << 21)       /* Overflow select count 2^14 */
++#define OVSEL_15                            (2 << 21)       /* Overflow select count 2^15 */
++#define OVSEL_16                            (3 << 21)       /* Overflow select count 2^16 */
++
++/*Bus time out register
++*/
++#define BSTMOUT_OFFSET                       29              
++#define BSTMOUT_20us                         0               /* bus time out interval 20 us*/
++#define BSTMOUT_30us                         (1 << BSTMOUT_OFFSET)       /* bus time out interval 30 us*/
++#define BSTMOUT_40us                         (2 << BSTMOUT_OFFSET)       /* bus time out interval 40 us*/
++#define BSTMOUT_50us                         (3 << BSTMOUT_OFFSET)       /* bus time out interval 50 us*/
++
++
++/* GPIO control registers 
++*/
++#define PBCNR                               (0x00C + GPIOCR_BASE)     /* Port B control */
++#define PBDIR                               (0x010 + GPIOCR_BASE)     /* Port B direction */
++#define PBDAT                               (0x014 + GPIOCR_BASE)     /* Port B data */
++#define PBISR                               (0x018 + GPIOCR_BASE)     /* Port B interrupt status */
++#define PBIMR                               (0x01C + GPIOCR_BASE)     /* Port B interrupt mask */
++
++
++/* Memory config registers 
++*/
++#define MEMCFG_BASE                         0xBD013000
++#define MCFGR                               (0x000 + MEMCFG_BASE)       /* Memory config */
++#define MTCR                                (0x004 + MEMCFG_BASE)       /* Memory timing config */
++/* Memory config register field definitions 
++*/
++#define ROM_256K                            0               /* ROM size 256K */
++#define ROM_512K                            (1 << 30)       /* ROM size 512K */
++#define ROM_1M                              (2 << 30)       /* ROM size 1M */
++#define ROM_2M                              (3 << 30)       /* ROM size 2M */
++#define SDRAM_16M                           0               /* SDRAM size 512Kx16x2 */
++#define SDRAM_64M                           (1 << 28)       /* SDRAM size 1Mx16x4 */
++#define SDRAM_128M                          (2 << 28)       /* SDRAM size 2Mx16x4 */
++#define CAS_LAT_2                           0               /* CAS latency = 2 */
++#define CAS_LAT_3                           (1 << 27)       /* CAS latency = 3 */
++#define B0_BUSWIDTH_8BIT                    0               /* Bank 0 bus width 8 bits */
++#define B0_BUSWIDTH_16BIT                   (1 << 25)       /* Bank 0 bus width 16 bits */
++#define B0_BUSWIDTH_32BIT                   (2 << 25)       /* Bank 0 bus width 32 bits */
++#define B1_BUSWIDTH_8BIT                    0               /* Bank 1 bus width 8 bits */
++#define B1_BUSWIDTH_16BIT                   (1 << 23)       /* Bank 1 bus width 16 bits */
++#define B1_BUSWIDTH_32BIT                   (2 << 23)       /* Bank 1 bus width 32 bits */
++#define SDBUSWID_16BIT                      0               /* SDRAM bus width 16 bits */
++#define SDBUSWID_32BIT                      (1 << 24)       /* SDRAM bus width 32 bits */
++#define MEMCLK_2_LXCLK_1_1                  0               /* Memory clock to lexra bus clock 1:1 */
++#define MEMCLK_2_LXCLK_1_2                  (1 << 23)       /* Memory clock to lexra bus clock 1:2 */
++#define CLKRATE_200                         0               /* Bus clock 200 */
++#define CLKRATE_100                         (1 << 20)       /* Bus clock 100 */
++#define CLKRATE_50                          (2 << 20)       /* Bus clock 50 */
++#define CLKRATE_25                          (3 << 20)       /* Bus clock 25 */
++#define CLKRATE_12_5                        (4 << 20)       /* Bus clock 12.5 */
++#define CLKRATE_6_25                        (5 << 20)       /* Bus clock 6.25 */
++/* Memory timing config register field definitions 
++*/
++#define CE0T_CS_OFFSET                      28
++#define CE0T_WP_OFFSET                      24
++#define CE1T_CS_OFFSET                      20
++#define CE1T_WP_OFFSET                      16
++#define CE23T_RAS_OFFSET                    10
++#define CE23T_RFC_OFFSET                    6
++#define CE23T_RP_OFFSET                     4
++
++#define ICU_UNMASK(n) *((volatile u_int32_t *)0xbd012000) |=(1<<(31-n))
++#define ICU_MASK(n) *((volatile u_int32_t*)0xbd012000)&=~(1<<(31-n))
++#define ICU_STATUS(n) *((volatile u_int32_t *)0xbd012004)  & (1<<(31-n))
++#define ICU_ROUTE(n,r) \
++{\
++	*((volatile u_int32_t *)0xbd012008) &= ~(3<<(30-n)); \
++	*((volatile u_int32_t *)0xbd012008) |= ((r-1)<<(30-n)); \
++}
++
++
++
++// For Interrupt Controller
++#define GIMR		0xbd012000
++#define GISR		0xbd012004
++#define IRR		0xbd012008
++#define SYS_CLK_MASK                        (0x7 << 16)
++#define SYS_CLK_100M                        (0 << 16)
++#define SYS_CLK_90M                         (1 << 16)
++#define SYS_CLK_85M                         (2 << 16)
++#define SYS_CLK_96M                         (3 << 16)
++#define SYS_CLK_80M                         (4 << 16)
++#define SYS_CLK_75M                         (5 << 16)
++#define SYS_CLK_70M                         (6 << 16)
++#define SYS_CLK_50M                         (7 << 16)
++
++
++
++#endif   /* _ASICREGS_H */
++
+Index: linux-2.4.27/arch/mips/realtek/rtl865x/setup.c
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/arch/mips/realtek/rtl865x/setup.c	2008-03-26 11:18:45.000000000 +0300
+@@ -0,0 +1,189 @@
++/*
++ *  arch/mips/realtek/rtl865x/setup.c
++ *
++ *  Copyright (C) 2001 Steven J. Hill (sjhill@realitydiluted.com)
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License version 2 as
++ * published by the Free Software Foundation.
++ *
++ *  Interrupt and exception initialization for Realtek RTL865XB SoC
++ * Copy-pasted from Philips Nino
++ */
++#include <linux/console.h>
++#include <linux/init.h>
++#include <linux/interrupt.h>
++#include <linux/sched.h>
++#include <asm/addrspace.h>
++#include <asm/io.h>
++#include <asm/irq.h>
++#include <asm/reboot.h>
++#include <asm/time.h>
++#include "rtl865x.h"
++// For Interrupt Controller
++#define GIMR		0xbd012000
++#define GISR		0xbd012004
++#define IRR		0xbd012008
++
++unsigned int GetSysClockRate();
++
++static void rtl865x_machine_restart(char *command)
++{
++	unsigned long flags;
++	static void (*back_to_prom)(void) = (void (*)(void)) 0xbe000000;
++	printk("Enable Watch Dog to Reset whole system\n");
++	save_flags(flags); cli();
++	*(volatile unsigned long *)(0xBD01203c)=0; // this is to enable watch dog reset
++	for(;;);
++	/* Reboot */
++	back_to_prom();
++}
++
++static void rtl865x_machine_halt(void)
++{
++	printk("device is halted.\n");
++	while(1);
++}
++
++static void rtl865x_machine_power_off(void)
++{
++	printk("Device is halted. Please turn off power.\n");
++	while(1);
++}
++
++static void __init rtl865x_board_init()
++{
++	/*
++	 * Set up the master clock module. The value set in
++	 * the Clock Control Register by WindowsCE is 0x00432ba.
++	 * We set a few values here and let the device drivers
++	 * handle the rest.
++	 *
++	 * NOTE: The UART clocks must be enabled here to provide
++	 *       enough time for them to settle.
++	 */
++}
++
++static __init void rtl865x_time_init(void)
++{
++}
++static __init void rtl865x_timer_setup(struct irqaction *irq)
++{
++	int c;
++	unsigned int cpu_clock_rate;
++
++	cpu_clock_rate = GetSysClockRate();
++	
++	//printk("irqaction %x %s %d\n",irq,__FILE__,__LINE__);	
++	irq->dev_id = (void *) irq;
++	setup_irq(0, irq);
++	REG32(TCCNR) = 0; /* disable timer before setting CDBR */
++	REG32(CDBR)=(DIVISOR) << DIVF_OFFSET;
++	REG32(TC0DATA) = (((cpu_clock_rate/DIVISOR)/HZ)) << TCD_OFFSET;	
++
++    /* We must wait n cycles for timer to re-latch the new value of TC1DATA. */
++	for( c = 0; c < DIVISOR; c++ );
++	
++	REG32(TCCNR) = TC0EN | TC0MODE_TIMER;
++	REG32(TCIR)=TCIR_TC0IE;
++}
++void timer_ack()
++{
++	REG32(TCIR) |= TCIR_TC0IP;
++}
++
++/*
++ * I/O ASIC systems use a standard writeback buffer that gets flushed
++ * upon an uncached read.
++ */
++static void wbflush_mips(void)
++{
++//	__fast_iob();
++}
++
++
++void (*__wbflush) (void);
++#define IO_MEM_LOGICAL_START   0x1fc00000
++#define ONE_MEG 0x100000
++void __init rtl865x_setup(void)
++{
++	extern void rtl865x_irq_setup(void);
++	//clear GIMR first!
++
++	irq_setup = rtl865x_irq_setup;
++	set_io_port_base(KSEG1ADDR(0x1d010000));
++	//mips_io_port_base=RTL8181_REG_BASE;
++
++	_machine_restart = rtl865x_machine_restart;
++	_machine_halt = rtl865x_machine_halt;
++	_machine_power_off = rtl865x_machine_power_off;
++
++	board_time_init = rtl865x_time_init;
++	board_timer_setup = rtl865x_timer_setup;
++	mips_timer_ack=timer_ack;
++
++#ifdef CONFIG_FB
++	conswitchp = &dummy_con;
++#endif
++
++	__wbflush = wbflush_mips;
++	rtl865x_board_init();
++}
++
++unsigned int GetSysClockRate()
++{
++	unsigned int SysClkRate;
++	
++	REG32(MACMR) = 0;
++	switch ( REG32(MACMR) & SYS_CLK_MASK )
++	{
++        	case SYS_CLK_100M:
++	       		SysClkRate = 100000000;
++	        	break;
++	        case SYS_CLK_90M:
++       			SysClkRate = 90000000;
++            		break;
++	        case SYS_CLK_85M:
++        	    	SysClkRate = 85000000;
++			break;
++		case SYS_CLK_96M:
++			SysClkRate = 96000000;
++			break;
++		case SYS_CLK_80M:
++			SysClkRate = 80000000;
++			break;
++		case SYS_CLK_75M:
++			SysClkRate = 75000000;
++			break;
++		case SYS_CLK_70M:
++			SysClkRate = 70000000;
++			break;
++		case SYS_CLK_50M:
++			SysClkRate = 50000000;
++			break;
++		default:
++			while(1);
++	}
++	return SysClkRate;
++}
++int GetChipVersion(char *name,unsigned int size, int *rev){
++     unsigned int id = REG32(0xbc805104/*CRMR*/);
++     if(!id){
++          id = REG32(0xbc805100/*CHIPID*/);
++          if((unsigned short)(id>>16)==0x8650)
++               strncpy(name,"8650",size);
++          else
++               strncpy(name,"8651",size);
++          if(rev)
++           *rev=0;
++     }else if((unsigned short)id==0x5788){
++          if(id&0x02000000)
++               strncpy(name,"8651B",size);
++          else
++               strncpy(name,"8650B",size);
++          if(rev)
++           *rev=(id>>16)&0xf;
++     }else
++          snprintf(name, size, "%08x", id);
++  return 0;
++}
+Index: linux-2.4.27/include/asm-mips/bootinfo.h
+===================================================================
+--- linux-2.4.27.orig/include/asm-mips/bootinfo.h	2008-03-26 11:18:31.000000000 +0300
++++ linux-2.4.27/include/asm-mips/bootinfo.h	2008-03-26 11:20:43.000000000 +0300
+@@ -37,7 +37,7 @@
+ #define MACH_GROUP_HP_LJ       20 /* Hewlett Packard LaserJet               */
+ #define MACH_GROUP_LASAT       21
+ #define MACH_GROUP_TITAN       22 /* PMC-Sierra Titan 			    */
+-
++#define MACH_GROUP_REALTEK     23 /* Realtek Co */
+ /*
+  * Valid machtype values for group unknown (low order halfword of mips_machtype)
+  */
+@@ -145,6 +145,12 @@
+ #define MACH_PHILIPS_VELO	1	/* Velo */
+ 
+ /*
++ * Valid machtype for group REALTEK
++ */
++
++#define MACH_REALTEK_RTL865X	0
++
++/*
+  * Valid machtype for group SIBYTE
+  */
+ #define MACH_SWARM              0

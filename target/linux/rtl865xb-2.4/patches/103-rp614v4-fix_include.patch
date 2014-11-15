@@ -1,0 +1,10 @@
+--- linux/arch/mips/realtek/rtl865x/Makefile	2005-12-21 04:30:20.000000000 +0200
++++ linux/arch/mips/realtek/rtl865x/Makefile.new	2009-01-08 13:14:36.000000000 +0200
+@@ -25,6 +25,6 @@
+ clean:
+ 		rm -f *.o
+ 
+-EXTRA_CFLAGS += -I../../../../../include/
++#EXTRA_CFLAGS += -I../../../../../include/
+ 
+ include $(TOPDIR)/Rules.make

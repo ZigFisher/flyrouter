@@ -1,0 +1,10 @@
+# $Id: Makefile.k26,v 1.1 2004/08/18 22:01:45 jal2 Exp $
+
+obj-$(CONFIG_USB_ATMEL) += at76c503.o at76_usbdfu.o at76c503-i3861.o at76c503-rfmd.o at76c503-rfmd-acc.o \
+          at76c505-rfmd.o at76c503-i3863.o at76c505-rfmd2958.o at76c505a-rfmd2958.o
+
+# copy the fw-*.h files into this dir and uncomment to compile the firmware statically
+# into the driver (against kernel policy of not including binary-only code)
+#EXTRA_CFLAGS = -DCOMPILE_FIRMWARE_INTO_DRIVER
+
+

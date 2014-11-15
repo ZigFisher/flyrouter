@@ -1,0 +1,3904 @@
+diff --git a/include/asm-generic/div64.h b/include/asm-generic/div64.h
+new file mode 100644
+index 0000000..cfa7baf
+--- /dev/null
++++ b/include/asm-generic/div64.h
+@@ -0,0 +1,66 @@
++#ifndef _ASM_GENERIC_DIV64_H
++#define _ASM_GENERIC_DIV64_H
++
++#include <linux/types.h>
++
++/*
++ * do_div() performs a 64bit/32bit unsigned division and modulo.
++ * The 64bit result is stored back in the divisor, the 32bit
++ * remainder is returned.
++ *
++ * A semantically correct implementation would do this:
++ *
++ *	static inline uint32_t do_div(uint64_t &n, uint32_t base)
++ *	{
++ *		uint32_t rem;
++ *		rem = n % base;
++ *		n = n / base;
++ *		return rem;
++ *	}
++ *
++ * We can't rely on GCC's "long long" math since it would turn
++ * everything into a full 64bit division implemented through _udivdi3(),
++ * which is much slower.
++ */
++
++#if BITS_PER_LONG == 64
++
++# define do_div(n,base) ({					\
++	uint32_t __res;						\
++	__res = ((uint64_t)(n)) % (uint32_t)(base);		\
++	(n) = ((uint64_t)(n)) / (uint32_t)(base);		\
++	__res;							\
++ })
++
++#elif BITS_PER_LONG == 32
++
++# define do_div(n,base)	({					\
++								\
++	uint32_t __low, __low2, __high, __rem;			\
++	__low  = (n) & 0xffffffff;				\
++	__high = (n) >> 32;					\
++	if (__high) {						\
++		__rem   = __high % (uint32_t)(base);		\
++		__high  = __high / (uint32_t)(base);		\
++		__low2  = __low >> 16;				\
++		__low2 += __rem << 16;				\
++		__rem   = __low2 % (uint32_t)(base);		\
++		__low2  = __low2 / (uint32_t)(base);		\
++		__low   = __low & 0xffff;			\
++		__low  += __rem << 16;				\
++		__rem   = __low  % (uint32_t)(base);		\
++		__low   = __low  / (uint32_t)(base);		\
++		(n) = __low  + ((uint64_t)__low2 << 16) +	\
++			((uint64_t) __high << 32);		\
++	} else {						\
++		__rem = __low % (uint32_t)(base);		\
++		(n) = (__low / (uint32_t)(base));		\
++	}							\
++	__rem;							\
++ })
++
++#else /* BITS_PER_LONG == ?? */
++# error do_div() does not yet support the C64
++#endif /* BITS_PER_LONG */
++
++#endif /* _ASM_GENERIC_DIV64_H */
+diff --git a/include/linux/blk.h b/include/linux/blk.h
+index 49cb199..717e3e7 100644
+--- a/include/linux/blk.h
++++ b/include/linux/blk.h
+@@ -46,6 +46,7 @@ extern int ez_init(void);
+ extern int bpcd_init(void);
+ extern int ps2esdi_init(void);
+ extern int jsfd_init(void);
++extern int blkmem_init(void);
+ extern int viodasd_init(void);
+ extern int viocd_init(void);
+ 
+diff --git a/include/linux/blkmem.h b/include/linux/blkmem.h
+new file mode 100644
+index 0000000..f1aae2c
+--- /dev/null
++++ b/include/linux/blkmem.h
+@@ -0,0 +1,55 @@
++
++/* 
++ * linux/blkmem.h header file for Linux.
++ *
++ * Copyright (C) 1998  Kenneth Albanowski <kjahds@kjahds.com>,
++ *
++ */
++
++#ifndef _LINUX_BLKMEM_H
++#define _LINUX_BLKMEM_H
++
++#include <linux/ioctl.h>
++
++/*
++ * Structures and definitions for mag tape io control commands
++ */
++ 
++#define BMSERASE       1	/* erase sector containing address */
++#define BMSGSIZE       2	/* get size of sector */
++#define BMSGERASEVALUE 3	/* get value of bytes in erased sectors */
++#define BMGETSIZES     4	/* get length of device in sectors */
++#define BMGETSIZEB     5	/* get length of device in bytes */
++
++#define BMPROGRAM      6	/* program entire arena in one go */
++
++struct blkmem_program_t {
++	unsigned long magic1;
++	int	blocks;
++	int	reset;
++	unsigned long magic2;
++	struct {
++		unsigned char * data;
++		unsigned long pos;
++		unsigned long length;
++		int magic3;
++	}block[0];
++};
++
++#define BMPROGRAM_MAGIC_1 0x123abc32
++
++#define BMPROGRAM_MAGIC_2 0x9C00C00F
++
++#define BMPROGRAM_MAGIC_3 0x56408F26
++
++#if 0
++#define BMSSAUTOERASE  10	/* set auto-erase bits */
++#endif
++
++#define DEVICE_NAME "Blkmem"
++#define DEVICE_REQUEST do_blkmem_request
++#define DEVICE_NR(device) (MINOR(device))
++#define DEVICE_ON(device)
++#define DEVICE_OFF(device)
++
++#endif /* _LINUX_BLKMEM_H */
+diff --git a/include/linux/console_struct.h b/include/linux/console_struct.h
+index 860937f..8169c3c 100644
+--- a/include/linux/console_struct.h
++++ b/include/linux/console_struct.h
+@@ -7,6 +7,8 @@
+  * Fields marked with [#] must be set by the low-level driver.
+  * Fields marked with [!] can be changed by the low-level driver
+  * to achieve effects such as fast scrolling by changing the origin.
++ *
++ *  11/07/1998	RMK	Changed vc_state to be a function pointer
+  */
+ 
+ #ifndef _LINUX_CONSOLE_STRUCT_H_
+@@ -34,7 +36,11 @@ struct vc_data {
+ 	unsigned short	vc_s_complement_mask;	/* Saved mouse pointer mask */
+ 	unsigned int	vc_x, vc_y;		/* Cursor position */
+ 	unsigned int	vc_top, vc_bottom;	/* Scrolling region */
++#ifdef CONSOLE_WIP
++	int (*vc_state)(int currcons, struct tty_struct *tty, unsigned int c);
++#else
+ 	unsigned int	vc_state;		/* Escape sequence parser state */
++#endif
+ 	unsigned int	vc_npar,vc_par[NPAR];	/* Parameters of current escape sequence */
+ 	unsigned long	vc_origin;		/* [!] Start of real screen */
+ 	unsigned long	vc_scr_end;		/* [!] End of real screen */
+diff --git a/include/linux/ibm_ocp_gpio.h b/include/linux/ibm_ocp_gpio.h
+new file mode 100644
+index 0000000..f6c72b9
+--- /dev/null
++++ b/include/linux/ibm_ocp_gpio.h
+@@ -0,0 +1,58 @@
++/*
++ * FILE NAME ibm_ocp_gpio.h
++ *
++ * BRIEF MODULE DESCRIPTION
++ *	Generic gpio.
++ *
++ *  Armin Kuster akuster@pacbell.net
++ *  Sept, 2001
++ *
++ *  Orignial driver
++ *  Author: MontaVista Software, Inc.  <source@mvista.com>
++ *          Frank Rowand <frank_rowand@mvista.com>
++ *
++ * Copyright 2000 MontaVista Software Inc.
++ *
++ *  This program is free software; you can redistribute  it and/or modify it
++ *  under  the terms of  the GNU General  Public License as published by the
++ *  Free Software Foundation;  either version 2 of the  License, or (at your
++ *  option) any later version.
++ *
++ *  THIS  SOFTWARE  IS PROVIDED   ``AS  IS'' AND   ANY  EXPRESS OR IMPLIED
++ *  WARRANTIES,   INCLUDING, BUT NOT  LIMITED  TO, THE IMPLIED WARRANTIES OF
++ *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.  IN
++ *  NO  EVENT  SHALL   THE AUTHOR  BE    LIABLE FOR ANY   DIRECT, INDIRECT,
++ *  INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
++ *  NOT LIMITED   TO, PROCUREMENT OF  SUBSTITUTE GOODS  OR SERVICES; LOSS OF
++ *  USE, DATA,  OR PROFITS; OR  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
++ *  ANY THEORY OF LIABILITY, WHETHER IN  CONTRACT, STRICT LIABILITY, OR TORT
++ *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
++ *  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
++ *
++ *  You should have received a copy of the  GNU General Public License along
++ *  with this program; if not, write  to the Free Software Foundation, Inc.,
++ *  675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef __IBM_OCP_GPIO_H
++#define __IBM_OCP_GPIO_H
++
++#include <linux/ioctl.h>
++#include <linux/types.h>
++
++#define IBMGPIO_IOCTL_BASE	'Z'
++
++struct ibm_gpio_ioctl_data {
++	__u32 device;
++	__u32 mask;
++	__u32 data;
++};
++
++#define GPIO_MINOR             185
++#define IBMGPIO_IN		_IOWR(IBMGPIO_IOCTL_BASE, 0, struct ibm_gpio_ioctl_data)
++#define IBMGPIO_OUT		_IOW (IBMGPIO_IOCTL_BASE, 1, struct ibm_gpio_ioctl_data)
++#define IBMGPIO_OPEN_DRAIN	_IOW (IBMGPIO_IOCTL_BASE, 2, struct ibm_gpio_ioctl_data)
++#define IBMGPIO_TRISTATE	_IOW (IBMGPIO_IOCTL_BASE, 3, struct ibm_gpio_ioctl_data)
++#define IBMGPIO_CFG		_IOW (IBMGPIO_IOCTL_BASE, 4, struct ibm_gpio_ioctl_data)
++
++#endif
+diff --git a/include/linux/if_tunnel.h b/include/linux/if_tunnel.h
+index bef9f8f..1dc64cb 100644
+--- a/include/linux/if_tunnel.h
++++ b/include/linux/if_tunnel.h
+@@ -15,6 +15,8 @@
+ #define GRE_FLAGS	__constant_htons(0x00F8)
+ #define GRE_VERSION	__constant_htons(0x0007)
+ 
++#define GRE_P_ETH_BR	__constant_htons(0x6558)
++
+ struct ip_tunnel_parm
+ {
+ 	char			name[IFNAMSIZ];
+diff --git a/include/linux/init.h b/include/linux/init.h
+index ae8dfca..1baf3d9 100644
+--- a/include/linux/init.h
++++ b/include/linux/init.h
+@@ -76,8 +76,13 @@ extern struct kernel_param __setup_start, __setup_end;
+  * Mark functions and data as being only used at initialization
+  * or exit time.
+  */
++#ifndef NO_TEXT_SECTIONS
+ #define __init		__attribute__ ((__section__ (".text.init")))
+ #define __exit		__attribute_used__ __attribute__ (( __section__(".text.exit")))
++#else
++#define __init
++#define __exit		__attribute__ ((unused))
++#endif
+ #define __initdata	__attribute__ ((__section__ (".data.init")))
+ #define __exitdata	__attribute_used__ __attribute__ ((__section__ (".data.exit")))
+ #define __initsetup	__attribute_used__ __attribute__ ((__section__ (".setup.init")))
+diff --git a/include/linux/jffs.h b/include/linux/jffs.h
+index 2edf62e..bd48cda 100644
+--- a/include/linux/jffs.h
++++ b/include/linux/jffs.h
+@@ -191,6 +191,7 @@ struct jffs_control
+ 	struct completion gc_thread_comp; /* GC thread exit mutex */
+ 	__u32 gc_minfree_threshold;	/* GC trigger thresholds */
+ 	__u32 gc_maxdirty_threshold;
++	__u16 gc_background;		/* GC currently running in background */
+ };
+ 
+ 
+diff --git a/include/linux/major.h b/include/linux/major.h
+index 290db4b..90eeb6b 100644
+--- a/include/linux/major.h
++++ b/include/linux/major.h
+@@ -64,6 +64,7 @@
+ #define ACSI_MAJOR	28
+ #define AZTECH_CDROM_MAJOR 29
+ #define GRAPHDEV_MAJOR	29	/* SparcLinux & Linux/68k /dev/fb */
++#define BLKMEM_MAJOR	31
+ #define SHMIQ_MAJOR	85	/* Linux/mips, SGI /dev/shmiq */
+ #define CM206_CDROM_MAJOR 32
+ #define IDE2_MAJOR	33
+diff --git a/include/linux/mtd/cfi.h b/include/linux/mtd/cfi.h
+index e035891..56fc2ee 100644
+--- a/include/linux/mtd/cfi.h
++++ b/include/linux/mtd/cfi.h
+@@ -307,7 +307,7 @@ struct cfi_private {
+ 	struct mtd_info *(*cmdset_setup)(struct map_info *);
+ 	struct cfi_ident *cfiq; /* For now only one. We insist that all devs
+ 				  must be of the same type. */
+-	int mfr, id;
++	int mfr, id, extra;
+ 	int numchips;
+ 	unsigned long chipshift; /* Because they're of the same type */
+ 	const char *im_name;	 /* inter_module name for cmdset_setup */
+diff --git a/include/linux/mtd/inftl.h b/include/linux/mtd/inftl.h
+new file mode 100644
+index 0000000..5878f80
+--- /dev/null
++++ b/include/linux/mtd/inftl.h
+@@ -0,0 +1,132 @@
++/*
++ *	inftl.h -- defines to support the Inverse NAND Flash Translation Layer
++ *
++ *	(C) Copyright 2002, Greg Ungerer (gerg@snapgear.com)
++ */
++
++#ifndef __MTD_INFTL_H__
++#define __MTD_INFTL_H__
++
++#ifndef __BOOT__
++#include <linux/mtd/mtd.h>
++#include <linux/mtd/nftl.h>
++#endif
++
++#define	OSAK_VERSION	0x5120
++#define	PERCENTUSED	98
++
++#define	SECTORSIZE	512
++
++/* Block Control Information */
++
++struct inftl_bci {
++	__u8 ECCsig[6];
++	__u8 Status;
++	__u8 Status1;
++} __attribute__((packed));
++
++struct inftl_unithead1 {
++	__u16 virtualUnitNo;
++	__u16 prevUnitNo;
++	__u8 ANAC;
++	__u8 NACs;
++	__u8 parityPerField;
++	__u8 discarded;
++} __attribute__((packed));
++
++struct inftl_unithead2 {
++	__u8 parityPerField;
++	__u8 ANAC;
++	__u16 prevUnitNo;
++	__u16 virtualUnitNo;
++	__u8 NACs;
++	__u8 discarded;
++} __attribute__((packed));
++
++struct inftl_unittail {
++	__u8 Reserved[4];
++	__u16 EraseMark;
++	__u16 EraseMark1;
++} __attribute__((packed));
++
++union inftl_uci {
++	struct inftl_unithead1 a;
++	struct inftl_unithead2 b;
++	struct inftl_unittail c;
++};
++
++struct inftl_oob {
++	struct inftl_bci b;
++	union inftl_uci u;
++};
++
++
++/* INFTL Media Header */
++
++struct INFTLPartition {
++	__u32 virtualUnits;
++	__u32 firstUnit;
++	__u32 lastUnit;
++	__u32 flags;
++	__u32 spareUnits;
++	__u32 Reserved0;
++	__u32 Reserved1;
++} __attribute__((packed));
++
++struct INFTLMediaHeader {
++	char bootRecordID[8];
++	__u32 NoOfBootImageBlocks;
++	__u32 NoOfBinaryPartitions;
++	__u32 NoOfBDTLPartitions;
++	__u32 BlockMultiplierBits;
++	__u32 FormatFlags;
++	__u32 OsakVersion;
++	__u32 PercentUsed;
++	struct INFTLPartition Partitions[4];
++} __attribute__((packed));
++
++/* Partition flag types */
++#define	INFTL_BINARY	0x20000000
++#define	INFTL_BDTL	0x40000000
++#define	INFTL_LAST	0x80000000
++
++
++#ifdef __KERNEL__
++
++struct INFTLrecord {
++	struct mtd_info *mtd;
++	struct semaphore mutex;
++	__u16 MediaUnit, SpareMediaUnit;
++	__u32 EraseSize;
++	struct INFTLMediaHeader MediaHdr;
++	int usecount;
++	unsigned char heads;
++	unsigned char sectors;
++	unsigned short cylinders;
++	__u16 numvunits;
++	__u16 firstEUN;
++	__u16 lastEUN;
++	__u16 numfreeEUNs;
++	__u16 LastFreeEUN; 		/* To speed up finding a free EUN */
++	__u32 long nr_sects;
++	int head,sect,cyl;
++	__u16 *PUtable;	 		/* Physical Unit Table  */
++	__u16 *VUtable; 		/* Virtual Unit Table */
++        unsigned int nb_blocks;		/* number of physical blocks */
++        unsigned int nb_boot_blocks;	/* number of blocks used by the bios */
++        struct erase_info instr;
++};
++
++#ifndef INFTL_MAJOR
++#define INFTL_MAJOR 94
++#endif
++
++#define MAX_INFTLS 16
++#define INFTL_PARTN_BITS 4
++
++int INFTL_mount(struct INFTLrecord *s);
++int INFTL_formatblock(struct INFTLrecord *s, int block);
++
++#endif /* __KERNEL__ */
++
++#endif /* __MTD_INFTL_H__ */
+diff --git a/include/linux/mtd/nand_ids.h b/include/linux/mtd/nand_ids.h
+index fca30b3..2c14b72 100644
+--- a/include/linux/mtd/nand_ids.h
++++ b/include/linux/mtd/nand_ids.h
+@@ -41,9 +41,10 @@ static struct nand_flash_dev nand_flash_ids[] = {
+ 	{"Samsung unknown 4Mb",   NAND_MFR_SAMSUNG, 0x6b, 22, 0, 2, 0x2000},
+ 	{"Samsung KM29U128T",     NAND_MFR_SAMSUNG, 0x73, 24, 0, 2, 0x4000},
+ 	{"Samsung KM29U256T",     NAND_MFR_SAMSUNG, 0x75, 25, 0, 2, 0x4000},
+-	{"Samsung unknown 64Mb",  NAND_MFR_SAMSUNG, 0x76, 26, 0, 3, 0x4000},
++	{"Samsung KM29V512000",   NAND_MFR_SAMSUNG, 0x76, 26, 0, 3, 0x4000},
++	{"Samsung KM29V1024000",  NAND_MFR_SAMSUNG, 0x79, 27, 0, 3, 0x4000},
+ 	{"Samsung KM29W32000",    NAND_MFR_SAMSUNG, 0xe3, 22, 0, 2, 0x2000},
+-	{"Samsung unknown 4Mb",   NAND_MFR_SAMSUNG, 0xe5, 22, 0, 2, 0x2000},
++	{"Samsung KM29N32000",    NAND_MFR_SAMSUNG, 0xe5, 22, 0, 2, 0x2000},
+ 	{"Samsung KM29U64000",    NAND_MFR_SAMSUNG, 0xe6, 23, 0, 2, 0x2000},
+ 	{"Samsung KM29W16000",    NAND_MFR_SAMSUNG, 0xea, 21, 1, 2, 0x1000},
+ 	{NULL,}
+diff --git a/include/linux/mtd/nftl.h b/include/linux/mtd/nftl.h
+index fb0b09a..aafdacf 100644
+--- a/include/linux/mtd/nftl.h
++++ b/include/linux/mtd/nftl.h
+@@ -114,7 +114,7 @@ int NFTL_formatblock(struct NFTLrecord *s, int block);
+ #endif
+ 
+ #define MAX_NFTLS 16
+-#define MAX_SECTORS_PER_UNIT 32
++#define MAX_SECTORS_PER_UNIT 64
+ #define NFTL_PARTN_BITS 4
+ 
+ #endif /* __KERNEL__ */
+diff --git a/include/linux/netfilter.h b/include/linux/netfilter.h
+index 4310ce2..7f97bf6 100644
+--- a/include/linux/netfilter.h
++++ b/include/linux/netfilter.h
+@@ -118,17 +118,23 @@ extern struct list_head nf_hooks[NPROTO][NF_MAX_HOOKS];
+ /* This is gross, but inline doesn't cut it for avoiding the function
+    call in fast path: gcc doesn't inline (needs value tracking?). --RR */
+ #ifdef CONFIG_NETFILTER_DEBUG
+-#define NF_HOOK nf_hook_slow
++#define NF_HOOK(pf, hook, skb, indev, outdev, okfn)			\
++ nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn), INT_MIN)
++#define NF_HOOK_THRESH nf_hook_slow
+ #else
+ #define NF_HOOK(pf, hook, skb, indev, outdev, okfn)			\
+ (list_empty(&nf_hooks[(pf)][(hook)])					\
+  ? (okfn)(skb)								\
+- : nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn)))
++ : nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn), INT_MIN))
++#define NF_HOOK_THRESH(pf, hook, skb, indev, outdev, okfn, thresh)	\
++(list_empty(&nf_hooks[(pf)][(hook)])					\
++ ? (okfn)(skb)								\
++ : nf_hook_slow((pf), (hook), (skb), (indev), (outdev), (okfn), (thresh)))
+ #endif
+ 
+ int nf_hook_slow(int pf, unsigned int hook, struct sk_buff *skb,
+ 		 struct net_device *indev, struct net_device *outdev,
+-		 int (*okfn)(struct sk_buff *));
++		 int (*okfn)(struct sk_buff *), int thresh);
+ 
+ /* Call setsockopt() */
+ int nf_setsockopt(struct sock *sk, int pf, int optval, char *opt, 
+diff --git a/include/linux/netfilter_bridge.h b/include/linux/netfilter_bridge.h
+index f553673..0f07bda 100644
+--- a/include/linux/netfilter_bridge.h
++++ b/include/linux/netfilter_bridge.h
+@@ -6,6 +6,9 @@
+ 
+ #include <linux/config.h>
+ #include <linux/netfilter.h>
++#if defined(__KERNEL__) && defined(CONFIG_NETFILTER)
++#include <asm/atomic.h>
++#endif
+ 
+ /* Bridge Hooks */
+ /* After promisc drops, checksum checks. */
+@@ -18,7 +21,48 @@
+ #define NF_BR_LOCAL_OUT		3
+ /* Packets about to hit the wire. */
+ #define NF_BR_POST_ROUTING	4
+-#define NF_BR_NUMHOOKS		5
++/* Not really a hook, but used for the ebtables broute table */
++#define NF_BR_BROUTING		5
++#define NF_BR_NUMHOOKS		6
++
++#ifdef __KERNEL__
++
++#define BRNF_PKT_TYPE			0x01
++#define BRNF_BRIDGED_DNAT		0x02
++#define BRNF_DONT_TAKE_PARENT		0x04
++
++enum nf_br_hook_priorities {
++	NF_BR_PRI_FIRST = INT_MIN,
++	NF_BR_PRI_NAT_DST_BRIDGED = -300,
++	NF_BR_PRI_FILTER_BRIDGED = -200,
++	NF_BR_PRI_BRNF = 0,
++	NF_BR_PRI_NAT_DST_OTHER = 100,
++	NF_BR_PRI_FILTER_OTHER = 200,
++	NF_BR_PRI_NAT_SRC = 300,
++	NF_BR_PRI_LAST = INT_MAX,
++};
++
++#ifdef CONFIG_NETFILTER
++static inline
++struct nf_bridge_info *nf_bridge_alloc(struct sk_buff *skb)
++{
++	struct nf_bridge_info **nf_bridge = &(skb->nf_bridge);
++
++	if ((*nf_bridge = kmalloc(sizeof(**nf_bridge), GFP_ATOMIC)) != NULL) {
++		atomic_set(&(*nf_bridge)->use, 1);
++		(*nf_bridge)->mask = 0;
++		(*nf_bridge)->physindev = (*nf_bridge)->physoutdev = NULL;
++	}
++
++	return *nf_bridge;
++}
+ 
++struct bridge_skb_cb {
++	union {
++		__u32 ipv4;
++	} daddr;
++};
++#endif /* CONFIG_NETFILTER */
+ 
++#endif /* __KERNEL__ */
+ #endif
+diff --git a/include/linux/netfilter_bridge/ebt_arp.h b/include/linux/netfilter_bridge/ebt_arp.h
+new file mode 100644
+index 0000000..8967dda
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_arp.h
+@@ -0,0 +1,26 @@
++#ifndef __LINUX_BRIDGE_EBT_ARP_H
++#define __LINUX_BRIDGE_EBT_ARP_H
++
++#define EBT_ARP_OPCODE 0x01
++#define EBT_ARP_HTYPE 0x02
++#define EBT_ARP_PTYPE 0x04
++#define EBT_ARP_SRC_IP 0x08
++#define EBT_ARP_DST_IP 0x10
++#define EBT_ARP_MASK (EBT_ARP_OPCODE | EBT_ARP_HTYPE | EBT_ARP_PTYPE | \
++   EBT_ARP_SRC_IP | EBT_ARP_DST_IP)
++#define EBT_ARP_MATCH "arp"
++
++struct ebt_arp_info
++{
++	uint16_t htype;
++	uint16_t ptype;
++	uint16_t opcode;
++	uint32_t saddr;
++	uint32_t smsk;
++	uint32_t daddr;
++	uint32_t dmsk;
++	uint8_t  bitmask;
++	uint8_t  invflags;
++};
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_ip.h b/include/linux/netfilter_bridge/ebt_ip.h
+new file mode 100644
+index 0000000..499089b
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_ip.h
+@@ -0,0 +1,43 @@
++/*
++ *  ebt_ip
++ *
++ *	Authors:
++ *	Bart De Schuymer <bart.de.schuymer@pandora.be>
++ *
++ *  April, 2002
++ *
++ *  Changes:
++ *    added ip-sport and ip-dport
++ *    Innominate Security Technologies AG <mhopf@innominate.com>
++ *    September, 2002
++ */
++
++#ifndef __LINUX_BRIDGE_EBT_IP_H
++#define __LINUX_BRIDGE_EBT_IP_H
++
++#define EBT_IP_SOURCE 0x01
++#define EBT_IP_DEST 0x02
++#define EBT_IP_TOS 0x04
++#define EBT_IP_PROTO 0x08
++#define EBT_IP_SPORT 0x10
++#define EBT_IP_DPORT 0x20
++#define EBT_IP_MASK (EBT_IP_SOURCE | EBT_IP_DEST | EBT_IP_TOS | EBT_IP_PROTO |\
++ EBT_IP_SPORT | EBT_IP_DPORT )
++#define EBT_IP_MATCH "ip"
++
++// the same values are used for the invflags
++struct ebt_ip_info
++{
++	uint32_t saddr;
++	uint32_t daddr;
++	uint32_t smsk;
++	uint32_t dmsk;
++	uint8_t  tos;
++	uint8_t  protocol;
++	uint8_t  bitmask;
++	uint8_t  invflags;
++	uint16_t sport[2];
++	uint16_t dport[2];
++};
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_log.h b/include/linux/netfilter_bridge/ebt_log.h
+new file mode 100644
+index 0000000..d3e7377
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_log.h
+@@ -0,0 +1,17 @@
++#ifndef __LINUX_BRIDGE_EBT_LOG_H
++#define __LINUX_BRIDGE_EBT_LOG_H
++
++#define EBT_LOG_IP 0x01 // if the frame is made by ip, log the ip information
++#define EBT_LOG_ARP 0x02
++#define EBT_LOG_MASK (EBT_LOG_IP | EBT_LOG_ARP)
++#define EBT_LOG_PREFIX_SIZE 30
++#define EBT_LOG_WATCHER "log"
++
++struct ebt_log_info
++{
++	uint8_t loglevel;
++	uint8_t prefix[EBT_LOG_PREFIX_SIZE];
++	uint32_t bitmask;
++};
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_mark_m.h b/include/linux/netfilter_bridge/ebt_mark_m.h
+new file mode 100644
+index 0000000..301524f
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_mark_m.h
+@@ -0,0 +1,15 @@
++#ifndef __LINUX_BRIDGE_EBT_MARK_M_H
++#define __LINUX_BRIDGE_EBT_MARK_M_H
++
++#define EBT_MARK_AND 0x01
++#define EBT_MARK_OR 0x02
++#define EBT_MARK_MASK (EBT_MARK_AND | EBT_MARK_OR)
++struct ebt_mark_m_info
++{
++	unsigned long mark, mask;
++	uint8_t invert;
++	uint8_t bitmask;
++};
++#define EBT_MARK_MATCH "mark_m"
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_mark_t.h b/include/linux/netfilter_bridge/ebt_mark_t.h
+new file mode 100644
+index 0000000..f84d2ad
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_mark_t.h
+@@ -0,0 +1,12 @@
++#ifndef __LINUX_BRIDGE_EBT_MARK_T_H
++#define __LINUX_BRIDGE_EBT_MARK_T_H
++
++struct ebt_mark_t_info
++{
++	unsigned long mark;
++	// EBT_ACCEPT, EBT_DROP or EBT_CONTINUE or EBT_RETURN
++	int target;
++};
++#define EBT_MARK_TARGET "mark"
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_nat.h b/include/linux/netfilter_bridge/ebt_nat.h
+new file mode 100644
+index 0000000..eac1871
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_nat.h
+@@ -0,0 +1,13 @@
++#ifndef __LINUX_BRIDGE_EBT_NAT_H
++#define __LINUX_BRIDGE_EBT_NAT_H
++
++struct ebt_nat_info
++{
++	unsigned char mac[ETH_ALEN];
++	// EBT_ACCEPT, EBT_DROP, EBT_CONTINUE or EBT_RETURN
++	int target;
++};
++#define EBT_SNAT_TARGET "snat"
++#define EBT_DNAT_TARGET "dnat"
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_redirect.h b/include/linux/netfilter_bridge/ebt_redirect.h
+new file mode 100644
+index 0000000..c741521
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_redirect.h
+@@ -0,0 +1,11 @@
++#ifndef __LINUX_BRIDGE_EBT_REDIRECT_H
++#define __LINUX_BRIDGE_EBT_REDIRECT_H
++
++struct ebt_redirect_info
++{
++	// EBT_ACCEPT, EBT_DROP or EBT_CONTINUE or EBT_RETURN
++	int target;
++};
++#define EBT_REDIRECT_TARGET "redirect"
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebt_vlan.h b/include/linux/netfilter_bridge/ebt_vlan.h
+new file mode 100644
+index 0000000..cb1fcc4
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebt_vlan.h
+@@ -0,0 +1,20 @@
++#ifndef __LINUX_BRIDGE_EBT_VLAN_H
++#define __LINUX_BRIDGE_EBT_VLAN_H
++
++#define EBT_VLAN_ID	0x01
++#define EBT_VLAN_PRIO	0x02
++#define EBT_VLAN_ENCAP	0x04
++#define EBT_VLAN_MASK (EBT_VLAN_ID | EBT_VLAN_PRIO | EBT_VLAN_ENCAP)
++#define EBT_VLAN_MATCH "vlan"
++
++struct ebt_vlan_info {
++	uint16_t id;		/* VLAN ID {1-4095} */
++	uint8_t prio;		/* VLAN User Priority {0-7} */
++	uint16_t encap;		/* VLAN Encapsulated frame code {0-65535} */
++	uint8_t bitmask;		/* Args bitmask bit 1=1 - ID arg,
++				   bit 2=1 User-Priority arg, bit 3=1 encap*/
++	uint8_t invflags;		/* Inverse bitmask  bit 1=1 - inversed ID arg, 
++				   bit 2=1 - inversed Pirority arg */
++};
++
++#endif
+diff --git a/include/linux/netfilter_bridge/ebtables.h b/include/linux/netfilter_bridge/ebtables.h
+new file mode 100644
+index 0000000..17f4d80
+--- /dev/null
++++ b/include/linux/netfilter_bridge/ebtables.h
+@@ -0,0 +1,359 @@
++/*
++ *  ebtables
++ *
++ *	Authors:
++ *	Bart De Schuymer		<bart.de.schuymer@pandora.be>
++ *
++ *  ebtables.c,v 2.0, September, 2002
++ *
++ *  This code is stongly inspired on the iptables code which is
++ *  Copyright (C) 1999 Paul `Rusty' Russell & Michael J. Neuling
++ */
++
++#ifndef __LINUX_BRIDGE_EFF_H
++#define __LINUX_BRIDGE_EFF_H
++#include <linux/if.h>
++#include <linux/netfilter_bridge.h>
++#include <linux/if_ether.h>
++
++#define EBT_TABLE_MAXNAMELEN 32
++#define EBT_CHAIN_MAXNAMELEN EBT_TABLE_MAXNAMELEN
++#define EBT_FUNCTION_MAXNAMELEN EBT_TABLE_MAXNAMELEN
++
++// verdicts >0 are "branches"
++#define EBT_ACCEPT   -1
++#define EBT_DROP     -2
++#define EBT_CONTINUE -3
++#define EBT_RETURN   -4
++#define NUM_STANDARD_TARGETS   4
++
++struct ebt_counter
++{
++	uint64_t pcnt;
++	uint64_t bcnt;
++};
++
++struct ebt_entries {
++	// this field is always set to zero
++	// See EBT_ENTRY_OR_ENTRIES.
++	// Must be same size as ebt_entry.bitmask
++	unsigned int distinguisher;
++	// the chain name
++	char name[EBT_CHAIN_MAXNAMELEN];
++	// counter offset for this chain
++	unsigned int counter_offset;
++	// one standard (accept, drop, return) per hook
++	int policy;
++	// nr. of entries
++	unsigned int nentries;
++	// entry list
++	char data[0];
++};
++
++// used for the bitmask of struct ebt_entry
++
++// This is a hack to make a difference between an ebt_entry struct and an
++// ebt_entries struct when traversing the entries from start to end.
++// Using this simplifies the code alot, while still being able to use
++// ebt_entries.
++// Contrary, iptables doesn't use something like ebt_entries and therefore uses
++// different techniques for naming the policy and such. So, iptables doesn't
++// need a hack like this.
++#define EBT_ENTRY_OR_ENTRIES 0x01
++// these are the normal masks
++#define EBT_NOPROTO 0x02
++#define EBT_802_3 0x04
++#define EBT_SOURCEMAC 0x08
++#define EBT_DESTMAC 0x10
++#define EBT_F_MASK (EBT_NOPROTO | EBT_802_3 | EBT_SOURCEMAC | EBT_DESTMAC \
++   | EBT_ENTRY_OR_ENTRIES)
++
++#define EBT_IPROTO 0x01
++#define EBT_IIN 0x02
++#define EBT_IOUT 0x04
++#define EBT_ISOURCE 0x8
++#define EBT_IDEST 0x10
++#define EBT_ILOGICALIN 0x20
++#define EBT_ILOGICALOUT 0x40
++#define EBT_INV_MASK (EBT_IPROTO | EBT_IIN | EBT_IOUT | EBT_ILOGICALIN \
++   | EBT_ILOGICALOUT | EBT_ISOURCE | EBT_IDEST)
++
++struct ebt_entry_match
++{
++	union {
++		char name[EBT_FUNCTION_MAXNAMELEN];
++		struct ebt_match *match;
++	} u;
++	// size of data
++	unsigned int match_size;
++	unsigned char data[0];
++};
++
++struct ebt_entry_watcher
++{
++	union {
++		char name[EBT_FUNCTION_MAXNAMELEN];
++		struct ebt_watcher *watcher;
++	} u;
++	// size of data
++	unsigned int watcher_size;
++	unsigned char data[0];
++};
++
++struct ebt_entry_target
++{
++	union {
++		char name[EBT_FUNCTION_MAXNAMELEN];
++		struct ebt_target *target;
++	} u;
++	// size of data
++	unsigned int target_size;
++	unsigned char data[0];
++};
++
++#define EBT_STANDARD_TARGET "standard"
++struct ebt_standard_target
++{
++	struct ebt_entry_target target;
++	int verdict;
++};
++
++// one entry
++struct ebt_entry {
++	// this needs to be the first field
++	unsigned int bitmask;
++	unsigned int invflags;
++	uint16_t ethproto;
++	// the physical in-dev
++	char in[IFNAMSIZ];
++	// the logical in-dev
++	char logical_in[IFNAMSIZ];
++	// the physical out-dev
++	char out[IFNAMSIZ];
++	// the logical out-dev
++	char logical_out[IFNAMSIZ];
++	unsigned char sourcemac[ETH_ALEN];
++	unsigned char sourcemsk[ETH_ALEN];
++	unsigned char destmac[ETH_ALEN];
++	unsigned char destmsk[ETH_ALEN];
++	// sizeof ebt_entry + matches
++	unsigned int watchers_offset;
++	// sizeof ebt_entry + matches + watchers
++	unsigned int target_offset;
++	// sizeof ebt_entry + matches + watchers + target
++	unsigned int next_offset;
++	unsigned char elems[0];
++};
++
++struct ebt_replace
++{
++	char name[EBT_TABLE_MAXNAMELEN];
++	unsigned int valid_hooks;
++	// nr of rules in the table
++	unsigned int nentries;
++	// total size of the entries
++	unsigned int entries_size;
++	// start of the chains
++	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
++	// nr of counters userspace expects back
++	unsigned int num_counters;
++	// where the kernel will put the old counters
++	struct ebt_counter *counters;
++	char *entries;
++};
++
++// [gs]etsockopt numbers
++#define EBT_BASE_CTL            128
++
++#define EBT_SO_SET_ENTRIES      (EBT_BASE_CTL)
++#define EBT_SO_SET_COUNTERS     (EBT_SO_SET_ENTRIES+1)
++#define EBT_SO_SET_MAX          (EBT_SO_SET_COUNTERS+1)
++
++#define EBT_SO_GET_INFO         (EBT_BASE_CTL)
++#define EBT_SO_GET_ENTRIES      (EBT_SO_GET_INFO+1)
++#define EBT_SO_GET_INIT_INFO    (EBT_SO_GET_ENTRIES+1)
++#define EBT_SO_GET_INIT_ENTRIES (EBT_SO_GET_INIT_INFO+1)
++#define EBT_SO_GET_MAX          (EBT_SO_GET_INIT_ENTRIES+1)
++
++#ifdef __KERNEL__
++
++// return values for match() functions
++#define EBT_MATCH 0
++#define EBT_NOMATCH 1
++
++struct ebt_match
++{
++	struct list_head list;
++	const char name[EBT_FUNCTION_MAXNAMELEN];
++	// 0 == it matches
++	int (*match)(const struct sk_buff *skb, const struct net_device *in,
++	   const struct net_device *out, const void *matchdata,
++	   unsigned int datalen);
++	// 0 == let it in
++	int (*check)(const char *tablename, unsigned int hookmask,
++	   const struct ebt_entry *e, void *matchdata, unsigned int datalen);
++	void (*destroy)(void *matchdata, unsigned int datalen);
++	struct module *me;
++};
++
++struct ebt_watcher
++{
++	struct list_head list;
++	const char name[EBT_FUNCTION_MAXNAMELEN];
++	void (*watcher)(const struct sk_buff *skb, const struct net_device *in,
++	   const struct net_device *out, const void *watcherdata,
++	   unsigned int datalen);
++	// 0 == let it in
++	int (*check)(const char *tablename, unsigned int hookmask,
++	   const struct ebt_entry *e, void *watcherdata, unsigned int datalen);
++	void (*destroy)(void *watcherdata, unsigned int datalen);
++	struct module *me;
++};
++
++struct ebt_target
++{
++	struct list_head list;
++	const char name[EBT_FUNCTION_MAXNAMELEN];
++	// returns one of the standard verdicts
++	int (*target)(struct sk_buff **pskb, unsigned int hooknr,
++	   const struct net_device *in, const struct net_device *out,
++	   const void *targetdata, unsigned int datalen);
++	// 0 == let it in
++	int (*check)(const char *tablename, unsigned int hookmask,
++	   const struct ebt_entry *e, void *targetdata, unsigned int datalen);
++	void (*destroy)(void *targetdata, unsigned int datalen);
++	struct module *me;
++};
++
++// used for jumping from and into user defined chains (udc)
++struct ebt_chainstack
++{
++	struct ebt_entries *chaininfo; // pointer to chain data
++	struct ebt_entry *e; // pointer to entry data
++	unsigned int n; // n'th entry
++};
++
++struct ebt_table_info
++{
++	// total size of the entries
++	unsigned int entries_size;
++	unsigned int nentries;
++	// pointers to the start of the chains
++	struct ebt_entries *hook_entry[NF_BR_NUMHOOKS];
++	// room to maintain the stack used for jumping from and into udc
++	struct ebt_chainstack **chainstack;
++	char *entries;
++	struct ebt_counter counters[0] ____cacheline_aligned;
++};
++
++struct ebt_table
++{
++	struct list_head list;
++	char name[EBT_TABLE_MAXNAMELEN];
++	struct ebt_replace *table;
++	unsigned int valid_hooks;
++	rwlock_t lock;
++	// e.g. could be the table explicitly only allows certain
++	// matches, targets, ... 0 == let it in
++	int (*check)(const struct ebt_table_info *info,
++	   unsigned int valid_hooks);
++	// the data used by the kernel
++	struct ebt_table_info *private;
++};
++
++extern int ebt_register_table(struct ebt_table *table);
++extern void ebt_unregister_table(struct ebt_table *table);
++extern int ebt_register_match(struct ebt_match *match);
++extern void ebt_unregister_match(struct ebt_match *match);
++extern int ebt_register_watcher(struct ebt_watcher *watcher);
++extern void ebt_unregister_watcher(struct ebt_watcher *watcher);
++extern int ebt_register_target(struct ebt_target *target);
++extern void ebt_unregister_target(struct ebt_target *target);
++extern unsigned int ebt_do_table(unsigned int hook, struct sk_buff **pskb,
++   const struct net_device *in, const struct net_device *out,
++   struct ebt_table *table);
++
++   // Used in the kernel match() functions
++#define FWINV(bool,invflg) ((bool) ^ !!(info->invflags & invflg))
++// True if the hook mask denotes that the rule is in a base chain,
++// used in the check() functions
++#define BASE_CHAIN (hookmask & (1 << NF_BR_NUMHOOKS))
++// Clear the bit in the hook mask that tells if the rule is on a base chain
++#define CLEAR_BASE_CHAIN_BIT (hookmask &= ~(1 << NF_BR_NUMHOOKS))
++// True if the target is not a standard target
++#define INVALID_TARGET (info->target < -NUM_STANDARD_TARGETS || info->target >= 0)
++
++#endif /* __KERNEL__ */
++
++// blatently stolen from ip_tables.h
++// fn returns 0 to continue iteration
++#define EBT_MATCH_ITERATE(e, fn, args...)                   \
++({                                                          \
++	unsigned int __i;                                   \
++	int __ret = 0;                                      \
++	struct ebt_entry_match *__match;                    \
++	                                                    \
++	for (__i = sizeof(struct ebt_entry);                \
++	     __i < (e)->watchers_offset;                    \
++	     __i += __match->match_size +                   \
++	     sizeof(struct ebt_entry_match)) {              \
++		__match = (void *)(e) + __i;                \
++		                                            \
++		__ret = fn(__match , ## args);              \
++		if (__ret != 0)                             \
++			break;                              \
++	}                                                   \
++	if (__ret == 0) {                                   \
++		if (__i != (e)->watchers_offset)            \
++			__ret = -EINVAL;                    \
++	}                                                   \
++	__ret;                                              \
++})
++
++#define EBT_WATCHER_ITERATE(e, fn, args...)                 \
++({                                                          \
++	unsigned int __i;                                   \
++	int __ret = 0;                                      \
++	struct ebt_entry_watcher *__watcher;                \
++	                                                    \
++	for (__i = e->watchers_offset;                      \
++	     __i < (e)->target_offset;                      \
++	     __i += __watcher->watcher_size +               \
++	     sizeof(struct ebt_entry_watcher)) {            \
++		__watcher = (void *)(e) + __i;              \
++		                                            \
++		__ret = fn(__watcher , ## args);            \
++		if (__ret != 0)                             \
++			break;                              \
++	}                                                   \
++	if (__ret == 0) {                                   \
++		if (__i != (e)->target_offset)              \
++			__ret = -EINVAL;                    \
++	}                                                   \
++	__ret;                                              \
++})
++
++#define EBT_ENTRY_ITERATE(entries, size, fn, args...)       \
++({                                                          \
++	unsigned int __i;                                   \
++	int __ret = 0;                                      \
++	struct ebt_entry *__entry;                          \
++	                                                    \
++	for (__i = 0; __i < (size);) {                      \
++		__entry = (void *)(entries) + __i;          \
++		__ret = fn(__entry , ## args);              \
++		if (__ret != 0)                             \
++			break;                              \
++		if (__entry->bitmask != 0)                  \
++			__i += __entry->next_offset;        \
++		else                                        \
++			__i += sizeof(struct ebt_entries);  \
++	}                                                   \
++	if (__ret == 0) {                                   \
++		if (__i != (size))                          \
++			__ret = -EINVAL;                    \
++	}                                                   \
++	__ret;                                              \
++})
++
++#endif
+diff --git a/include/linux/netfilter_ipv4.h b/include/linux/netfilter_ipv4.h
+index aff6c9d..f336462 100644
+--- a/include/linux/netfilter_ipv4.h
++++ b/include/linux/netfilter_ipv4.h
+@@ -49,15 +49,19 @@
+ #define NF_IP_POST_ROUTING	4
+ #define NF_IP_NUMHOOKS		5
+ 
++#ifdef __KERNEL__
+ enum nf_ip_hook_priorities {
+ 	NF_IP_PRI_FIRST = INT_MIN,
+ 	NF_IP_PRI_CONNTRACK = -200,
++	NF_IP_PRI_BRIDGE_SABOTAGE_FORWARD = -175,
+ 	NF_IP_PRI_MANGLE = -150,
+ 	NF_IP_PRI_NAT_DST = -100,
++	NF_IP_PRI_BRIDGE_SABOTAGE_LOCAL_OUT = -50,
+ 	NF_IP_PRI_FILTER = 0,
+ 	NF_IP_PRI_NAT_SRC = 100,
+ 	NF_IP_PRI_LAST = INT_MAX,
+ };
++#endif
+ 
+ /* Arguments for setsockopt SOL_IP: */
+ /* 2.0 firewalling went from 64 through 71 (and +256, +512, etc). */
+diff --git a/include/linux/netfilter_ipv4/ip_conntrack.h b/include/linux/netfilter_ipv4/ip_conntrack.h
+index 3f74382..fcbd1d8 100644
+--- a/include/linux/netfilter_ipv4/ip_conntrack.h
++++ b/include/linux/netfilter_ipv4/ip_conntrack.h
+@@ -50,19 +50,25 @@ enum ip_conntrack_status {
+ 
+ #include <linux/netfilter_ipv4/ip_conntrack_tcp.h>
+ #include <linux/netfilter_ipv4/ip_conntrack_icmp.h>
++#include <linux/netfilter_ipv4/ip_conntrack_proto_gre.h>
+ 
+ /* per conntrack: protocol private data */
+ union ip_conntrack_proto {
+ 	/* insert conntrack proto private data here */
++	struct ip_ct_gre gre;
+ 	struct ip_ct_tcp tcp;
+ 	struct ip_ct_icmp icmp;
+ };
+ 
+ union ip_conntrack_expect_proto {
+ 	/* insert expect proto private data here */
++	struct ip_ct_gre_expect gre;
+ };
+ 
+ /* Add protocol helper include file here */
++#include <linux/netfilter_ipv4/ip_conntrack_h323.h>
++
++#include <linux/netfilter_ipv4/ip_conntrack_pptp.h>
+ #include <linux/netfilter_ipv4/ip_conntrack_amanda.h>
+ 
+ #include <linux/netfilter_ipv4/ip_conntrack_ftp.h>
+@@ -71,6 +77,8 @@ union ip_conntrack_expect_proto {
+ /* per expectation: application helper private data */
+ union ip_conntrack_expect_help {
+ 	/* insert conntrack helper private data (expect) here */
++	struct ip_ct_h225_expect exp_h225_info;
++	struct ip_ct_pptp_expect exp_pptp_info;
+ 	struct ip_ct_amanda_expect exp_amanda_info;
+ 	struct ip_ct_ftp_expect exp_ftp_info;
+ 	struct ip_ct_irc_expect exp_irc_info;
+@@ -85,16 +93,20 @@ union ip_conntrack_expect_help {
+ /* per conntrack: application helper private data */
+ union ip_conntrack_help {
+ 	/* insert conntrack helper private data (master) here */
++	struct ip_ct_h225_master ct_h225_info;
++	struct ip_ct_pptp_master ct_pptp_info;
+ 	struct ip_ct_ftp_master ct_ftp_info;
+ 	struct ip_ct_irc_master ct_irc_info;
+ };
+ 
+ #ifdef CONFIG_IP_NF_NAT_NEEDED
+ #include <linux/netfilter_ipv4/ip_nat.h>
++#include <linux/netfilter_ipv4/ip_nat_pptp.h>
+ 
+ /* per conntrack: nat application helper private data */
+ union ip_conntrack_nat_help {
+ 	/* insert nat helper private data here */
++	struct ip_nat_pptp nat_pptp_info;
+ };
+ #endif
+ 
+diff --git a/include/linux/netfilter_ipv4/ip_conntrack_h323.h b/include/linux/netfilter_ipv4/ip_conntrack_h323.h
+new file mode 100644
+index 0000000..10221fe
+--- /dev/null
++++ b/include/linux/netfilter_ipv4/ip_conntrack_h323.h
+@@ -0,0 +1,30 @@
++#ifndef _IP_CONNTRACK_H323_H
++#define _IP_CONNTRACK_H323_H
++/* H.323 connection tracking. */
++
++#ifdef __KERNEL__
++/* Protects H.323 related data */
++DECLARE_LOCK_EXTERN(ip_h323_lock);
++#endif
++
++/* Default H.225 port */
++#define H225_PORT	1720
++
++/* This structure is per expected connection */
++struct ip_ct_h225_expect {
++	u_int16_t port;			/* Port of the H.225 helper/RTCP/RTP channel */
++	enum ip_conntrack_dir dir;	/* Direction of the original connection */
++	unsigned int offset;		/* offset of the address in the payload */
++};
++
++/* This structure exists only once per master */
++struct ip_ct_h225_master {
++	int is_h225;				/* H.225 or H.245 connection */
++#ifdef CONFIG_IP_NF_NAT_NEEDED
++	enum ip_conntrack_dir dir;		/* Direction of the original connection */
++	u_int32_t seq[IP_CT_DIR_MAX];		/* Exceptional packet mangling for signal addressess... */
++	unsigned int offset[IP_CT_DIR_MAX];	/* ...and the offset of the addresses in the payload */
++#endif
++};
++
++#endif /* _IP_CONNTRACK_H323_H */
+diff --git a/include/linux/netfilter_ipv4/ip_conntrack_pptp.h b/include/linux/netfilter_ipv4/ip_conntrack_pptp.h
+new file mode 100644
+index 0000000..5155f57
+--- /dev/null
++++ b/include/linux/netfilter_ipv4/ip_conntrack_pptp.h
+@@ -0,0 +1,313 @@
++/* PPTP constants and structs */
++#ifndef _CONNTRACK_PPTP_H
++#define _CONNTRACK_PPTP_H
++
++/* state of the control session */
++enum pptp_ctrlsess_state {
++	PPTP_SESSION_NONE,			/* no session present */
++	PPTP_SESSION_ERROR,			/* some session error */
++	PPTP_SESSION_STOPREQ,			/* stop_sess request seen */
++	PPTP_SESSION_REQUESTED,			/* start_sess request seen */
++	PPTP_SESSION_CONFIRMED,			/* session established */
++};
++
++/* state of the call inside the control session */
++enum pptp_ctrlcall_state {
++	PPTP_CALL_NONE,
++	PPTP_CALL_ERROR,
++	PPTP_CALL_OUT_REQ,
++	PPTP_CALL_OUT_CONF,
++	PPTP_CALL_IN_REQ,
++	PPTP_CALL_IN_REP,
++	PPTP_CALL_IN_CONF,
++	PPTP_CALL_CLEAR_REQ,
++};
++
++
++/* conntrack private data */
++struct ip_ct_pptp_master {
++	enum pptp_ctrlsess_state sstate;	/* session state */
++
++	/* everything below is going to be per-expectation in newnat,
++	 * since there could be more than one call within one session */
++	enum pptp_ctrlcall_state cstate;	/* call state */
++	u_int16_t pac_call_id;			/* call id of PAC, host byte order */
++	u_int16_t pns_call_id;			/* call id of PNS, host byte order */
++};
++
++/* conntrack_expect private member */
++struct ip_ct_pptp_expect {
++	enum pptp_ctrlcall_state cstate; 	/* call state */
++	u_int16_t pac_call_id;			/* call id of PAC */
++	u_int16_t pns_call_id;			/* call id of PNS */
++};
++
++
++#ifdef __KERNEL__
++
++#include <linux/netfilter_ipv4/lockhelp.h>
++DECLARE_LOCK_EXTERN(ip_pptp_lock);
++
++#define IP_CONNTR_PPTP		PPTP_CONTROL_PORT
++
++union pptp_ctrl_union {
++                void				*rawreq;
++		struct PptpStartSessionRequest	*sreq;
++		struct PptpStartSessionReply	*srep;
++		struct PptpStopSessionReqest	*streq;
++		struct PptpStopSessionReply	*strep;
++                struct PptpOutCallRequest       *ocreq;
++                struct PptpOutCallReply         *ocack;
++                struct PptpInCallRequest        *icreq;
++                struct PptpInCallReply          *icack;
++                struct PptpInCallConnected      *iccon;
++		struct PptpClearCallRequest	*clrreq;
++                struct PptpCallDisconnectNotify *disc;
++                struct PptpWanErrorNotify       *wanerr;
++                struct PptpSetLinkInfo          *setlink;
++};
++
++
++
++#define PPTP_CONTROL_PORT	1723
++
++#define PPTP_PACKET_CONTROL	1
++#define PPTP_PACKET_MGMT	2
++
++#define PPTP_MAGIC_COOKIE	0x1a2b3c4d
++
++struct pptp_pkt_hdr {
++	__u16	packetLength;
++	__u16	packetType;
++	__u32	magicCookie;
++};
++
++/* PptpControlMessageType values */
++#define PPTP_START_SESSION_REQUEST	1
++#define PPTP_START_SESSION_REPLY	2
++#define PPTP_STOP_SESSION_REQUEST	3
++#define PPTP_STOP_SESSION_REPLY		4
++#define PPTP_ECHO_REQUEST		5
++#define PPTP_ECHO_REPLY			6
++#define PPTP_OUT_CALL_REQUEST		7
++#define PPTP_OUT_CALL_REPLY		8
++#define PPTP_IN_CALL_REQUEST		9
++#define PPTP_IN_CALL_REPLY		10
++#define PPTP_IN_CALL_CONNECT		11
++#define PPTP_CALL_CLEAR_REQUEST		12
++#define PPTP_CALL_DISCONNECT_NOTIFY	13
++#define PPTP_WAN_ERROR_NOTIFY		14
++#define PPTP_SET_LINK_INFO		15
++
++#define PPTP_MSG_MAX			15
++
++/* PptpGeneralError values */
++#define PPTP_ERROR_CODE_NONE		0
++#define PPTP_NOT_CONNECTED		1
++#define PPTP_BAD_FORMAT			2
++#define PPTP_BAD_VALUE			3
++#define PPTP_NO_RESOURCE		4
++#define PPTP_BAD_CALLID			5
++#define PPTP_REMOVE_DEVICE_ERROR	6
++
++struct PptpControlHeader {
++	__u16	messageType;
++	__u16	reserved;
++};
++
++/* FramingCapability Bitmap Values */
++#define PPTP_FRAME_CAP_ASYNC		0x1
++#define PPTP_FRAME_CAP_SYNC		0x2
++
++/* BearerCapability Bitmap Values */
++#define PPTP_BEARER_CAP_ANALOG		0x1
++#define PPTP_BEARER_CAP_DIGITAL		0x2
++
++struct PptpStartSessionRequest {
++	__u16	protocolVersion;
++	__u8	reserved1;
++	__u8	reserved2;
++	__u32	framingCapability;
++	__u32	bearerCapability;
++	__u16	maxChannels;
++	__u16	firmwareRevision;
++	__u8	hostName[64];
++	__u8	vendorString[64];
++};
++
++/* PptpStartSessionResultCode Values */
++#define PPTP_START_OK			1
++#define PPTP_START_GENERAL_ERROR	2
++#define PPTP_START_ALREADY_CONNECTED	3
++#define PPTP_START_NOT_AUTHORIZED	4
++#define PPTP_START_UNKNOWN_PROTOCOL	5
++
++struct PptpStartSessionReply {
++	__u16	protocolVersion;
++	__u8	resultCode;
++	__u8	generalErrorCode;
++	__u32	framingCapability;
++	__u32	bearerCapability;
++	__u16	maxChannels;
++	__u16	firmwareRevision;
++	__u8	hostName[64];
++	__u8	vendorString[64];
++};
++
++/* PptpStopReasons */
++#define PPTP_STOP_NONE			1
++#define PPTP_STOP_PROTOCOL		2
++#define PPTP_STOP_LOCAL_SHUTDOWN	3
++
++struct PptpStopSessionRequest {
++	__u8	reason;
++};
++
++/* PptpStopSessionResultCode */
++#define PPTP_STOP_OK			1
++#define PPTP_STOP_GENERAL_ERROR		2
++
++struct PptpStopSessionReply {
++	__u8	resultCode;
++	__u8	generalErrorCode;
++};
++
++struct PptpEchoRequest {
++	__u32 identNumber;
++};
++
++/* PptpEchoReplyResultCode */
++#define PPTP_ECHO_OK			1
++#define PPTP_ECHO_GENERAL_ERROR		2
++
++struct PptpEchoReply {
++	__u32	identNumber;
++	__u8	resultCode;
++	__u8	generalErrorCode;
++	__u16	reserved;
++};
++
++/* PptpFramingType */
++#define PPTP_ASYNC_FRAMING		1
++#define PPTP_SYNC_FRAMING		2
++#define PPTP_DONT_CARE_FRAMING		3
++
++/* PptpCallBearerType */
++#define PPTP_ANALOG_TYPE		1
++#define PPTP_DIGITAL_TYPE		2
++#define PPTP_DONT_CARE_BEARER_TYPE	3
++
++struct PptpOutCallRequest {
++	__u16	callID;
++	__u16	callSerialNumber;
++	__u32	minBPS;
++	__u32	maxBPS;
++	__u32	bearerType;
++	__u32	framingType;
++	__u16	packetWindow;
++	__u16	packetProcDelay;
++	__u16	reserved1;
++	__u16	phoneNumberLength;
++	__u16	reserved2;
++	__u8	phoneNumber[64];
++	__u8	subAddress[64];
++};
++
++/* PptpCallResultCode */
++#define PPTP_OUTCALL_CONNECT		1
++#define PPTP_OUTCALL_GENERAL_ERROR	2
++#define PPTP_OUTCALL_NO_CARRIER		3
++#define PPTP_OUTCALL_BUSY		4
++#define PPTP_OUTCALL_NO_DIAL_TONE	5
++#define PPTP_OUTCALL_TIMEOUT		6
++#define PPTP_OUTCALL_DONT_ACCEPT	7
++
++struct PptpOutCallReply {
++	__u16	callID;
++	__u16	peersCallID;
++	__u8	resultCode;
++	__u8	generalErrorCode;
++	__u16	causeCode;
++	__u32	connectSpeed;
++	__u16	packetWindow;
++	__u16	packetProcDelay;
++	__u32	physChannelID;
++};
++
++struct PptpInCallRequest {
++	__u16	callID;
++	__u16	callSerialNumber;
++	__u32	callBearerType;
++	__u32	physChannelID;
++	__u16	dialedNumberLength;
++	__u16	dialingNumberLength;
++	__u8	dialedNumber[64];
++	__u8	dialingNumber[64];
++	__u8	subAddress[64];
++};
++
++/* PptpInCallResultCode */
++#define PPTP_INCALL_ACCEPT		1
++#define PPTP_INCALL_GENERAL_ERROR	2
++#define PPTP_INCALL_DONT_ACCEPT		3
++
++struct PptpInCallReply {
++	__u16	callID;
++	__u16	peersCallID;
++	__u8	resultCode;
++	__u8	generalErrorCode;
++	__u16	packetWindow;
++	__u16	packetProcDelay;
++	__u16	reserved;
++};
++
++struct PptpInCallConnected {
++	__u16	peersCallID;
++	__u16	reserved;
++	__u32	connectSpeed;
++	__u16	packetWindow;
++	__u16	packetProcDelay;
++	__u32	callFramingType;
++};
++
++struct PptpClearCallRequest {
++	__u16	callID;
++	__u16	reserved;
++};
++
++struct PptpCallDisconnectNotify {
++	__u16	callID;
++	__u8	resultCode;
++	__u8	generalErrorCode;
++	__u16	causeCode;
++	__u16	reserved;
++	__u8	callStatistics[128];
++};
++
++struct PptpWanErrorNotify {
++	__u16	peersCallID;
++	__u16	reserved;
++	__u32	crcErrors;
++	__u32	framingErrors;
++	__u32	hardwareOverRuns;
++	__u32	bufferOverRuns;
++	__u32	timeoutErrors;
++	__u32	alignmentErrors;
++};
++
++struct PptpSetLinkInfo {
++	__u16	peersCallID;
++	__u16	reserved;
++	__u32	sendAccm;
++	__u32	recvAccm;
++};
++
++
++struct pptp_priv_data {
++	__u16	call_id;
++	__u16	mcall_id;
++	__u16	pcall_id;
++};
++
++#endif /* __KERNEL__ */
++#endif /* _CONNTRACK_PPTP_H */
+diff --git a/include/linux/netfilter_ipv4/ip_conntrack_proto_gre.h b/include/linux/netfilter_ipv4/ip_conntrack_proto_gre.h
+new file mode 100644
+index 0000000..0764685
+--- /dev/null
++++ b/include/linux/netfilter_ipv4/ip_conntrack_proto_gre.h
+@@ -0,0 +1,123 @@
++#ifndef _CONNTRACK_PROTO_GRE_H
++#define _CONNTRACK_PROTO_GRE_H
++#include <asm/byteorder.h>
++
++/* GRE PROTOCOL HEADER */
++
++/* GRE Version field */
++#define GRE_VERSION_1701	0x0
++#define GRE_VERSION_PPTP	0x1
++
++/* GRE Protocol field */
++#define GRE_PROTOCOL_PPTP	0x880B
++
++/* GRE Flags */
++#define GRE_FLAG_C		0x80
++#define GRE_FLAG_R		0x40
++#define GRE_FLAG_K		0x20
++#define GRE_FLAG_S		0x10
++#define GRE_FLAG_A		0x80
++
++#define GRE_IS_C(f)	((f)&GRE_FLAG_C)
++#define GRE_IS_R(f)	((f)&GRE_FLAG_R)
++#define GRE_IS_K(f)	((f)&GRE_FLAG_K)
++#define GRE_IS_S(f)	((f)&GRE_FLAG_S)
++#define GRE_IS_A(f)	((f)&GRE_FLAG_A)
++
++/* GRE is a mess: Four different standards */
++struct gre_hdr {
++#if defined(__LITTLE_ENDIAN_BITFIELD)
++	__u16	rec:3,
++		srr:1,
++		seq:1,
++		key:1,
++		routing:1,
++		csum:1,
++		version:3,
++		reserved:4,
++		ack:1;
++#elif defined(__BIG_ENDIAN_BITFIELD)
++	__u16	csum:1,
++		routing:1,
++		key:1,
++		seq:1,
++		srr:1,
++		rec:3,
++		ack:1,
++		reserved:4,
++		version:3;
++#else
++#error "Adjust your <asm/byteorder.h> defines"
++#endif
++	__u16	protocol;
++};
++
++/* modified GRE header for PPTP */
++struct gre_hdr_pptp {
++	__u8  flags;		/* bitfield */
++	__u8  version;		/* should be GRE_VERSION_PPTP */
++	__u16 protocol;		/* should be GRE_PROTOCOL_PPTP */
++	__u16 payload_len;	/* size of ppp payload, not inc. gre header */
++	__u16 call_id;		/* peer's call_id for this session */
++	__u32 seq;		/* sequence number.  Present if S==1 */
++	__u32 ack;		/* seq number of highest packet recieved by */
++				/*  sender in this session */
++};
++
++
++/* this is part of ip_conntrack */
++struct ip_ct_gre {
++	unsigned int stream_timeout;
++	unsigned int timeout;
++};
++
++/* this is part of ip_conntrack_expect */
++struct ip_ct_gre_expect {
++	struct ip_ct_gre_keymap *keymap_orig, *keymap_reply;
++};
++
++#ifdef __KERNEL__
++struct ip_conntrack_expect;
++
++/* structure for original <-> reply keymap */
++struct ip_ct_gre_keymap {
++	struct list_head list;
++
++	struct ip_conntrack_tuple tuple;
++};
++
++
++/* add new tuple->key_reply pair to keymap */
++int ip_ct_gre_keymap_add(struct ip_conntrack_expect *exp,
++			 struct ip_conntrack_tuple *t,
++			 int reply);
++
++/* change an existing keymap entry */
++void ip_ct_gre_keymap_change(struct ip_ct_gre_keymap *km,
++			     struct ip_conntrack_tuple *t);
++
++/* delete keymap entries */
++void ip_ct_gre_keymap_destroy(struct ip_conntrack_expect *exp);
++
++
++/* get pointer to gre key, if present */
++static inline u_int32_t *gre_key(struct gre_hdr *greh)
++{
++	if (!greh->key)
++		return NULL;
++	if (greh->csum || greh->routing)
++		return (u_int32_t *) (greh+sizeof(*greh)+4);
++	return (u_int32_t *) (greh+sizeof(*greh));
++}
++
++/* get pointer ot gre csum, if present */
++static inline u_int16_t *gre_csum(struct gre_hdr *greh)
++{
++	if (!greh->csum)
++		return NULL;
++	return (u_int16_t *) (greh+sizeof(*greh));
++}
++
++#endif /* __KERNEL__ */
++
++#endif /* _CONNTRACK_PROTO_GRE_H */
+diff --git a/include/linux/netfilter_ipv4/ip_conntrack_tuple.h b/include/linux/netfilter_ipv4/ip_conntrack_tuple.h
+index 1e76911..bd497c3 100644
+--- a/include/linux/netfilter_ipv4/ip_conntrack_tuple.h
++++ b/include/linux/netfilter_ipv4/ip_conntrack_tuple.h
+@@ -14,7 +14,7 @@
+ union ip_conntrack_manip_proto
+ {
+ 	/* Add other protocols here. */
+-	u_int16_t all;
++	u_int32_t all;
+ 
+ 	struct {
+ 		u_int16_t port;
+@@ -25,6 +25,9 @@ union ip_conntrack_manip_proto
+ 	struct {
+ 		u_int16_t id;
+ 	} icmp;
++	struct {
++		u_int32_t key;
++	} gre;
+ };
+ 
+ /* The manipulable part of the tuple. */
+@@ -44,7 +47,7 @@ struct ip_conntrack_tuple
+ 		u_int32_t ip;
+ 		union {
+ 			/* Add other protocols here. */
+-			u_int16_t all;
++			u_int64_t all;
+ 
+ 			struct {
+ 				u_int16_t port;
+@@ -55,6 +58,11 @@ struct ip_conntrack_tuple
+ 			struct {
+ 				u_int8_t type, code;
+ 			} icmp;
++			struct {
++				u_int16_t protocol;
++				u_int8_t version;
++				u_int32_t key;
++			} gre;
+ 		} u;
+ 
+ 		/* The protocol. */
+@@ -80,10 +88,16 @@ enum ip_conntrack_dir
+ #ifdef __KERNEL__
+ 
+ #define DUMP_TUPLE(tp)						\
+-DEBUGP("tuple %p: %u %u.%u.%u.%u:%hu -> %u.%u.%u.%u:%hu\n",	\
++DEBUGP("tuple %p: %u %u.%u.%u.%u:%u -> %u.%u.%u.%u:%u\n",	\
+        (tp), (tp)->dst.protonum,				\
+-       NIPQUAD((tp)->src.ip), ntohs((tp)->src.u.all),		\
+-       NIPQUAD((tp)->dst.ip), ntohs((tp)->dst.u.all))
++       NIPQUAD((tp)->src.ip), ntohl((tp)->src.u.all),		\
++       NIPQUAD((tp)->dst.ip), ntohl((tp)->dst.u.all))
++
++#define DUMP_TUPLE_RAW(x) 						\
++	DEBUGP("tuple %p: %u %u.%u.%u.%u:0x%08x -> %u.%u.%u.%u:0x%08x\n",\
++	(x), (x)->dst.protonum,						\
++	NIPQUAD((x)->src.ip), ntohl((x)->src.u.all), 			\
++	NIPQUAD((x)->dst.ip), ntohl((x)->dst.u.all))
+ 
+ #define CTINFO2DIR(ctinfo) ((ctinfo) >= IP_CT_IS_REPLY ? IP_CT_DIR_REPLY : IP_CT_DIR_ORIGINAL)
+ 
+diff --git a/include/linux/netfilter_ipv4/ip_nat_pptp.h b/include/linux/netfilter_ipv4/ip_nat_pptp.h
+new file mode 100644
+index 0000000..eaf66c2
+--- /dev/null
++++ b/include/linux/netfilter_ipv4/ip_nat_pptp.h
+@@ -0,0 +1,11 @@
++/* PPTP constants and structs */
++#ifndef _NAT_PPTP_H
++#define _NAT_PPTP_H
++
++/* conntrack private data */
++struct ip_nat_pptp {
++	u_int16_t pns_call_id;		/* NAT'ed PNS call id */
++	u_int16_t pac_call_id;		/* NAT'ed PAC call id */
++};
++
++#endif /* _NAT_PPTP_H */
+diff --git a/include/linux/pci_ids.h b/include/linux/pci_ids.h
+index f91e7d9..cb24683 100644
+--- a/include/linux/pci_ids.h
++++ b/include/linux/pci_ids.h
+@@ -2015,3 +2015,9 @@
+ #define PCI_DEVICE_ID_MICROGATE_USC	0x0010
+ #define PCI_DEVICE_ID_MICROGATE_SCC	0x0020
+ #define PCI_DEVICE_ID_MICROGATE_SCA	0x0030
++
++#define PCI_VENDOR_ID_ANI               0x17CB
++#define PCI_DEVICE_ID_ANI_POLARIS       0x0001
++#define PCI_DEVICE_ID_ANI_POLARIS_REV3  0x0003
++#define PCI_DEVICE_ID_ANI_POLARIS_OLD   0x802B
++
+diff --git a/include/linux/posix_types.h b/include/linux/posix_types.h
+index 3ee2ed9..e2d4d6d 100644
+--- a/include/linux/posix_types.h
++++ b/include/linux/posix_types.h
+@@ -41,7 +41,10 @@ typedef struct {
+ typedef void (*__kernel_sighandler_t)(int);
+ 
+ /* Type of a SYSV IPC key.  */
++#ifndef __KERNEL_KEY_T
+ typedef int __kernel_key_t;
++#endif
++#define __KERNEL_KEY_T
+ 
+ #include <asm/posix_types.h>
+ 
+diff --git a/include/linux/ppp-comp.h b/include/linux/ppp-comp.h
+index 3184d07..e777465 100644
+--- a/include/linux/ppp-comp.h
++++ b/include/linux/ppp-comp.h
+@@ -28,7 +28,7 @@
+  */
+ 
+ /*
+- *  ==FILEVERSION 980319==
++ *  ==FILEVERSION 990623==
+  *
+  *  NOTE TO MAINTAINERS:
+  *     If you modify this file at all, please set the above date.
+@@ -120,6 +120,7 @@ struct compressor {
+  * Don't you just lurve software patents.
+  */
+ 
++#define DECOMP_OK		0	/* no error occured */
+ #define DECOMP_ERROR		-1	/* error detected before decomp. */
+ #define DECOMP_FATALERROR	-2	/* error detected after decomp. */
+ 
+@@ -138,7 +139,7 @@ struct compressor {
+  * Max # bytes for a CCP option
+  */
+ 
+-#define CCP_MAX_OPTION_LENGTH	32
++#define CCP_MAX_OPTION_LENGTH	64
+ 
+ /*
+  * Parts of a CCP packet.
+@@ -187,6 +188,20 @@ struct compressor {
+ #define DEFLATE_CHK_SEQUENCE	0
+ 
+ /*
++ * Definitions for MPPE.
++ */
++
++#define CI_MPPE			18	/* config. option for MPPE */
++#define CILEN_MPPE		6	/* length of config. option */
++
++/*
++ * Definitions for Stac LZS.
++ */
++
++#define CI_LZS			17	/* config option for Stac LZS */
++#define CILEN_LZS		5	/* length of config option */
++
++/*
+  * Definitions for other, as yet unsupported, compression methods.
+  */
+ 
+diff --git a/include/linux/sched.h b/include/linux/sched.h
+index 6efc4d4..9bf62bf 100644
+--- a/include/linux/sched.h
++++ b/include/linux/sched.h
+@@ -415,8 +467,18 @@ struct task_struct {
+ 
+ /* journalling filesystem info */
+ 	void *journal_info;
++
++#ifdef CONFIG_SYSCALLTIMER
++	int curr_syscall;
++#endif
+ };
+ 
++#ifdef CONFIG_SYSCALLTIMER
++#define CURR_SYSCALL curr_syscall:	0,
++#else
++#define CURR_SYSCALL
++#endif
++
+ /*
+  * Per process flags
+  */
+@@ -510,6 +572,7 @@ extern struct exec_domain	default_exec_domain;
+     blocked:		{{0}},						\
+     alloc_lock:		SPIN_LOCK_UNLOCKED,				\
+     journal_info:	NULL,						\
++    CURR_SYSCALL							\
+ }
+ 
+ 
+diff --git a/include/linux/serio.h b/include/linux/serio.h
+index edb2a9b..7a23aac 100644
+--- a/include/linux/serio.h
++++ b/include/linux/serio.h
+@@ -110,6 +110,7 @@ static __inline__ int serio_write(struct serio *serio, unsigned char data)
+ #define SERIO_H3600	0x21
+ #define SERIO_PS2SER	0x22
+ #define SERIO_HIL	0x25
++#define SERIO_IPOD_REM	0x26
+ 
+ #define SERIO_ID	0xff00UL
+ #define SERIO_EXTRA	0xff0000UL
+diff --git a/include/linux/string.h b/include/linux/string.h
+index b5497d1..f0ed67f 100644
+--- a/include/linux/string.h
++++ b/include/linux/string.h
+@@ -12,18 +12,20 @@
+ extern "C" {
+ #endif
+ 
+-extern char * ___strtok;
+-extern char * strpbrk(const char *,const char *);
+-extern char * strtok(char *,const char *);
+-extern char * strsep(char **,const char *);
+-extern __kernel_size_t strspn(const char *,const char *);
+-
+ 
+ /*
+  * Include machine specific inline routines
+  */
+ #include <asm/string.h>
+ 
++#ifndef __HAVE_ARCH_STRTOK
++extern char * ___strtok;
++extern char * strpbrk(const char *,const char *);
++extern char * strtok(char *,const char *);
++extern char * strsep(char **,const char *);
++extern __kernel_size_t strspn(const char *,const char *);
++#endif
++
+ #ifndef __HAVE_ARCH_STRCPY
+ extern char * strcpy(char *,const char *);
+ #endif
+diff --git a/include/linux/udf_fs_sb.h b/include/linux/udf_fs_sb.h
+index e898136..ecdff12 100644
+--- a/include/linux/udf_fs_sb.h
++++ b/include/linux/udf_fs_sb.h
+@@ -18,8 +18,6 @@
+ #ifndef _UDF_FS_SB_H
+ #define _UDF_FS_SB_H 1
+ 
+-#pragma pack(1)
+-
+ #define UDF_MAX_BLOCK_LOADED	8
+ 
+ #define UDF_TYPE1_MAP15			0x1511U
+@@ -31,13 +29,13 @@ struct udf_sparing_data
+ {
+ 	__u16	s_packet_len;
+ 	struct buffer_head *s_spar_map[4];
+-};
++} __attribute ((packed));
+ 
+ struct udf_virtual_data
+ {
+ 	__u32	s_num_entries;
+ 	__u16	s_start_offset;
+-};
++} __attribute ((packed));
+ 
+ struct udf_bitmap
+ {
+@@ -45,7 +43,7 @@ struct udf_bitmap
+ 	__u32			s_extPosition;
+ 	__u16			s_nr_groups;
+ 	struct buffer_head 	**s_block_bitmap;
+-};
++} __attribute ((packed));
+ 
+ struct udf_part_map
+ {
+@@ -71,9 +69,7 @@ struct udf_part_map
+ 	__u32	(*s_partition_func)(struct super_block *, __u32, __u16, __u32);
+ 	__u16	s_volumeseqnum;
+ 	__u16	s_partition_flags;
+-};
+-
+-#pragma pack()
++} __attribute ((packed));
+ 
+ struct udf_sb_info
+ {
+diff --git a/include/linux/usb_old.h b/include/linux/usb_old.h
+new file mode 100644
+index 0000000..ef92650
+--- /dev/null
++++ b/include/linux/usb_old.h
+@@ -0,0 +1,1161 @@
++#ifndef __LINUX_USB_H
++#define __LINUX_USB_H
++
++/* USB constants */
++
++/*
++ * Device and/or Interface Class codes
++ */
++#define USB_CLASS_PER_INTERFACE		0	/* for DeviceClass */
++#define USB_CLASS_AUDIO			1
++#define USB_CLASS_COMM			2
++#define USB_CLASS_HID			3
++#define USB_CLASS_PHYSICAL		5
++#define USB_CLASS_STILL_IMAGE		6
++#define USB_CLASS_PRINTER		7
++#define USB_CLASS_MASS_STORAGE		8
++#define USB_CLASS_HUB			9
++#define USB_CLASS_CDC_DATA		0x0a
++#define USB_CLASS_CSCID		0x0b /* chip+ smart card */
++#define USB_CLASS_CONTENT_SEC		0x0d /* content security */
++#define USB_CLASS_APP_SPEC		0xfe
++#define USB_CLASS_VENDOR_SPEC		0xff
++
++/*
++ * USB types
++ */
++#define USB_TYPE_MASK			(0x03 << 5)
++#define USB_TYPE_STANDARD		(0x00 << 5)
++#define USB_TYPE_CLASS			(0x01 << 5)
++#define USB_TYPE_VENDOR			(0x02 << 5)
++#define USB_TYPE_RESERVED		(0x03 << 5)
++
++/*
++ * USB recipients
++ */
++#define USB_RECIP_MASK			0x1f
++#define USB_RECIP_DEVICE		0x00
++#define USB_RECIP_INTERFACE		0x01
++#define USB_RECIP_ENDPOINT		0x02
++#define USB_RECIP_OTHER			0x03
++
++/*
++ * USB directions
++ */
++#define USB_DIR_OUT			0
++#define USB_DIR_IN			0x80
++
++/*
++ * Descriptor types
++ */
++#define USB_DT_DEVICE			0x01
++#define USB_DT_CONFIG			0x02
++#define USB_DT_STRING			0x03
++#define USB_DT_INTERFACE		0x04
++#define USB_DT_ENDPOINT			0x05
++
++#define USB_DT_HID			(USB_TYPE_CLASS | 0x01)
++#define USB_DT_REPORT			(USB_TYPE_CLASS | 0x02)
++#define USB_DT_PHYSICAL			(USB_TYPE_CLASS | 0x03)
++#define USB_DT_HUB			(USB_TYPE_CLASS | 0x09)
++
++/*
++ * Descriptor sizes per descriptor type
++ */
++#define USB_DT_DEVICE_SIZE		18
++#define USB_DT_CONFIG_SIZE		9
++#define USB_DT_INTERFACE_SIZE		9
++#define USB_DT_ENDPOINT_SIZE		7
++#define USB_DT_ENDPOINT_AUDIO_SIZE	9	/* Audio extension */
++#define USB_DT_HUB_NONVAR_SIZE		7
++#define USB_DT_HID_SIZE			9
++
++/*
++ * Endpoints
++ */
++#define USB_ENDPOINT_NUMBER_MASK	0x0f	/* in bEndpointAddress */
++#define USB_ENDPOINT_DIR_MASK		0x80
++
++#define USB_ENDPOINT_XFERTYPE_MASK	0x03	/* in bmAttributes */
++#define USB_ENDPOINT_XFER_CONTROL	0
++#define USB_ENDPOINT_XFER_ISOC		1
++#define USB_ENDPOINT_XFER_BULK		2
++#define USB_ENDPOINT_XFER_INT		3
++
++/*
++ * USB Packet IDs (PIDs)
++ */
++#define USB_PID_UNDEF_0                        0xf0
++#define USB_PID_OUT                            0xe1
++#define USB_PID_ACK                            0xd2
++#define USB_PID_DATA0                          0xc3
++#define USB_PID_PING                           0xb4	/* USB 2.0 */
++#define USB_PID_SOF                            0xa5
++#define USB_PID_NYET                           0x96	/* USB 2.0 */
++#define USB_PID_DATA2                          0x87	/* USB 2.0 */
++#define USB_PID_SPLIT                          0x78	/* USB 2.0 */
++#define USB_PID_IN                             0x69
++#define USB_PID_NAK                            0x5a
++#define USB_PID_DATA1                          0x4b
++#define USB_PID_PREAMBLE                       0x3c	/* Token mode */
++#define USB_PID_ERR                            0x3c	/* USB 2.0: handshake mode */
++#define USB_PID_SETUP                          0x2d
++#define USB_PID_STALL                          0x1e
++#define USB_PID_MDATA                          0x0f	/* USB 2.0 */
++
++/*
++ * Standard requests
++ */
++#define USB_REQ_GET_STATUS		0x00
++#define USB_REQ_CLEAR_FEATURE		0x01
++#define USB_REQ_SET_FEATURE		0x03
++#define USB_REQ_SET_ADDRESS		0x05
++#define USB_REQ_GET_DESCRIPTOR		0x06
++#define USB_REQ_SET_DESCRIPTOR		0x07
++#define USB_REQ_GET_CONFIGURATION	0x08
++#define USB_REQ_SET_CONFIGURATION	0x09
++#define USB_REQ_GET_INTERFACE		0x0A
++#define USB_REQ_SET_INTERFACE		0x0B
++#define USB_REQ_SYNCH_FRAME		0x0C
++
++/*
++ * HID requests
++ */
++#define USB_REQ_GET_REPORT		0x01
++#define USB_REQ_GET_IDLE		0x02
++#define USB_REQ_GET_PROTOCOL		0x03
++#define USB_REQ_SET_REPORT		0x09
++#define USB_REQ_SET_IDLE		0x0A
++#define USB_REQ_SET_PROTOCOL		0x0B
++
++
++#ifdef __KERNEL__
++
++#include <linux/types.h>
++#include <linux/ioctl.h>
++#include <linux/version.h>
++#include <linux/sched.h>
++#include <linux/delay.h>
++#include <linux/interrupt.h>	/* for in_interrupt() */
++#include <linux/config.h>
++#include <linux/list.h>
++
++#define USB_MAJOR 180
++
++static __inline__ void wait_ms(unsigned int ms)
++{
++	if(!in_interrupt()) {
++		current->state = TASK_UNINTERRUPTIBLE;
++		schedule_timeout(1 + ms * HZ / 1000);
++	}
++	else
++		mdelay(ms);
++}
++#if 0
++typedef struct {
++	__u8 requesttype;
++	__u8 request;
++	__u16 value;
++	__u16 index;
++	__u16 length;
++} devrequest __attribute__ ((packed));
++#else
++typedef struct {
++	__u16 value;
++	__u8 request;
++	__u8 requesttype;
++	__u16 length;
++	__u16 index;
++} devrequest __attribute__ ((packed));
++
++#endif
++/*
++ * USB-status codes:
++ * USB_ST* maps to -E* and should go away in the future
++ */
++
++#define USB_ST_NOERROR		0
++#define USB_ST_CRC		(-EILSEQ)
++#define USB_ST_BITSTUFF		(-EPROTO)
++#define USB_ST_NORESPONSE	(-ETIMEDOUT)			/* device not responding/handshaking */
++#define USB_ST_DATAOVERRUN	(-EOVERFLOW)
++#define USB_ST_DATAUNDERRUN	(-EREMOTEIO)
++#define USB_ST_BUFFEROVERRUN	(-ECOMM)
++#define USB_ST_BUFFERUNDERRUN	(-ENOSR)
++#define USB_ST_INTERNALERROR	(-EPROTO) 			/* unknown error */
++#define USB_ST_SHORT_PACKET    	(-EREMOTEIO)
++#define USB_ST_PARTIAL_ERROR  	(-EXDEV)			/* ISO transfer only partially completed */
++#define USB_ST_URB_KILLED     	(-ENOENT)			/* URB canceled by user */
++#define USB_ST_URB_PENDING       (-EINPROGRESS)
++#define USB_ST_REMOVED		(-ENODEV) 			/* device not existing or removed */
++#define USB_ST_TIMEOUT		(-ETIMEDOUT)			/* communication timed out, also in urb->status**/
++#define USB_ST_NOTSUPPORTED	(-ENOSYS)			
++#define USB_ST_BANDWIDTH_ERROR	(-ENOSPC)			/* too much bandwidth used */
++#define USB_ST_URB_INVALID_ERROR  (-EINVAL)			/* invalid value/transfer type */
++#define USB_ST_URB_REQUEST_ERROR  (-ENXIO)			/* invalid endpoint */
++#define USB_ST_STALL		(-EPIPE) 			/* pipe stalled, also in urb->status*/
++
++/*
++ * USB device number allocation bitmap. There's one bitmap
++ * per USB tree.
++ */
++struct usb_devmap {
++	unsigned long devicemap[128 / (8*sizeof(unsigned long))];
++};
++
++#define USB_MAXBUS		64
++
++struct usb_busmap {
++	unsigned long busmap[USB_MAXBUS / (8*sizeof(unsigned long))];
++};
++
++/*
++ * This is a USB device descriptor.
++ *
++ * USB device information
++ */
++
++/* Everything but the endpoint maximums are aribtrary */
++#define USB_MAXCONFIG		8
++#define USB_ALTSETTINGALLOC     4
++#define USB_MAXALTSETTING	128  /* Hard limit */
++#define USB_MAXINTERFACES	32
++#define USB_MAXENDPOINTS	32
++
++/* All standard descriptors have these 2 fields in common */
++struct usb_descriptor_header {
++	__u8  bLength;
++	__u8  bDescriptorType;
++} __attribute__ ((packed));
++#if 1
++/* Device descriptor */
++struct usb_device_descriptor {
++	__u8  bLength;
++	__u8  bDescriptorType;
++	__u16 bcdUSB;
++	__u8  bDeviceClass;
++	__u8  bDeviceSubClass;
++	__u8  bDeviceProtocol;
++	__u8  bMaxPacketSize0;
++	__u16 idVendor;
++	__u16 idProduct;
++	__u16 bcdDevice;
++	__u8  iManufacturer;
++	__u8  iProduct;
++	__u8  iSerialNumber;
++	__u8  bNumConfigurations;
++} __attribute__ ((packed));
++#else
++struct usb_device_descriptor {
++	__u16 bcdUSB;
++	__u8  bDescriptorType;
++	__u8  bLength;
++
++	__u8  bMaxPacketSize0;
++	__u8  bDeviceProtocol;
++	__u8  bDeviceSubClass;
++	__u8  bDeviceClass;
++
++	
++	__u16 idProduct;
++	__u16 idVendor;
++	
++	__u8  iProduct;
++	__u8  iManufacturer;
++	__u16 bcdDevice;
++	
++	__u16 iPadding;
++	__u8  bNumConfigurations;
++	__u8  iSerialNumber;
++} __attribute__ ((packed));
++
++
++#endif
++/* Endpoint descriptor */
++#if 1
++struct usb_endpoint_descriptor {
++	__u8  bLength		__attribute__ ((packed));
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u8  bEndpointAddress	__attribute__ ((packed));
++	__u8  bmAttributes	__attribute__ ((packed));
++	__u16 wMaxPacketSize	__attribute__ ((packed));
++	__u8  bInterval		__attribute__ ((packed));
++	__u8  bRefresh		__attribute__ ((packed));
++	__u8  bSynchAddress	__attribute__ ((packed));
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++#else
++
++struct usb_endpoint_descriptor {
++
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u8  bLength		__attribute__ ((packed));
++
++	__u8  bmAttributes	__attribute__ ((packed));
++	__u8  bEndpointAddress	__attribute__ ((packed));
++
++	__u8  bRefresh		__attribute__ ((packed));
++	__u8  bInterval		__attribute__ ((packed));
++	__u16 wMaxPacketSize	__attribute__ ((packed));
++	
++	__u8  bSynchAddress	__attribute__ ((packed));
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++
++
++#endif
++/* Interface descriptor */
++#if 1 
++struct usb_interface_descriptor {
++	__u8  bLength		__attribute__ ((packed));
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u8  bInterfaceNumber	__attribute__ ((packed));
++	__u8  bAlternateSetting	__attribute__ ((packed));
++	__u8  bNumEndpoints	__attribute__ ((packed));
++	__u8  bInterfaceClass	__attribute__ ((packed));
++	__u8  bInterfaceSubClass __attribute__ ((packed));
++	__u8  bInterfaceProtocol __attribute__ ((packed));
++	__u8  iInterface	__attribute__ ((packed));
++
++  	struct usb_endpoint_descriptor *endpoint;
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++#else
++
++struct usb_interface_descriptor {
++
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u8  bLength		__attribute__ ((packed));
++
++	__u8  bAlternateSetting	__attribute__ ((packed));
++	__u8  bInterfaceNumber	__attribute__ ((packed));
++
++
++	__u8  bInterfaceClass	__attribute__ ((packed));
++	__u8  bNumEndpoints	__attribute__ ((packed));
++	__u8  bInterfaceProtocol __attribute__ ((packed));
++	__u8  bInterfaceSubClass __attribute__ ((packed));
++
++
++	__u8  iInterface	__attribute__ ((packed));
++
++  	struct usb_endpoint_descriptor *endpoint;
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++
++#endif
++
++struct usb_interface {
++	struct usb_interface_descriptor *altsetting;
++
++	int act_altsetting;		/* active alternate setting */
++	int num_altsetting;		/* number of alternate settings */
++	int max_altsetting;             /* total memory allocated */
++ 
++	struct usb_driver *driver;	/* driver */
++	void *private_data;
++};
++
++/* Configuration descriptor information.. */
++#if 1
++struct usb_config_descriptor {
++	__u8  bLength		__attribute__ ((packed));
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u16 wTotalLength	__attribute__ ((packed));
++	__u8  bNumInterfaces	__attribute__ ((packed));
++	__u8  bConfigurationValue __attribute__ ((packed));
++	__u8  iConfiguration	__attribute__ ((packed));
++	__u8  bmAttributes	__attribute__ ((packed));
++	__u8  MaxPower		__attribute__ ((packed));
++
++	struct usb_interface *interface;
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++#else
++struct usb_config_descriptor {
++	__u16 wTotalLength	__attribute__ ((packed));
++	__u8  bDescriptorType	__attribute__ ((packed));
++	__u8  bLength		__attribute__ ((packed));
++
++	__u8  bmAttributes	__attribute__ ((packed));
++	__u8  iConfiguration	__attribute__ ((packed));
++	__u8  bConfigurationValue __attribute__ ((packed));
++	__u8  bNumInterfaces	__attribute__ ((packed));
++	
++	__u8  MaxPower		__attribute__ ((packed));
++
++	struct usb_interface *interface;
++
++   	unsigned char *extra;   /* Extra descriptors */
++	int extralen;
++};
++
++
++
++#endif
++
++/* String descriptor */
++struct usb_string_descriptor {
++	__u8  bLength;
++	__u8  bDescriptorType;
++	__u16 wData[1];
++} __attribute__ ((packed));
++
++struct usb_device;
++
++/*
++ * Device table entry for "new style" table-driven USB drivers.
++ * User mode code can read these tables to choose which modules to load.
++ * Declare the table as __devinitdata, and as a MODULE_DEVICE_TABLE.
++ *
++ * With a device table provide bind() instead of probe().  Then the
++ * third bind() parameter will point to a matching entry from this
++ * table.  (Null value reserved.)
++ * 
++ * Terminate the driver's table with an all-zeroes entry.
++ * Init the fields you care about; zeroes are not used in comparisons.
++ */
++#define USB_DEVICE_ID_MATCH_VENDOR		0x0001
++#define USB_DEVICE_ID_MATCH_PRODUCT		0x0002
++#define USB_DEVICE_ID_MATCH_DEV_LO		0x0004
++#define USB_DEVICE_ID_MATCH_DEV_HI		0x0008
++#define USB_DEVICE_ID_MATCH_DEV_CLASS		0x0010
++#define USB_DEVICE_ID_MATCH_DEV_SUBCLASS	0x0020
++#define USB_DEVICE_ID_MATCH_DEV_PROTOCOL	0x0040
++#define USB_DEVICE_ID_MATCH_INT_CLASS		0x0080
++#define USB_DEVICE_ID_MATCH_INT_SUBCLASS	0x0100
++#define USB_DEVICE_ID_MATCH_INT_PROTOCOL	0x0200
++
++#define USB_DEVICE_ID_MATCH_DEVICE		(USB_DEVICE_ID_MATCH_VENDOR | USB_DEVICE_ID_MATCH_PRODUCT)
++#define USB_DEVICE_ID_MATCH_DEV_RANGE		(USB_DEVICE_ID_MATCH_DEV_LO | USB_DEVICE_ID_MATCH_DEV_HI)
++#define USB_DEVICE_ID_MATCH_DEVICE_AND_VERSION	(USB_DEVICE_ID_MATCH_DEVICE | USB_DEVICE_ID_MATCH_DEV_RANGE)
++#define USB_DEVICE_ID_MATCH_DEV_INFO \
++	(USB_DEVICE_ID_MATCH_DEV_CLASS | USB_DEVICE_ID_MATCH_DEV_SUBCLASS | USB_DEVICE_ID_MATCH_DEV_PROTOCOL)
++#define USB_DEVICE_ID_MATCH_INT_INFO \
++	(USB_DEVICE_ID_MATCH_INT_CLASS | USB_DEVICE_ID_MATCH_INT_SUBCLASS | USB_DEVICE_ID_MATCH_INT_PROTOCOL)
++
++/* Some useful macros */
++#define USB_DEVICE(vend,prod) \
++	match_flags: USB_DEVICE_ID_MATCH_DEVICE, idVendor: (vend), idProduct: (prod)
++#define USB_DEVICE_VER(vend,prod,lo,hi) \
++	match_flags: USB_DEVICE_ID_MATCH_DEVICE_AND_VERSION, idVendor: (vend), idProduct: (prod), bcdDevice_lo: (lo), bcdDevice_hi: (hi)
++#define USB_DEVICE_INFO(cl,sc,pr) \
++	match_flags: USB_DEVICE_ID_MATCH_DEV_INFO, bDeviceClass: (cl), bDeviceSubClass: (sc), bDeviceProtocol: (pr)
++#define USB_INTERFACE_INFO(cl,sc,pr) \
++	match_flags: USB_DEVICE_ID_MATCH_INT_INFO, bInterfaceClass: (cl), bInterfaceSubClass: (sc), bInterfaceProtocol: (pr)
++
++struct usb_device_id {
++	/* This bitmask is used to determine which of the following fields
++	 * are to be used for matching.
++	 */
++	__u16		match_flags;
++
++	/*
++	 * vendor/product codes are checked, if vendor is nonzero
++	 * Range is for device revision (bcdDevice), inclusive;
++	 * zero values here mean range isn't considered
++	 */
++	__u16		idVendor;
++	__u16		idProduct;
++	__u16		bcdDevice_lo, bcdDevice_hi;
++
++	/*
++	 * if device class != 0, these can be match criteria;
++	 * but only if this bDeviceClass value is nonzero
++	 */
++	__u8		bDeviceClass;
++	__u8		bDeviceSubClass;
++	__u8		bDeviceProtocol;
++
++	/*
++	 * if interface class != 0, these can be match criteria;
++	 * but only if this bInterfaceClass value is nonzero
++	 */
++	__u8		bInterfaceClass;
++	__u8		bInterfaceSubClass;
++	__u8		bInterfaceProtocol;
++
++	/*
++	 * for driver's use; not involved in driver matching.
++	 */
++	unsigned long	driver_info;
++};
++
++struct usb_driver {
++	const char *name;
++
++	void *(*probe)(
++	    struct usb_device *dev,		/* the device */
++	    unsigned intf,			/* what interface */
++	    const struct usb_device_id *id	/* from id_table */
++	    );
++	void (*disconnect)(struct usb_device *, void *);
++
++	struct list_head driver_list;
++
++	struct file_operations *fops;
++	int minor;
++
++	struct semaphore serialize;
++
++	/* ioctl -- userspace apps can talk to drivers through usbdevfs */
++	int (*ioctl)(struct usb_device *dev, unsigned int code, void *buf);
++
++	/* support for "new-style" USB hotplugging
++	 * binding policy can be driven from user mode too
++	 */
++	const struct usb_device_id *id_table;
++
++	/* suspend before the bus suspends;
++	 * disconnect or resume when the bus resumes */
++	// void (*suspend)(struct usb_device *dev);
++	// void (*resume)(struct usb_device *dev);
++};
++	
++/*----------------------------------------------------------------------------* 
++ * New USB Structures                                                         *
++ *----------------------------------------------------------------------------*/
++
++/*
++ * urb->transfer_flags:
++ */
++#define USB_DISABLE_SPD         0x0001
++#define USB_ISO_ASAP            0x0002
++#define USB_ASYNC_UNLINK        0x0008
++#define USB_QUEUE_BULK          0x0010
++#define USB_NO_FSBR		0x0020
++#define USB_ZERO_PACKET         0x0040  // Finish bulk OUTs always with zero length packet
++#define URB_NO_INTERRUPT	0x0080	/* HINT: no non-error interrupt needed */
++					/* ... less overhead for QUEUE_BULK */
++#define USB_TIMEOUT_KILLED	0x1000	// only set by HCD!
++
++typedef struct
++{
++	unsigned int offset;
++	unsigned int length;		// expected length
++	unsigned int actual_length;
++	unsigned int status;
++} iso_packet_descriptor_t, *piso_packet_descriptor_t;
++
++struct urb;
++typedef void (*usb_complete_t)(struct urb *);
++
++typedef struct urb
++{
++	spinlock_t lock;		// lock for the URB
++	void *hcpriv;			// private data for host controller
++	struct list_head urb_list;	// list pointer to all active urbs 
++	struct urb *next;		// pointer to next URB	
++	struct usb_device *dev;		// pointer to associated USB device
++	unsigned int pipe;		// pipe information
++	int status;			// returned status
++	unsigned int transfer_flags;	// USB_DISABLE_SPD | USB_ISO_ASAP | etc.
++	void *transfer_buffer;		// associated data buffer
++	int transfer_buffer_length;	// data buffer length
++	int actual_length;              // actual data buffer length	
++	int bandwidth;			// bandwidth for this transfer request (INT or ISO)
++	unsigned char *setup_packet;	// setup packet (control only)
++	//
++	int start_frame;		// start frame (iso/irq only)
++	int number_of_packets;		// number of packets in this request (iso)
++	int interval;                   // polling interval (irq only)
++	int error_count;		// number of errors in this transfer (iso only)
++	int timeout;			// timeout (in jiffies)
++	//
++	void *context;			// context for completion routine
++	usb_complete_t complete;	// pointer to completion routine
++	//
++	iso_packet_descriptor_t iso_frame_desc[0];
++} urb_t, *purb_t;
++
++/**
++ * FILL_CONTROL_URB - macro to help initialize a control urb
++ * @URB: pointer to the urb to initialize.
++ * @DEV: pointer to the struct usb_device for this urb.
++ * @PIPE: the endpoint pipe
++ * @SETUP_PACKET: pointer to the setup_packet buffer
++ * @TRANSFER_BUFFER: pointer to the transfer buffer
++ * @BUFFER_LENGTH: length of the transfer buffer
++ * @COMPLETE: pointer to the usb_complete_t function
++ * @CONTEXT: what to set the urb context to.
++ *
++ * Initializes a control urb with the proper information needed to submit
++ * it to a device.  This macro is depreciated, the usb_fill_control_urb()
++ * function should be used instead.
++ */
++#define FILL_CONTROL_URB(URB,DEV,PIPE,SETUP_PACKET,TRANSFER_BUFFER,BUFFER_LENGTH,COMPLETE,CONTEXT) \
++    do {\
++	spin_lock_init(&(URB)->lock);\
++	(URB)->dev=DEV;\
++	(URB)->pipe=PIPE;\
++	(URB)->setup_packet=SETUP_PACKET;\
++	(URB)->transfer_buffer=TRANSFER_BUFFER;\
++	(URB)->transfer_buffer_length=BUFFER_LENGTH;\
++	(URB)->complete=COMPLETE;\
++	(URB)->context=CONTEXT;\
++    } while (0)
++
++/**
++ * FILL_BULK_URB - macro to help initialize a bulk urb
++ * @URB: pointer to the urb to initialize.
++ * @DEV: pointer to the struct usb_device for this urb.
++ * @PIPE: the endpoint pipe
++ * @TRANSFER_BUFFER: pointer to the transfer buffer
++ * @BUFFER_LENGTH: length of the transfer buffer
++ * @COMPLETE: pointer to the usb_complete_t function
++ * @CONTEXT: what to set the urb context to.
++ *
++ * Initializes a bulk urb with the proper information needed to submit it
++ * to a device.  This macro is depreciated, the usb_fill_bulk_urb()
++ * function should be used instead.
++ */
++#define FILL_BULK_URB(URB,DEV,PIPE,TRANSFER_BUFFER,BUFFER_LENGTH,COMPLETE,CONTEXT) \
++    do {\
++	spin_lock_init(&(URB)->lock);\
++	(URB)->dev=DEV;\
++	(URB)->pipe=PIPE;\
++	(URB)->transfer_buffer=TRANSFER_BUFFER;\
++	(URB)->transfer_buffer_length=BUFFER_LENGTH;\
++	(URB)->complete=COMPLETE;\
++	(URB)->context=CONTEXT;\
++    } while (0)
++    
++/**
++ * FILL_INT_URB - macro to help initialize a interrupt urb
++ * @URB: pointer to the urb to initialize.
++ * @DEV: pointer to the struct usb_device for this urb.
++ * @PIPE: the endpoint pipe
++ * @TRANSFER_BUFFER: pointer to the transfer buffer
++ * @BUFFER_LENGTH: length of the transfer buffer
++ * @COMPLETE: pointer to the usb_complete_t function
++ * @CONTEXT: what to set the urb context to.
++ * @INTERVAL: what to set the urb interval to.
++ *
++ * Initializes a interrupt urb with the proper information needed to submit
++ * it to a device.  This macro is depreciated, the usb_fill_int_urb()
++ * function should be used instead.
++ */
++#define FILL_INT_URB(URB,DEV,PIPE,TRANSFER_BUFFER,BUFFER_LENGTH,COMPLETE,CONTEXT,INTERVAL) \
++    do {\
++	spin_lock_init(&(URB)->lock);\
++	(URB)->dev=DEV;\
++	(URB)->pipe=PIPE;\
++	(URB)->transfer_buffer=TRANSFER_BUFFER;\
++	(URB)->transfer_buffer_length=BUFFER_LENGTH;\
++	(URB)->complete=COMPLETE;\
++	(URB)->context=CONTEXT;\
++	(URB)->interval=INTERVAL;\
++	(URB)->start_frame=-1;\
++    } while (0)
++
++#define FILL_CONTROL_URB_TO(a,aa,b,c,d,e,f,g,h) \
++    do {\
++	spin_lock_init(&(a)->lock);\
++	(a)->dev=aa;\
++	(a)->pipe=b;\
++	(a)->setup_packet=c;\
++	(a)->transfer_buffer=d;\
++	(a)->transfer_buffer_length=e;\
++	(a)->complete=f;\
++	(a)->context=g;\
++	(a)->timeout=h;\
++    } while (0)
++
++#define FILL_BULK_URB_TO(a,aa,b,c,d,e,f,g) \
++    do {\
++	spin_lock_init(&(a)->lock);\
++	(a)->dev=aa;\
++	(a)->pipe=b;\
++	(a)->transfer_buffer=c;\
++	(a)->transfer_buffer_length=d;\
++	(a)->complete=e;\
++	(a)->context=f;\
++	(a)->timeout=g;\
++    } while (0)
++ 
++/**
++ * usb_fill_control_urb - initializes a control urb
++ * @urb: pointer to the urb to initialize.
++ * @dev: pointer to the struct usb_device for this urb.
++ * @pipe: the endpoint pipe
++ * @setup_packet: pointer to the setup_packet buffer
++ * @transfer_buffer: pointer to the transfer buffer
++ * @buffer_length: length of the transfer buffer
++ * @complete: pointer to the usb_complete_t function
++ * @context: what to set the urb context to.
++ *
++ * Initializes a control urb with the proper information needed to submit
++ * it to a device.
++ */
++static inline void usb_fill_control_urb (struct urb *urb,
++					 struct usb_device *dev,
++					 unsigned int pipe,
++					 unsigned char *setup_packet,
++					 void *transfer_buffer,
++					 int buffer_length,
++					 usb_complete_t complete,
++					 void *context)
++{
++	spin_lock_init(&urb->lock);
++	urb->dev = dev;
++	urb->pipe = pipe;
++	urb->setup_packet = setup_packet;
++	urb->transfer_buffer = transfer_buffer;
++	urb->transfer_buffer_length = buffer_length;
++	urb->complete = complete;
++	urb->context = context;
++}
++
++/**
++ * usb_fill_bulk_urb - macro to help initialize a bulk urb
++ * @urb: pointer to the urb to initialize.
++ * @dev: pointer to the struct usb_device for this urb.
++ * @pipe: the endpoint pipe
++ * @transfer_buffer: pointer to the transfer buffer
++ * @buffer_length: length of the transfer buffer
++ * @complete: pointer to the usb_complete_t function
++ * @context: what to set the urb context to.
++ *
++ * Initializes a bulk urb with the proper information needed to submit it
++ * to a device.
++ */
++static inline void usb_fill_bulk_urb (struct urb *urb,
++				      struct usb_device *dev,
++				      unsigned int pipe,
++				      void *transfer_buffer,
++				      int buffer_length,
++				      usb_complete_t complete,
++				      void *context)
++				      
++{
++	spin_lock_init(&urb->lock);
++	urb->dev = dev;
++	urb->pipe = pipe;
++	urb->transfer_buffer = transfer_buffer;
++	urb->transfer_buffer_length = buffer_length;
++	urb->complete = complete;
++	urb->context = context;
++}
++    
++/**
++ * usb_fill_int_urb - macro to help initialize a interrupt urb
++ * @urb: pointer to the urb to initialize.
++ * @dev: pointer to the struct usb_device for this urb.
++ * @pipe: the endpoint pipe
++ * @transfer_buffer: pointer to the transfer buffer
++ * @buffer_length: length of the transfer buffer
++ * @complete: pointer to the usb_complete_t function
++ * @context: what to set the urb context to.
++ * @interval: what to set the urb interval to.
++ *
++ * Initializes a interrupt urb with the proper information needed to submit
++ * it to a device.
++ */
++static inline void usb_fill_int_urb (struct urb *urb,
++				     struct usb_device *dev,
++				     unsigned int pipe,
++				     void *transfer_buffer,
++				     int buffer_length,
++				     usb_complete_t complete,
++				     void *context,
++				     int interval)
++{
++	spin_lock_init(&urb->lock);
++	urb->dev = dev;
++	urb->pipe = pipe;
++	urb->transfer_buffer = transfer_buffer;
++	urb->transfer_buffer_length = buffer_length;
++	urb->complete = complete;
++	urb->context = context;
++	urb->interval = interval;
++	urb->start_frame = -1;
++}
++
++purb_t usb_alloc_urb(int iso_packets);
++void usb_free_urb (purb_t purb);
++int usb_submit_urb(purb_t purb);
++int usb_unlink_urb(purb_t purb);
++int usb_internal_control_msg(struct usb_device *usb_dev, unsigned int pipe, devrequest *cmd,  void *data, int len, int timeout);
++int usb_bulk_msg(struct usb_device *usb_dev, unsigned int pipe, void *data, int len, int *actual_length, int timeout);
++
++/*-------------------------------------------------------------------*
++ *                         SYNCHRONOUS CALL SUPPORT                  *
++ *-------------------------------------------------------------------*/
++
++struct usb_api_data
++{
++	wait_queue_head_t wqh;
++	int done;
++	/* void* stuff;	*/	/* Possible extension later. */
++};
++
++/* -------------------------------------------------------------------------- */
++
++struct usb_operations {
++	int (*allocate)(struct usb_device *);
++	int (*deallocate)(struct usb_device *);
++	int (*get_frame_number) (struct usb_device *usb_dev);
++	int (*submit_urb) (struct urb* purb);
++	int (*unlink_urb) (struct urb* purb);
++};
++
++#define DEVNUM_ROUND_ROBIN	/***** OPTION *****/
++
++/*
++ * Allocated per bus we have
++ */
++struct usb_bus {
++	int busnum;			/* Bus number (in order of reg) */
++
++#ifdef DEVNUM_ROUND_ROBIN
++	int devnum_next;                /* Next open device number in round-robin allocation */
++#endif /* DEVNUM_ROUND_ROBIN */
++
++	struct usb_devmap devmap;       /* Device map */
++	struct usb_operations *op;      /* Operations (specific to the HC) */
++	struct usb_device *root_hub;    /* Root hub */
++	struct list_head bus_list;
++	void *hcpriv;                   /* Host Controller private data */
++
++	int bandwidth_allocated;	/* on this Host Controller; */
++					  /* applies to Int. and Isoc. pipes; */
++					  /* measured in microseconds/frame; */
++					  /* range is 0..900, where 900 = */
++					  /* 90% of a 1-millisecond frame */
++	int bandwidth_int_reqs;		/* number of Interrupt requesters */
++	int bandwidth_isoc_reqs;	/* number of Isoc. requesters */
++
++	/* usbdevfs inode list */
++	struct list_head inodes;
++
++	atomic_t refcnt;
++};
++
++/*
++ * As of USB 2.0, full/low speed devices are segregated into trees.
++ * One type grows from USB 1.1 host controllers (OHCI, UHCI etc).
++ * The other type grows from high speed hubs when they connect to
++ * full/low speed devices using "Transaction Translators" (TTs).
++ *
++ * TTs should only be known to the hub driver, and high speed bus
++ * drivers (only EHCI for now).  They affect periodic scheduling and
++ * sometimes control/bulk error recovery.
++ */
++struct usb_tt {
++	struct usb_device	*hub;	/* upstream highspeed hub */
++	int			multi;	/* true means one TT per port */
++};
++
++
++/* This is arbitrary.
++ * From USB 2.0 spec Table 11-13, offset 7, a hub can
++ * have up to 255 ports. The most yet reported is 10.
++ */
++#define USB_MAXCHILDREN		(16)
++
++struct usb_device {
++	int devnum;			/* Device number on USB bus */
++
++	enum {
++		USB_SPEED_UNKNOWN = 0,			/* enumerating */
++		USB_SPEED_LOW, USB_SPEED_FULL,		/* usb 1.1 */
++		USB_SPEED_HIGH				/* usb 2.0 */
++	} speed;
++
++	struct usb_tt	*tt; 		/* low/full speed dev, highspeed hub */
++	int		ttport;		/* device port on that tt hub */
++
++	atomic_t refcnt;		/* Reference count */
++	struct semaphore serialize;
++
++	unsigned int toggle[2];		/* one bit for each endpoint ([0] = IN, [1] = OUT) */
++	unsigned int halted[2];		/* endpoint halts; one bit per endpoint # & direction; */
++					/* [0] = IN, [1] = OUT */
++	int epmaxpacketin[16];		/* INput endpoint specific maximums */
++	int epmaxpacketout[16];		/* OUTput endpoint specific maximums */
++
++	struct usb_device *parent;
++	struct usb_bus *bus;		/* Bus we're part of */
++
++	struct usb_device_descriptor descriptor;/* Descriptor */
++	struct usb_config_descriptor *config;	/* All of the configs */
++	struct usb_config_descriptor *actconfig;/* the active configuration */
++
++	char **rawdescriptors;		/* Raw descriptors for each config */
++
++	int have_langid;		/* whether string_langid is valid yet */
++	int string_langid;		/* language ID for strings */
++  
++	void *hcpriv;			/* Host Controller private data */
++	
++        /* usbdevfs inode list */
++	struct list_head inodes;
++	struct list_head filelist;
++
++	/*
++	 * Child devices - these can be either new devices
++	 * (if this is a hub device), or different instances
++	 * of this same device.
++	 *
++	 * Each instance needs its own set of data structures.
++	 */
++
++	int maxchild;			/* Number of ports if hub */
++	struct usb_device *children[USB_MAXCHILDREN];
++};
++
++extern struct usb_interface *usb_ifnum_to_if(struct usb_device *dev, unsigned ifnum);
++extern struct usb_endpoint_descriptor *usb_epnum_to_ep_desc(struct usb_device *dev, unsigned epnum);
++
++extern int usb_register(struct usb_driver *);
++extern void usb_deregister(struct usb_driver *);
++extern void usb_scan_devices(void);
++
++/* used these for multi-interface device registration */
++extern void usb_driver_claim_interface(struct usb_driver *driver, struct usb_interface *iface, void* priv);
++extern int usb_interface_claimed(struct usb_interface *iface);
++extern void usb_driver_release_interface(struct usb_driver *driver, struct usb_interface *iface);
++const struct usb_device_id *usb_match_id(struct usb_device *dev,
++					 struct usb_interface *interface,
++					 const struct usb_device_id *id);
++
++extern struct usb_bus *usb_alloc_bus(struct usb_operations *);
++extern void usb_free_bus(struct usb_bus *);
++extern void usb_register_bus(struct usb_bus *);
++extern void usb_deregister_bus(struct usb_bus *);
++
++extern struct usb_device *usb_alloc_dev(struct usb_device *parent, struct usb_bus *);
++extern void usb_free_dev(struct usb_device *);
++extern void usb_inc_dev_use(struct usb_device *);
++#define usb_dec_dev_use usb_free_dev
++
++extern int usb_check_bandwidth (struct usb_device *dev, struct urb *urb);
++extern void usb_claim_bandwidth (struct usb_device *dev, struct urb *urb, int bustime, int isoc);
++extern void usb_release_bandwidth(struct usb_device *dev, struct urb *urb, int isoc);
++
++extern int usb_control_msg(struct usb_device *dev, unsigned int pipe, __u8 request, __u8 requesttype, __u16 value, __u16 index, void *data, __u16 size, int timeout);
++
++extern int usb_root_hub_string(int id, int serial, char *type, __u8 *data, int len);
++extern void usb_connect(struct usb_device *dev);
++extern void usb_disconnect(struct usb_device **);
++
++extern void usb_destroy_configuration(struct usb_device *dev);
++
++int usb_get_current_frame_number (struct usb_device *usb_dev);
++
++/*
++ * Calling this entity a "pipe" is glorifying it. A USB pipe
++ * is something embarrassingly simple: it basically consists
++ * of the following information:
++ *  - device number (7 bits)
++ *  - endpoint number (4 bits)
++ *  - current Data0/1 state (1 bit)
++ *  - direction (1 bit)
++ *  - speed (1 bit)
++ *  - max packet size (2 bits: 8, 16, 32 or 64) [Historical; now gone.]
++ *  - pipe type (2 bits: control, interrupt, bulk, isochronous)
++ *
++ * That's 18 bits. Really. Nothing more. And the USB people have
++ * documented these eighteen bits as some kind of glorious
++ * virtual data structure.
++ *
++ * Let's not fall in that trap. We'll just encode it as a simple
++ * unsigned int. The encoding is:
++ *
++ *  - max size:		bits 0-1	(00 = 8, 01 = 16, 10 = 32, 11 = 64) [Historical; now gone.]
++ *  - direction:	bit 7		(0 = Host-to-Device [Out], 1 = Device-to-Host [In])
++ *  - device:		bits 8-14
++ *  - endpoint:		bits 15-18
++ *  - Data0/1:		bit 19
++ *  - speed:		bit 26		(0 = Full, 1 = Low Speed)
++ *  - pipe type:	bits 30-31	(00 = isochronous, 01 = interrupt, 10 = control, 11 = bulk)
++ *
++ * Why? Because it's arbitrary, and whatever encoding we select is really
++ * up to us. This one happens to share a lot of bit positions with the UHCI
++ * specification, so that much of the uhci driver can just mask the bits
++ * appropriately.
++ *
++ * NOTE:  there's no encoding (yet?) for a "high speed" endpoint; treat them
++ * like full speed devices.
++ */
++
++#define PIPE_ISOCHRONOUS		0
++#define PIPE_INTERRUPT			1
++#define PIPE_CONTROL			2
++#define PIPE_BULK			3
++
++#define usb_maxpacket(dev, pipe, out)	(out \
++				? (dev)->epmaxpacketout[usb_pipeendpoint(pipe)] \
++				: (dev)->epmaxpacketin [usb_pipeendpoint(pipe)] )
++#define usb_packetid(pipe)	(((pipe) & USB_DIR_IN) ? USB_PID_IN : USB_PID_OUT)
++
++#define usb_pipeout(pipe)	((((pipe) >> 7) & 1) ^ 1)
++#define usb_pipein(pipe)	(((pipe) >> 7) & 1)
++#define usb_pipedevice(pipe)	(((pipe) >> 8) & 0x7f)
++#define usb_pipe_endpdev(pipe)	(((pipe) >> 8) & 0x7ff)
++#define usb_pipeendpoint(pipe)	(((pipe) >> 15) & 0xf)
++#define usb_pipedata(pipe)	(((pipe) >> 19) & 1)
++#define usb_pipeslow(pipe)	(((pipe) >> 26) & 1)
++#define usb_pipetype(pipe)	(((pipe) >> 30) & 3)
++#define usb_pipeisoc(pipe)	(usb_pipetype((pipe)) == PIPE_ISOCHRONOUS)
++#define usb_pipeint(pipe)	(usb_pipetype((pipe)) == PIPE_INTERRUPT)
++#define usb_pipecontrol(pipe)	(usb_pipetype((pipe)) == PIPE_CONTROL)
++#define usb_pipebulk(pipe)	(usb_pipetype((pipe)) == PIPE_BULK)
++
++#define PIPE_DEVEP_MASK		0x0007ff00
++
++/* The D0/D1 toggle bits */
++#define usb_gettoggle(dev, ep, out) (((dev)->toggle[out] >> ep) & 1)
++#define	usb_dotoggle(dev, ep, out)  ((dev)->toggle[out] ^= (1 << ep))
++#define usb_settoggle(dev, ep, out, bit) ((dev)->toggle[out] = ((dev)->toggle[out] & ~(1 << ep)) | ((bit) << ep))
++
++/* Endpoint halt control/status */
++#define usb_endpoint_out(ep_dir)	(((ep_dir >> 7) & 1) ^ 1)
++#define usb_endpoint_halt(dev, ep, out) ((dev)->halted[out] |= (1 << (ep)))
++#define usb_endpoint_running(dev, ep, out) ((dev)->halted[out] &= ~(1 << (ep)))
++#define usb_endpoint_halted(dev, ep, out) ((dev)->halted[out] & (1 << (ep)))
++
++static inline unsigned int __create_pipe(struct usb_device *dev, unsigned int endpoint)
++{
++	return (dev->devnum << 8) | (endpoint << 15) |
++		((dev->speed == USB_SPEED_LOW) << 26);
++}
++
++static inline unsigned int __default_pipe(struct usb_device *dev)
++{
++	return ((dev->speed == USB_SPEED_LOW) << 26);
++}
++
++/* Create various pipes... */
++#define usb_sndctrlpipe(dev,endpoint)	((PIPE_CONTROL << 30) | __create_pipe(dev,endpoint))
++#define usb_rcvctrlpipe(dev,endpoint)	((PIPE_CONTROL << 30) | __create_pipe(dev,endpoint) | USB_DIR_IN)
++#define usb_sndisocpipe(dev,endpoint)	((PIPE_ISOCHRONOUS << 30) | __create_pipe(dev,endpoint))
++#define usb_rcvisocpipe(dev,endpoint)	((PIPE_ISOCHRONOUS << 30) | __create_pipe(dev,endpoint) | USB_DIR_IN)
++#define usb_sndbulkpipe(dev,endpoint)	((PIPE_BULK << 30) | __create_pipe(dev,endpoint))
++#define usb_rcvbulkpipe(dev,endpoint)	((PIPE_BULK << 30) | __create_pipe(dev,endpoint) | USB_DIR_IN)
++#define usb_sndintpipe(dev,endpoint)	((PIPE_INTERRUPT << 30) | __create_pipe(dev,endpoint))
++#define usb_rcvintpipe(dev,endpoint)	((PIPE_INTERRUPT << 30) | __create_pipe(dev,endpoint) | USB_DIR_IN)
++#define usb_snddefctrl(dev)		((PIPE_CONTROL << 30) | __default_pipe(dev))
++#define usb_rcvdefctrl(dev)		((PIPE_CONTROL << 30) | __default_pipe(dev) | USB_DIR_IN)
++
++/*
++ * Send and receive control messages..
++ */
++int usb_new_device(struct usb_device *dev);
++int usb_reset_device(struct usb_device *dev);
++int usb_set_address(struct usb_device *dev);
++int usb_get_descriptor(struct usb_device *dev, unsigned char desctype,
++	unsigned char descindex, void *buf, int size);
++int usb_get_class_descriptor(struct usb_device *dev, int ifnum, unsigned char desctype,
++	unsigned char descindex, void *buf, int size);
++int usb_get_device_descriptor(struct usb_device *dev);
++int __usb_get_extra_descriptor(char *buffer, unsigned size, unsigned char type, void **ptr);
++int usb_get_status(struct usb_device *dev, int type, int target, void *data);
++int usb_get_configuration(struct usb_device *dev);
++int usb_get_protocol(struct usb_device *dev, int ifnum);
++int usb_set_protocol(struct usb_device *dev, int ifnum, int protocol);
++int usb_set_interface(struct usb_device *dev, int ifnum, int alternate);
++int usb_set_idle(struct usb_device *dev, int ifnum, int duration, int report_id);
++int usb_set_configuration(struct usb_device *dev, int configuration);
++int usb_get_report(struct usb_device *dev, int ifnum, unsigned char type,
++	unsigned char id, void *buf, int size);
++int usb_set_report(struct usb_device *dev, int ifnum, unsigned char type,
++	unsigned char id, void *buf, int size);
++int usb_string(struct usb_device *dev, int index, char *buf, size_t size);
++int usb_clear_halt(struct usb_device *dev, int pipe);
++void usb_set_maxpacket(struct usb_device *dev);
++
++#define usb_get_extra_descriptor(ifpoint,type,ptr)\
++	__usb_get_extra_descriptor((ifpoint)->extra,(ifpoint)->extralen,type,(void**)ptr)
++
++/*
++ * Some USB bandwidth allocation constants.
++ */
++#define BW_HOST_DELAY	1000L		/* nanoseconds */
++#define BW_HUB_LS_SETUP	333L		/* nanoseconds */
++                        /* 4 full-speed bit times (est.) */
++
++#define FRAME_TIME_BITS         12000L		/* frame = 1 millisecond */
++#define FRAME_TIME_MAX_BITS_ALLOC	(90L * FRAME_TIME_BITS / 100L)
++#define FRAME_TIME_USECS	1000L
++#define FRAME_TIME_MAX_USECS_ALLOC	(90L * FRAME_TIME_USECS / 100L)
++
++#define BitTime(bytecount)  (7 * 8 * bytecount / 6)  /* with integer truncation */
++		/* Trying not to use worst-case bit-stuffing
++                   of (7/6 * 8 * bytecount) = 9.33 * bytecount */
++		/* bytecount = data payload byte count */
++
++#define NS_TO_US(ns)	((ns + 500L) / 1000L)
++			/* convert & round nanoseconds to microseconds */
++
++/*
++ * Debugging helpers..
++ */
++void usb_show_device_descriptor(struct usb_device_descriptor *);
++void usb_show_config_descriptor(struct usb_config_descriptor *);
++void usb_show_interface_descriptor(struct usb_interface_descriptor *);
++void usb_show_endpoint_descriptor(struct usb_endpoint_descriptor *);
++void usb_show_device(struct usb_device *);
++void usb_show_string(struct usb_device *dev, char *id, int index);
++
++#ifdef DEBUG
++#define dbg(fmt,arg...) printk(__FILE__":" fmt"\n",##arg)
++#else
++#define dbg(format, arg...) do {} while (0)
++#endif
++#define err(format, arg...) printk(__FILE__ ": " format "\n" , ## arg)
++#define info(format, arg...) printk(__FILE__ ": " format "\n" , ## arg)
++#define warn(format, arg...) printk( __FILE__ ": " format "\n" , ## arg)
++
++
++/*
++ * bus and driver list
++ */
++
++extern struct list_head usb_driver_list;
++extern struct list_head usb_bus_list;
++extern struct semaphore usb_bus_list_lock;
++
++/*
++ * USB device fs stuff
++ */
++
++#ifdef CONFIG_USB_DEVICEFS
++
++/*
++ * these are expected to be called from the USB core/hub thread
++ * with the kernel lock held
++ */
++extern void usbdevfs_add_bus(struct usb_bus *bus);
++extern void usbdevfs_remove_bus(struct usb_bus *bus);
++extern void usbdevfs_add_device(struct usb_device *dev);
++extern void usbdevfs_remove_device(struct usb_device *dev);
++
++extern int usbdevfs_init(void);
++extern void usbdevfs_cleanup(void);
++
++#else /* CONFIG_USB_DEVICEFS */
++
++static inline void usbdevfs_add_bus(struct usb_bus *bus) {}
++static inline void usbdevfs_remove_bus(struct usb_bus *bus) {}
++static inline void usbdevfs_add_device(struct usb_device *dev) {}
++static inline void usbdevfs_remove_device(struct usb_device *dev) {}
++
++static inline int usbdevfs_init(void) { return 0; }
++static inline void usbdevfs_cleanup(void) { }
++
++#endif /* CONFIG_USB_DEVICEFS */
++
++#endif  /* __KERNEL__ */
++
++#endif
+diff --git a/include/linux/usbdevice_fs.h b/include/linux/usbdevice_fs.h
+index 26ae1b1..1c1dc15 100644
+--- a/include/linux/usbdevice_fs.h
++++ b/include/linux/usbdevice_fs.h
+@@ -145,6 +145,9 @@ struct usbdevfs_hub_portinfo {
+ #define USBDEVFS_DISCONNECT        _IO('U', 22)
+ #define USBDEVFS_CONNECT           _IO('U', 23)
+ 
++//+++Add by shiang for usb printer hotplug detection. 2004/12/08
++#define USBDEVFS_PRINTERDEV_MINOR_ID _IOR('U', 24, unsigned int)
++//---Add by shiang for usb printer hotplug detection. 2004/12/08
+ /* --------------------------------------------------------------------- */
+ 
+ #ifdef __KERNEL__
+diff --git a/include/linux/watchdog.h b/include/linux/watchdog.h
+index 36b412c..6bbef9b 100644
+--- a/include/linux/watchdog.h
++++ b/include/linux/watchdog.h
+@@ -9,6 +9,7 @@
+ #ifndef _LINUX_WATCHDOG_H
+ #define _LINUX_WATCHDOG_H
+ 
++#include <asm/types.h>
+ #include <linux/ioctl.h>
+ 
+ #define	WATCHDOG_IOCTL_BASE	'W'
+diff --git a/include/linux/zlib_fs.h b/include/linux/zlib_fs.h
+new file mode 100644
+index 0000000..66efc18
+--- /dev/null
++++ b/include/linux/zlib_fs.h
+@@ -0,0 +1,679 @@
++/* zlib.h -- interface of the 'zlib' general purpose compression library
++  version 1.1.3, July 9th, 1998
++
++  Copyright (C) 1995-1998 Jean-loup Gailly and Mark Adler
++
++  This software is provided 'as-is', without any express or implied
++  warranty.  In no event will the authors be held liable for any damages
++  arising from the use of this software.
++
++  Permission is granted to anyone to use this software for any purpose,
++  including commercial applications, and to alter it and redistribute it
++  freely, subject to the following restrictions:
++
++  1. The origin of this software must not be misrepresented; you must not
++     claim that you wrote the original software. If you use this software
++     in a product, an acknowledgment in the product documentation would be
++     appreciated but is not required.
++  2. Altered source versions must be plainly marked as such, and must not be
++     misrepresented as being the original software.
++  3. This notice may not be removed or altered from any source distribution.
++
++  Jean-loup Gailly        Mark Adler
++  jloup@gzip.org          madler@alumni.caltech.edu
++
++
++  The data format used by the zlib library is described by RFCs (Request for
++  Comments) 1950 to 1952 in the files ftp://ds.internic.net/rfc/rfc1950.txt
++  (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).
++*/
++
++#ifndef _ZLIB_H
++#define _ZLIB_H
++
++#include "zconf.h"
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++#define ZLIB_VERSION "1.1.3"
++
++/* 
++     The 'zlib' compression library provides in-memory compression and
++  decompression functions, including integrity checks of the uncompressed
++  data.  This version of the library supports only one compression method
++  (deflation) but other algorithms will be added later and will have the same
++  stream interface.
++
++     Compression can be done in a single step if the buffers are large
++  enough (for example if an input file is mmap'ed), or can be done by
++  repeated calls of the compression function.  In the latter case, the
++  application must provide more input and/or consume the output
++  (providing more output space) before each call.
++
++     The library also supports reading and writing files in gzip (.gz) format
++  with an interface similar to that of stdio.
++
++     The library does not install any signal handler. The decoder checks
++  the consistency of the compressed data, so the library should never
++  crash even in case of corrupted input.
++*/
++
++typedef voidpf (*alloc_func) OF((voidpf opaque, uInt items, uInt size));
++typedef void   (*free_func)  OF((voidpf opaque, voidpf address));
++
++struct internal_state;
++
++typedef struct z_stream_s {
++    Bytef    *next_in;  /* next input byte */
++    uInt     avail_in;  /* number of bytes available at next_in */
++    uLong    total_in;  /* total nb of input bytes read so far */
++
++    Bytef    *next_out; /* next output byte should be put there */
++    uInt     avail_out; /* remaining free space at next_out */
++    uLong    total_out; /* total nb of bytes output so far */
++
++    char     *msg;      /* last error message, NULL if no error */
++    struct internal_state FAR *state; /* not visible by applications */
++
++    void     *workspace; /* memory allocated for this stream */
++
++    int     data_type;  /* best guess about the data type: ascii or binary */
++    uLong   adler;      /* adler32 value of the uncompressed data */
++    uLong   reserved;   /* reserved for future use */
++} z_stream;
++
++typedef z_stream FAR *z_streamp;
++
++/*
++   The application must update next_in and avail_in when avail_in has
++   dropped to zero. It must update next_out and avail_out when avail_out
++   has dropped to zero. The application must initialize zalloc, zfree and
++   opaque before calling the init function. All other fields are set by the
++   compression library and must not be updated by the application.
++
++   The opaque value provided by the application will be passed as the first
++   parameter for calls of zalloc and zfree. This can be useful for custom
++   memory management. The compression library attaches no meaning to the
++   opaque value.
++
++   zalloc must return Z_NULL if there is not enough memory for the object.
++   If zlib is used in a multi-threaded application, zalloc and zfree must be
++   thread safe.
++
++   On 16-bit systems, the functions zalloc and zfree must be able to allocate
++   exactly 65536 bytes, but will not be required to allocate more than this
++   if the symbol MAXSEG_64K is defined (see zconf.h). WARNING: On MSDOS,
++   pointers returned by zalloc for objects of exactly 65536 bytes *must*
++   have their offset normalized to zero. The default allocation function
++   provided by this library ensures this (see zutil.c). To reduce memory
++   requirements and avoid any allocation of 64K objects, at the expense of
++   compression ratio, compile the library with -DMAX_WBITS=14 (see zconf.h).
++
++   The fields total_in and total_out can be used for statistics or
++   progress reports. After compression, total_in holds the total size of
++   the uncompressed data and may be saved for use in the decompressor
++   (particularly if the decompressor wants to decompress everything in
++   a single step).
++*/
++
++                        /* constants */
++
++#define Z_NO_FLUSH      0
++#define Z_PARTIAL_FLUSH 1 /* will be removed, use Z_SYNC_FLUSH instead */
++#define Z_SYNC_FLUSH    2
++#define Z_FULL_FLUSH    3
++#define Z_FINISH        4
++/* Allowed flush values; see deflate() below for details */
++
++#define Z_OK            0
++#define Z_STREAM_END    1
++#define Z_NEED_DICT     2
++#define Z_ERRNO        (-1)
++#define Z_STREAM_ERROR (-2)
++#define Z_DATA_ERROR   (-3)
++#define Z_MEM_ERROR    (-4)
++#define Z_BUF_ERROR    (-5)
++#define Z_VERSION_ERROR (-6)
++/* Return codes for the compression/decompression functions. Negative
++ * values are errors, positive values are used for special but normal events.
++ */
++
++#define Z_NO_COMPRESSION         0
++#define Z_BEST_SPEED             1
++#define Z_BEST_COMPRESSION       9
++#define Z_DEFAULT_COMPRESSION  (-1)
++/* compression levels */
++
++#define Z_FILTERED            1
++#define Z_HUFFMAN_ONLY        2
++#define Z_DEFAULT_STRATEGY    0
++/* compression strategy; see deflateInit2() below for details */
++
++#define Z_BINARY   0
++#define Z_ASCII    1
++#define Z_UNKNOWN  2
++/* Possible values of the data_type field */
++
++#define Z_DEFLATED   8
++/* The deflate compression method (the only one supported in this version) */
++
++#define Z_NULL  0  /* for initializing zalloc, zfree, opaque */
++
++                        /* basic functions */
++
++ZEXTERN const char * ZEXPORT zlib_fs_zlibVersion OF((void));
++/* The application can compare zlibVersion and ZLIB_VERSION for consistency.
++   If the first character differs, the library code actually used is
++   not compatible with the zlib.h header file used by the application.
++   This check is automatically made by deflateInit and inflateInit.
++ */
++
++/* 
++ZEXTERN int ZEXPORT deflateInit OF((z_streamp strm, int level));
++
++     Initializes the internal stream state for compression. The fields
++   zalloc, zfree and opaque must be initialized before by the caller.
++   If zalloc and zfree are set to Z_NULL, deflateInit updates them to
++   use default allocation functions.
++
++     The compression level must be Z_DEFAULT_COMPRESSION, or between 0 and 9:
++   1 gives best speed, 9 gives best compression, 0 gives no compression at
++   all (the input data is simply copied a block at a time).
++   Z_DEFAULT_COMPRESSION requests a default compromise between speed and
++   compression (currently equivalent to level 6).
++
++     deflateInit returns Z_OK if success, Z_MEM_ERROR if there was not
++   enough memory, Z_STREAM_ERROR if level is not a valid compression level,
++   Z_VERSION_ERROR if the zlib library version (zlib_version) is incompatible
++   with the version assumed by the caller (ZLIB_VERSION).
++   msg is set to null if there is no error message.  deflateInit does not
++   perform any compression: this will be done by deflate().
++*/
++
++
++ZEXTERN int ZEXPORT zlib_fs_deflate OF((z_streamp strm, int flush));
++/*
++    deflate compresses as much data as possible, and stops when the input
++  buffer becomes empty or the output buffer becomes full. It may introduce some
++  output latency (reading input without producing any output) except when
++  forced to flush.
++
++    The detailed semantics are as follows. deflate performs one or both of the
++  following actions:
++
++  - Compress more input starting at next_in and update next_in and avail_in
++    accordingly. If not all input can be processed (because there is not
++    enough room in the output buffer), next_in and avail_in are updated and
++    processing will resume at this point for the next call of deflate().
++
++  - Provide more output starting at next_out and update next_out and avail_out
++    accordingly. This action is forced if the parameter flush is non zero.
++    Forcing flush frequently degrades the compression ratio, so this parameter
++    should be set only when necessary (in interactive applications).
++    Some output may be provided even if flush is not set.
++
++  Before the call of deflate(), the application should ensure that at least
++  one of the actions is possible, by providing more input and/or consuming
++  more output, and updating avail_in or avail_out accordingly; avail_out
++  should never be zero before the call. The application can consume the
++  compressed output when it wants, for example when the output buffer is full
++  (avail_out == 0), or after each call of deflate(). If deflate returns Z_OK
++  and with zero avail_out, it must be called again after making room in the
++  output buffer because there might be more output pending.
++
++    If the parameter flush is set to Z_SYNC_FLUSH, all pending output is
++  flushed to the output buffer and the output is aligned on a byte boundary, so
++  that the decompressor can get all input data available so far. (In particular
++  avail_in is zero after the call if enough output space has been provided
++  before the call.)  Flushing may degrade compression for some compression
++  algorithms and so it should be used only when necessary.
++
++    If flush is set to Z_FULL_FLUSH, all output is flushed as with
++  Z_SYNC_FLUSH, and the compression state is reset so that decompression can
++  restart from this point if previous compressed data has been damaged or if
++  random access is desired. Using Z_FULL_FLUSH too often can seriously degrade
++  the compression.
++
++    If deflate returns with avail_out == 0, this function must be called again
++  with the same value of the flush parameter and more output space (updated
++  avail_out), until the flush is complete (deflate returns with non-zero
++  avail_out).
++
++    If the parameter flush is set to Z_FINISH, pending input is processed,
++  pending output is flushed and deflate returns with Z_STREAM_END if there
++  was enough output space; if deflate returns with Z_OK, this function must be
++  called again with Z_FINISH and more output space (updated avail_out) but no
++  more input data, until it returns with Z_STREAM_END or an error. After
++  deflate has returned Z_STREAM_END, the only possible operations on the
++  stream are deflateReset or deflateEnd.
++  
++    Z_FINISH can be used immediately after deflateInit if all the compression
++  is to be done in a single step. In this case, avail_out must be at least
++  0.1% larger than avail_in plus 12 bytes.  If deflate does not return
++  Z_STREAM_END, then it must be called again as described above.
++
++    deflate() sets strm->adler to the adler32 checksum of all input read
++  so far (that is, total_in bytes).
++
++    deflate() may update data_type if it can make a good guess about
++  the input data type (Z_ASCII or Z_BINARY). In doubt, the data is considered
++  binary. This field is only for information purposes and does not affect
++  the compression algorithm in any manner.
++
++    deflate() returns Z_OK if some progress has been made (more input
++  processed or more output produced), Z_STREAM_END if all input has been
++  consumed and all output has been produced (only when flush is set to
++  Z_FINISH), Z_STREAM_ERROR if the stream state was inconsistent (for example
++  if next_in or next_out was NULL), Z_BUF_ERROR if no progress is possible
++  (for example avail_in or avail_out was zero).
++*/
++
++
++ZEXTERN int ZEXPORT zlib_fs_deflateEnd OF((z_streamp strm));
++/*
++     All dynamically allocated data structures for this stream are freed.
++   This function discards any unprocessed input and does not flush any
++   pending output.
++
++     deflateEnd returns Z_OK if success, Z_STREAM_ERROR if the
++   stream state was inconsistent, Z_DATA_ERROR if the stream was freed
++   prematurely (some input or output was discarded). In the error case,
++   msg may be set but then points to a static string (which must not be
++   deallocated).
++*/
++
++
++ZEXTERN int ZEXPORT zlib_fs_inflate_workspacesize OF((void));
++/*
++   Returns the number of bytes that needs to be allocated for a per-
++   stream workspace.  A pointer to this number of bytes should be
++   returned in stream->workspace before calling zlib_fs_inflateInit().
++*/
++
++/* 
++ZEXTERN int ZEXPORT zlib_fs_inflateInit OF((z_streamp strm));
++
++     Initializes the internal stream state for decompression. The fields
++   next_in, avail_in, and workspace must be initialized before by
++   the caller. If next_in is not Z_NULL and avail_in is large enough (the exact
++   value depends on the compression method), inflateInit determines the
++   compression method from the zlib header and allocates all data structures
++   accordingly; otherwise the allocation will be deferred to the first call of
++   inflate.  If zalloc and zfree are set to Z_NULL, inflateInit updates them to
++   use default allocation functions.
++
++     inflateInit returns Z_OK if success, Z_MEM_ERROR if there was not enough
++   memory, Z_VERSION_ERROR if the zlib library version is incompatible with the
++   version assumed by the caller.  msg is set to null if there is no error
++   message. inflateInit does not perform any decompression apart from reading
++   the zlib header if present: this will be done by inflate().  (So next_in and
++   avail_in may be modified, but next_out and avail_out are unchanged.)
++*/
++
++
++ZEXTERN int ZEXPORT zlib_fs_inflate OF((z_streamp strm, int flush));
++/*
++    inflate decompresses as much data as possible, and stops when the input
++  buffer becomes empty or the output buffer becomes full. It may some
++  introduce some output latency (reading input without producing any output)
++  except when forced to flush.
++
++  The detailed semantics are as follows. inflate performs one or both of the
++  following actions:
++
++  - Decompress more input starting at next_in and update next_in and avail_in
++    accordingly. If not all input can be processed (because there is not
++    enough room in the output buffer), next_in is updated and processing
++    will resume at this point for the next call of inflate().
++
++  - Provide more output starting at next_out and update next_out and avail_out
++    accordingly.  inflate() provides as much output as possible, until there
++    is no more input data or no more space in the output buffer (see below
++    about the flush parameter).
++
++  Before the call of inflate(), the application should ensure that at least
++  one of the actions is possible, by providing more input and/or consuming
++  more output, and updating the next_* and avail_* values accordingly.
++  The application can consume the uncompressed output when it wants, for
++  example when the output buffer is full (avail_out == 0), or after each
++  call of inflate(). If inflate returns Z_OK and with zero avail_out, it
++  must be called again after making room in the output buffer because there
++  might be more output pending.
++
++    If the parameter flush is set to Z_SYNC_FLUSH, inflate flushes as much
++  output as possible to the output buffer. The flushing behavior of inflate is
++  not specified for values of the flush parameter other than Z_SYNC_FLUSH
++  and Z_FINISH, but the current implementation actually flushes as much output
++  as possible anyway.
++
++    inflate() should normally be called until it returns Z_STREAM_END or an
++  error. However if all decompression is to be performed in a single step
++  (a single call of inflate), the parameter flush should be set to
++  Z_FINISH. In this case all pending input is processed and all pending
++  output is flushed; avail_out must be large enough to hold all the
++  uncompressed data. (The size of the uncompressed data may have been saved
++  by the compressor for this purpose.) The next operation on this stream must
++  be inflateEnd to deallocate the decompression state. The use of Z_FINISH
++  is never required, but can be used to inform inflate that a faster routine
++  may be used for the single inflate() call.
++
++     If a preset dictionary is needed at this point (see inflateSetDictionary
++  below), inflate sets strm-adler to the adler32 checksum of the
++  dictionary chosen by the compressor and returns Z_NEED_DICT; otherwise 
++  it sets strm->adler to the adler32 checksum of all output produced
++  so far (that is, total_out bytes) and returns Z_OK, Z_STREAM_END or
++  an error code as described below. At the end of the stream, inflate()
++  checks that its computed adler32 checksum is equal to that saved by the
++  compressor and returns Z_STREAM_END only if the checksum is correct.
++
++    inflate() returns Z_OK if some progress has been made (more input processed
++  or more output produced), Z_STREAM_END if the end of the compressed data has
++  been reached and all uncompressed output has been produced, Z_NEED_DICT if a
++  preset dictionary is needed at this point, Z_DATA_ERROR if the input data was
++  corrupted (input stream not conforming to the zlib format or incorrect
++  adler32 checksum), Z_STREAM_ERROR if the stream structure was inconsistent
++  (for example if next_in or next_out was NULL), Z_MEM_ERROR if there was not
++  enough memory, Z_BUF_ERROR if no progress is possible or if there was not
++  enough room in the output buffer when Z_FINISH is used. In the Z_DATA_ERROR
++  case, the application may then call inflateSync to look for a good
++  compression block.
++*/
++
++
++ZEXTERN int ZEXPORT zlib_fs_inflateEnd OF((z_streamp strm));
++/*
++     All dynamically allocated data structures for this stream are freed.
++   This function discards any unprocessed input and does not flush any
++   pending output.
++
++     inflateEnd returns Z_OK if success, Z_STREAM_ERROR if the stream state
++   was inconsistent. In the error case, msg may be set but then points to a
++   static string (which must not be deallocated).
++*/
++
++                        /* Advanced functions */
++
++/*
++    The following functions are needed only in some special applications.
++*/
++
++/*   
++ZEXTERN int ZEXPORT deflateInit2 OF((z_streamp strm,
++                                     int  level,
++                                     int  method,
++                                     int  windowBits,
++                                     int  memLevel,
++                                     int  strategy));
++
++     This is another version of deflateInit with more compression options. The
++   fields next_in, zalloc, zfree and opaque must be initialized before by
++   the caller.
++
++     The method parameter is the compression method. It must be Z_DEFLATED in
++   this version of the library.
++
++     The windowBits parameter is the base two logarithm of the window size
++   (the size of the history buffer).  It should be in the range 8..15 for this
++   version of the library. Larger values of this parameter result in better
++   compression at the expense of memory usage. The default value is 15 if
++   deflateInit is used instead.
++
++     The memLevel parameter specifies how much memory should be allocated
++   for the internal compression state. memLevel=1 uses minimum memory but
++   is slow and reduces compression ratio; memLevel=9 uses maximum memory
++   for optimal speed. The default value is 8. See zconf.h for total memory
++   usage as a function of windowBits and memLevel.
++
++     The strategy parameter is used to tune the compression algorithm. Use the
++   value Z_DEFAULT_STRATEGY for normal data, Z_FILTERED for data produced by a
++   filter (or predictor), or Z_HUFFMAN_ONLY to force Huffman encoding only (no
++   string match).  Filtered data consists mostly of small values with a
++   somewhat random distribution. In this case, the compression algorithm is
++   tuned to compress them better. The effect of Z_FILTERED is to force more
++   Huffman coding and less string matching; it is somewhat intermediate
++   between Z_DEFAULT and Z_HUFFMAN_ONLY. The strategy parameter only affects
++   the compression ratio but not the correctness of the compressed output even
++   if it is not set appropriately.
++
++      deflateInit2 returns Z_OK if success, Z_MEM_ERROR if there was not enough
++   memory, Z_STREAM_ERROR if a parameter is invalid (such as an invalid
++   method). msg is set to null if there is no error message.  deflateInit2 does
++   not perform any compression: this will be done by deflate().
++*/
++                            
++ZEXTERN int ZEXPORT zlib_fs_deflateSetDictionary OF((z_streamp strm,
++						     const Bytef *dictionary,
++						     uInt  dictLength));
++/*
++     Initializes the compression dictionary from the given byte sequence
++   without producing any compressed output. This function must be called
++   immediately after deflateInit, deflateInit2 or deflateReset, before any
++   call of deflate. The compressor and decompressor must use exactly the same
++   dictionary (see inflateSetDictionary).
++
++     The dictionary should consist of strings (byte sequences) that are likely
++   to be encountered later in the data to be compressed, with the most commonly
++   used strings preferably put towards the end of the dictionary. Using a
++   dictionary is most useful when the data to be compressed is short and can be
++   predicted with good accuracy; the data can then be compressed better than
++   with the default empty dictionary.
++
++     Depending on the size of the compression data structures selected by
++   deflateInit or deflateInit2, a part of the dictionary may in effect be
++   discarded, for example if the dictionary is larger than the window size in
++   deflate or deflate2. Thus the strings most likely to be useful should be
++   put at the end of the dictionary, not at the front.
++
++     Upon return of this function, strm->adler is set to the Adler32 value
++   of the dictionary; the decompressor may later use this value to determine
++   which dictionary has been used by the compressor. (The Adler32 value
++   applies to the whole dictionary even if only a subset of the dictionary is
++   actually used by the compressor.)
++
++     deflateSetDictionary returns Z_OK if success, or Z_STREAM_ERROR if a
++   parameter is invalid (such as NULL dictionary) or the stream state is
++   inconsistent (for example if deflate has already been called for this stream
++   or if the compression method is bsort). deflateSetDictionary does not
++   perform any compression: this will be done by deflate().
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_deflateCopy OF((z_streamp dest,
++					    z_streamp source));
++/*
++     Sets the destination stream as a complete copy of the source stream.
++
++     This function can be useful when several compression strategies will be
++   tried, for example when there are several ways of pre-processing the input
++   data with a filter. The streams that will be discarded should then be freed
++   by calling deflateEnd.  Note that deflateCopy duplicates the internal
++   compression state which can be quite large, so this strategy is slow and
++   can consume lots of memory.
++
++     deflateCopy returns Z_OK if success, Z_MEM_ERROR if there was not
++   enough memory, Z_STREAM_ERROR if the source stream state was inconsistent
++   (such as zalloc being NULL). msg is left unchanged in both source and
++   destination.
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_deflateReset OF((z_streamp strm));
++/*
++     This function is equivalent to deflateEnd followed by deflateInit,
++   but does not free and reallocate all the internal compression state.
++   The stream will keep the same compression level and any other attributes
++   that may have been set by deflateInit2.
++
++      deflateReset returns Z_OK if success, or Z_STREAM_ERROR if the source
++   stream state was inconsistent (such as zalloc or state being NULL).
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_deflateParams OF((z_streamp strm,
++					      int level,
++					      int strategy));
++/*
++     Dynamically update the compression level and compression strategy.  The
++   interpretation of level and strategy is as in deflateInit2.  This can be
++   used to switch between compression and straight copy of the input data, or
++   to switch to a different kind of input data requiring a different
++   strategy. If the compression level is changed, the input available so far
++   is compressed with the old level (and may be flushed); the new level will
++   take effect only at the next call of deflate().
++
++     Before the call of deflateParams, the stream state must be set as for
++   a call of deflate(), since the currently available input may have to
++   be compressed and flushed. In particular, strm->avail_out must be non-zero.
++
++     deflateParams returns Z_OK if success, Z_STREAM_ERROR if the source
++   stream state was inconsistent or if a parameter was invalid, Z_BUF_ERROR
++   if strm->avail_out was zero.
++*/
++
++/*   
++ZEXTERN int ZEXPORT inflateInit2 OF((z_streamp strm,
++                                     int  windowBits));
++
++     This is another version of inflateInit with an extra parameter. The
++   fields next_in, avail_in, zalloc, zfree and opaque must be initialized
++   before by the caller.
++
++     The windowBits parameter is the base two logarithm of the maximum window
++   size (the size of the history buffer).  It should be in the range 8..15 for
++   this version of the library. The default value is 15 if inflateInit is used
++   instead. If a compressed stream with a larger window size is given as
++   input, inflate() will return with the error code Z_DATA_ERROR instead of
++   trying to allocate a larger window.
++
++      inflateInit2 returns Z_OK if success, Z_MEM_ERROR if there was not enough
++   memory, Z_STREAM_ERROR if a parameter is invalid (such as a negative
++   memLevel). msg is set to null if there is no error message.  inflateInit2
++   does not perform any decompression apart from reading the zlib header if
++   present: this will be done by inflate(). (So next_in and avail_in may be
++   modified, but next_out and avail_out are unchanged.)
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_inflateSetDictionary OF((z_streamp strm,
++						     const Bytef *dictionary,
++						     uInt  dictLength));
++/*
++     Initializes the decompression dictionary from the given uncompressed byte
++   sequence. This function must be called immediately after a call of inflate
++   if this call returned Z_NEED_DICT. The dictionary chosen by the compressor
++   can be determined from the Adler32 value returned by this call of
++   inflate. The compressor and decompressor must use exactly the same
++   dictionary (see deflateSetDictionary).
++
++     inflateSetDictionary returns Z_OK if success, Z_STREAM_ERROR if a
++   parameter is invalid (such as NULL dictionary) or the stream state is
++   inconsistent, Z_DATA_ERROR if the given dictionary doesn't match the
++   expected one (incorrect Adler32 value). inflateSetDictionary does not
++   perform any decompression: this will be done by subsequent calls of
++   inflate().
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_inflateSync OF((z_streamp strm));
++/* 
++    Skips invalid compressed data until a full flush point (see above the
++  description of deflate with Z_FULL_FLUSH) can be found, or until all
++  available input is skipped. No output is provided.
++
++    inflateSync returns Z_OK if a full flush point has been found, Z_BUF_ERROR
++  if no more input was provided, Z_DATA_ERROR if no flush point has been found,
++  or Z_STREAM_ERROR if the stream structure was inconsistent. In the success
++  case, the application may save the current current value of total_in which
++  indicates where valid compressed data was found. In the error case, the
++  application may repeatedly call inflateSync, providing more input each time,
++  until success or end of the input data.
++*/
++
++ZEXTERN int ZEXPORT zlib_fs_inflateReset OF((z_streamp strm));
++/*
++     This function is equivalent to inflateEnd followed by inflateInit,
++   but does not free and reallocate all the internal decompression state.
++   The stream will keep attributes that may have been set by inflateInit2.
++
++      inflateReset returns Z_OK if success, or Z_STREAM_ERROR if the source
++   stream state was inconsistent (such as zalloc or state being NULL).
++*/
++
++                        /* checksum functions */
++
++/*
++     These functions are not related to compression but are exported
++   anyway because they might be useful in applications using the
++   compression library.
++*/
++
++ZEXTERN uLong ZEXPORT zlib_fs_adler32 OF((uLong adler, const Bytef *buf, uInt len));
++
++/*
++     Update a running Adler-32 checksum with the bytes buf[0..len-1] and
++   return the updated checksum. If buf is NULL, this function returns
++   the required initial value for the checksum.
++   An Adler-32 checksum is almost as reliable as a CRC32 but can be computed
++   much faster. Usage example:
++
++     uLong adler = adler32(0L, Z_NULL, 0);
++
++     while (read_buffer(buffer, length) != EOF) {
++       adler = adler32(adler, buffer, length);
++     }
++     if (adler != original_adler) error();
++*/
++
++ZEXTERN uLong ZEXPORT zlib_fs_crc32   OF((uLong crc, const Bytef *buf, uInt len));
++/*
++     Update a running crc with the bytes buf[0..len-1] and return the updated
++   crc. If buf is NULL, this function returns the required initial value
++   for the crc. Pre- and post-conditioning (one's complement) is performed
++   within this function so it shouldn't be done by the application.
++   Usage example:
++
++     uLong crc = crc32(0L, Z_NULL, 0);
++
++     while (read_buffer(buffer, length) != EOF) {
++       crc = crc32(crc, buffer, length);
++     }
++     if (crc != original_crc) error();
++*/
++
++
++                        /* various hacks, don't look :) */
++
++/* deflateInit and inflateInit are macros to allow checking the zlib version
++ * and the compiler's view of z_stream:
++ */
++ZEXTERN int ZEXPORT zlib_fs_deflateInit_ OF((z_streamp strm, int level,
++                                     const char *version, int stream_size));
++ZEXTERN int ZEXPORT zlib_fs_inflateInit_ OF((z_streamp strm,
++                                     const char *version, int stream_size));
++ZEXTERN int ZEXPORT zlib_fs_deflateInit2_ OF((z_streamp strm, int  level, int  method,
++                                      int windowBits, int memLevel,
++                                      int strategy, const char *version,
++                                      int stream_size));
++ZEXTERN int ZEXPORT zlib_fs_inflateInit2_ OF((z_streamp strm, int  windowBits,
++                                      const char *version, int stream_size));
++#define zlib_fs_deflateInit(strm, level) \
++        zlib_fs_deflateInit_((strm), (level), ZLIB_VERSION, sizeof(z_stream))
++#define zlib_fs_inflateInit(strm) \
++        zlib_fs_inflateInit_((strm), ZLIB_VERSION, sizeof(z_stream))
++#define zlib_fs_deflateInit2(strm, level, method, windowBits, memLevel, strategy) \
++        zlib_fs_deflateInit2_((strm),(level),(method),(windowBits),(memLevel),\
++                      (strategy), ZLIB_VERSION, sizeof(z_stream))
++#define zlib_fs_inflateInit2(strm, windowBits) \
++        zlib_fs_inflateInit2_((strm), (windowBits), ZLIB_VERSION, sizeof(z_stream))
++
++
++#if !defined(_Z_UTIL_H) && !defined(NO_DUMMY_DECL)
++    struct internal_state {int dummy;}; /* hack for buggy compilers */
++#endif
++
++ZEXTERN const char   * ZEXPORT zlib_fs_zError           OF((int err));
++ZEXTERN int            ZEXPORT zlib_fs_inflateSyncPoint OF((z_streamp z));
++ZEXTERN const uLongf * ZEXPORT zlib_fs_get_crc_table    OF((void));
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* _ZLIB_H */
+diff --git a/include/mast.h b/include/mast.h
+new file mode 100644
+index 0000000..626559b
+--- /dev/null
++++ b/include/mast.h
+@@ -0,0 +1,33 @@
++struct mast_callbacks {
++  int (*packet_encap)(struct device *mast, void *context,
++		      struct sk_buff *skb, int flowref);
++  int (*link_inquire)(struct device *mast, void *context);
++};
++
++
++struct device *mast_init (int family,
++			  struct mast_callbacks *callbacks,
++			  unsigned int flags,
++			  unsigned int desired_unit,
++			  unsigned int max_flowref,
++			  void *context);
++
++int mast_destroy(struct device *mast);
++
++int mast_recv(struct device *mast, struct sk_buff *skb, int flowref);
++
++/* free this skb as being useless, increment failure count. */
++int mast_toast(struct device *mast, struct sk_buff *skb, int flowref);
++
++int mast_linkstat (struct device *mast, int flowref,
++		   int status);
++
++int mast_setreference (struct device *mast,
++		       int defaultSA);
++
++int mast_setneighbor (struct device *mast,
++		      struct sockaddr *source,
++		      struct sockaddr *destination,
++		      int flowref);
++
++

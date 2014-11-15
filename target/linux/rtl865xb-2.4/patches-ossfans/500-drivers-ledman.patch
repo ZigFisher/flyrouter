@@ -1,0 +1,38 @@
+Index: linux-2.4.27/drivers/char/serial.c
+===================================================================
+--- linux-2.4.27.orig/drivers/char/serial.c	2004-02-18 16:36:31.000000000 +0300
++++ linux-2.4.27/drivers/char/serial.c	2008-03-21 14:37:48.000000000 +0300
+@@ -222,6 +226,9 @@
+ #ifdef CONFIG_MAGIC_SYSRQ
+ #include <linux/sysrq.h>
+ #endif
++#ifdef CONFIG_LEDMAN
++#include <linux/ledman.h>
++#endif
+ 
+ /*
+  * All of the compatibilty code so we can compile serial.c against
+@@ -569,6 +559,11 @@
+ 	struct	async_icount *icount;
+ 	int	max_count = 256;
+ 
++#ifdef CONFIG_LEDMAN
++	ledman_cmd(LEDMAN_CMD_SET,
++		(info->line == 0) ? LEDMAN_COM1_RX : LEDMAN_COM2_RX);
++#endif
++
+ 	icount = &info->state->icount;
+ 	do {
+ 		if (tty->flip.count >= TTY_FLIPBUF_SIZE) {
+@@ -682,6 +677,11 @@
+ {
+ 	int count;
+ 
++#ifdef CONFIG_LEDMAN
++	ledman_cmd(LEDMAN_CMD_SET,
++		(info->line == 0) ? LEDMAN_COM1_TX : LEDMAN_COM2_TX);
++#endif
++
+ 	if (info->x_char) {
+ 		serial_outp(info, UART_TX, info->x_char);
+ 		info->state->icount.tx++;

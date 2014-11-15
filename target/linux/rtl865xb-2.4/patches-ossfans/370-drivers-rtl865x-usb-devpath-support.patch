@@ -1,0 +1,38 @@
+Index: linux-2.4.27/drivers/usb/devices.c
+===================================================================
+--- linux-2.4.27.orig/drivers/usb/devices.c	2002-11-29 02:53:14.000000000 +0300
++++ linux-2.4.27/drivers/usb/devices.c	2008-03-21 14:37:48.000000000 +0300
+@@ -70,7 +70,13 @@
+ 
+ static char *format_topo =
+ /* T:  Bus=dd Lev=dd Prnt=dd Port=dd Cnt=dd Dev#=ddd Spd=ddd MxCh=dd */
++//+++Modify by shiang for devpath support! 2005/06/28
++#if 0  
+   "T:  Bus=%2.2d Lev=%2.2d Prnt=%2.2d Port=%2.2d Cnt=%2.2d Dev#=%3d Spd=%3s MxCh=%2d\n";
++#else
++  "T:  Bus=%2.2d Lev=%2.2d Prnt=%2.2d Port=%2.2d Cnt=%2.2d Dev#=%3d Spd=%3s MxCh=%2d Pth=%s\n";
++#endif
++//---Modify by shiang for devpath support! 2005/06/28
+ 
+ static char *format_string_manufacturer =
+ /* S:  Manufacturer=xxxx */
+@@ -482,10 +488,19 @@
+ 	default:
+ 		speed = "?? ";
+ 	}
++//+++Modify by shiang for devpath support! 2005/06/28
++#if 0 
+ 	data_end = pages_start + sprintf(pages_start, format_topo,
+ 			bus->busnum, level, parent_devnum,
+ 			index, count, usbdev->devnum,
+ 			speed, usbdev->maxchild);
++#else
++	data_end = pages_start + sprintf(pages_start, format_topo,
++			bus->busnum, level, parent_devnum,
++			index, count, usbdev->devnum,
++			speed, usbdev->maxchild, usbdev->devpath);	
++#endif
++//---Modify by shiang for devpath support! 2005/06/28
+ 	/*
+ 	 * level = topology-tier level;
+ 	 * parent_devnum = parent device number;

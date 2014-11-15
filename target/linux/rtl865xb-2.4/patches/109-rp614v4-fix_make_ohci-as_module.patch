@@ -1,0 +1,9 @@
+--- linux/drivers/usb/host/Config.in	2005-12-21 04:30:29.000000000 +0200
++++ linux/drivers/usb/host/Config.in-new	2009-01-16 00:39:31.000000000 +0200
+@@ -23,5 +23,5 @@
+ if [ "$CONFIG_ARCH_AT91RM9200" = "y" ]; then
+    dep_tristate '  AT91RM9200 OHCI-compatible host interface support' CONFIG_USB_OHCI_AT91 $CONFIG_USB
+ fi
+-bool	'  RTL865XB OHCI-compatible host interface support' CONFIG_USB_OHCI_RTL865XB
++dep_tristate '  RTL865XB OHCI-compatible host interface support' CONFIG_USB_OHCI_RTL865XB $CONFIG_USB
+ bool	'  RTL8652 OHCI-compatible host interface support' CONFIG_USB_OHCI_RTL8652

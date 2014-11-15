@@ -1,0 +1,45 @@
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index eafe6f1..f2dfe15 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -850,6 +854,9 @@ struct block_device_operations {
+ 	int (*check_media_change) (kdev_t);
+ 	int (*revalidate) (kdev_t);
+ 	struct module *owner;
++#ifdef MAGIC_ROM_PTR
++	int (*romptr) (kdev_t, struct vm_area_struct *);
++#endif /* MAGIC_ROM_PTR */
+ };
+ 
+ /*
+@@ -876,6 +883,9 @@ struct file_operations {
+ 	ssize_t (*writev) (struct file *, const struct iovec *, unsigned long, loff_t *);
+ 	ssize_t (*sendpage) (struct file *, struct page *, int, size_t, loff_t *, int);
+ 	unsigned long (*get_unmapped_area)(struct file *, unsigned long, unsigned long, unsigned long, unsigned long);
++#ifdef MAGIC_ROM_PTR
++	int (*romptr) (struct file *, struct vm_area_struct *);
++#endif /* MAGIC_ROM_PTR */
+ };
+ 
+ struct inode_operations {
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 0b86ba8..679bdf1 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -26,6 +26,16 @@ extern struct list_head inactive_list;
+ #include <asm/pgtable.h>
+ #include <asm/atomic.h>
+ 
++#ifdef MAGIC_ROM_PTR
++extern int is_in_rom(unsigned long);
++#endif
++
++#ifdef CONFIG_RTL865X
++#define  __DRAM  __attribute__  ((section(".dram")))
++#define  __IRAM  __attribute__  ((section(".iram")))
++#endif
++
++
+ /*
+  * Linux kernel virtual memory manager primitives.
+  * The idea being to have a "virtual" mm in the same way

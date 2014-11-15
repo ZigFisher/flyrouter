@@ -1,0 +1,770 @@
+diff --git a/kernel/Makefile b/kernel/Makefile
+index 02c4d3a..1212f40 100644
+--- a/kernel/Makefile
++++ b/kernel/Makefile
+@@ -9,13 +9,19 @@
+ 
+ O_TARGET := kernel.o
+ 
+-export-objs = signal.o sys.o kmod.o context.o ksyms.o pm.o exec_domain.o printk.o
++export-objs = signal.o sys.o kmod.o context.o ksyms.o pm.o exec_domain.o printk.o dma.o
+ 
+-obj-y     = sched.o dma.o fork.o exec_domain.o panic.o printk.o \
++obj-y     = sched.o fork.o exec_domain.o panic.o printk.o \
+ 	    module.o exit.o itimer.o info.o time.o softirq.o resource.o \
+ 	    sysctl.o acct.o capability.o ptrace.o timer.o user.o \
+ 	    signal.o sys.o kmod.o context.o
+ 
++ifndef CONFIG_ARM
++obj-y	 += dma.o
++endif
++
++OX_OBJS  += signal.o sys.o kmod.o context.o
++
+ obj-$(CONFIG_UID16) += uid16.o
+ obj-$(CONFIG_MODULES) += ksyms.o
+ obj-$(CONFIG_PM) += pm.o
+diff --git a/kernel/dma.c b/kernel/dma.c
+index cb1e89f..e0516b4 100644
+--- a/kernel/dma.c
++++ b/kernel/dma.c
+@@ -56,12 +56,17 @@ struct dma_chan {
+ 
+ static struct dma_chan dma_chan_busy[MAX_DMA_CHANNELS] = {
+ 	{ 0, 0 },
++#if defined(CONFIG_M5307) || defined(CONFIG_M5407)
+ 	{ 0, 0 },
+ 	{ 0, 0 },
++#endif
++#ifndef CONFIG_UCLINUX
++	{ 0, 0 },
+ 	{ 0, 0 },
+ 	{ 1, "cascade" },
+ 	{ 0, 0 },
+ 	{ 0, 0 },
++#endif
+ 	{ 0, 0 }
+ };
+ 
+@@ -121,7 +126,7 @@ void free_dma(unsigned int dmanr)
+ }
+ 
+ int get_dma_list(char *buf)
+-{	
++{
+ 	strcpy(buf, "No DMA\n");
+ 	return 7;
+ }
+diff --git a/kernel/exit.c b/kernel/exit.c
+index 35283a3..2747da7 100644
+--- a/kernel/exit.c
++++ b/kernel/exit.c
+@@ -427,7 +427,7 @@ NORET_TYPE void do_exit(long code)
+ 	struct task_struct *tsk = current;
+ 
+ 	if (in_interrupt())
+-		panic("Aiee, killing interrupt handler!");
++		panic("Aiee, killing interrupt handler\n");
+ 	if (!tsk->pid)
+ 		panic("Attempted to kill the idle task!");
+ 	if (tsk->pid == 1)
+@@ -458,6 +458,9 @@ fake_volatile:
+ 
+ 	tsk->exit_code = code;
+ 	exit_notify();
++#ifdef CONFIG_SYSCALLTIMER
++ 	current->curr_syscall = 0;
++#endif
+ 	schedule();
+ 	BUG();
+ /*
+@@ -587,7 +590,7 @@ end_wait4:
+ 	return retval;
+ }
+ 
+-#if !defined(__alpha__) && !defined(__ia64__)
++#if !defined(__alpha__) && !defined(__ia64__) && !defined(__arm__)
+ 
+ /*
+  * sys_waitpid() remains for compatibility. waitpid() should be
+diff --git a/kernel/fork.c b/kernel/fork.c
+index bde757e..393b0e2 100644
+--- a/kernel/fork.c
++++ b/kernel/fork.c
+@@ -77,8 +77,11 @@ void __init fork_init(unsigned long mempages)
+ 	 */
+ 	max_threads = mempages / (THREAD_SIZE/PAGE_SIZE) / 8;
+ 
+-	init_task.rlim[RLIMIT_NPROC].rlim_cur = max_threads/2;
+-	init_task.rlim[RLIMIT_NPROC].rlim_max = max_threads/2;
++	/*
++	 * we need to allow at least 10 threads to boot a system
++	 */
++	init_task.rlim[RLIMIT_NPROC].rlim_cur = max(10, max_threads/2);
++	init_task.rlim[RLIMIT_NPROC].rlim_max = max(10, max_threads/2);
+ }
+ 
+ /* Protects next_safe and last_pid. */
+@@ -142,6 +145,8 @@ nomorepids:
+ 	return 0;
+ }
+ 
++#ifndef CONFIG_UCLINUX
++
+ static inline int dup_mmap(struct mm_struct * mm)
+ {
+ 	struct vm_area_struct * mpnt, *tmp, **pprev;
+@@ -378,6 +383,131 @@ fail_nomem:
+ 	return retval;
+ }
+ 
++#else /* !CONFIG_UCLINUX */
++
++/*
++ * Allocate and initialize an mm_struct.
++ */
++struct mm_struct * mm_alloc(void)
++{
++	struct mm_struct * mm;
++
++	mm = kmem_cache_alloc(mm_cachep, SLAB_KERNEL);
++	if (mm) {
++		memset(mm, 0, sizeof(*mm));
++		atomic_set(&mm->mm_users, 1);
++		atomic_set(&mm->mm_count, 1);
++		init_rwsem(&mm->mmap_sem);
++		mm->page_table_lock = SPIN_LOCK_UNLOCKED;
++		return mm;
++	}
++	return NULL;
++}
++
++/*
++ * Called when the last reference to the mm
++ * is dropped: either by a lazy thread or by
++ * mmput. Free the mm.
++ */
++inline void __mmdrop(struct mm_struct *mm)
++{
++	if (mm == &init_mm) BUG();
++	kmem_cache_free(mm_cachep, mm);
++}
++
++/*
++ * Decrement the use count and release all resources for an mm.
++ */
++void mmput(struct mm_struct *mm)
++{
++	if (atomic_dec_and_test(&mm->mm_users)) {
++		exit_mmap(mm);
++		mmdrop(mm);
++	}
++}
++
++/* Please note the differences between mmput and mm_release.
++ * mmput is called whenever we stop holding onto a mm_struct,
++ * error success whatever.
++ *
++ * mm_release is called after a mm_struct has been removed
++ * from the current process.
++ *
++ * This difference is important for error handling, when we
++ * only half set up a mm_struct for a new process and need to restore
++ * the old one.  Because we mmput the new mm_struct before
++ * restoring the old one. . .
++ * Eric Biederman 10 January 1998
++ */
++void mm_release(void)
++{
++	struct task_struct *tsk = current;
++	struct completion *vfork_done = tsk->vfork_done;
++
++	/* notify parent sleeping on vfork() */
++	if (vfork_done) {
++		tsk->vfork_done = NULL;
++		complete(vfork_done);
++	}
++}
++
++static inline int copy_mm(unsigned long clone_flags, struct task_struct * tsk)
++{
++	struct mm_struct * mm;
++	int retval;
++
++	tsk->min_flt = tsk->maj_flt = 0;
++	tsk->cmin_flt = tsk->cmaj_flt = 0;
++	tsk->nswap = tsk->cnswap = 0;
++
++	tsk->mm = NULL;
++	tsk->active_mm = NULL;
++
++	/*
++	 * Are we cloning a kernel thread?
++	 *
++	 * We need to steal a active VM for that..
++	 */
++	mm = current->mm;
++	if (!mm)
++		return 0;
++
++	if (clone_flags & CLONE_VM) {
++		atomic_inc(&mm->mm_users);
++		goto good_mm;
++	}
++
++	retval = -ENOMEM;
++	mm = mm_alloc();
++	if (!mm)
++		goto fail_nomem;
++
++	tsk->mm = mm;
++	tsk->active_mm = mm;
++
++#if DAVIDM /* is this needed,  I took it out as it didn't appear to be */
++	if (tsk->mm->executable)
++		atomic_inc(&tsk->mm->executable->i_count);
++#endif
++
++	/*
++	 * child gets a private LDT (if there was an LDT in the parent)
++	 */
++	copy_segments(tsk, mm);
++
++good_mm:
++	tsk->mm = mm;
++	tsk->active_mm = mm;
++	return 0;
++
++free_pt:
++	mmput(mm);
++fail_nomem:
++	return retval;
++}
++
++#endif /* !CONFIG_UCLINUX */
++
+ static inline struct fs_struct *__copy_fs_struct(struct fs_struct *old)
+ {
+ 	struct fs_struct *fs = kmem_cache_alloc(fs_cachep, GFP_KERNEL);
+@@ -617,7 +747,6 @@ long kernel_thread(int (*fn)(void *), void * arg, unsigned long flags)
+ 	old_task_dumpable = task->task_dumpable;
+ 	task->task_dumpable = 0;
+ 	task_unlock(task);
+-
+ 	ret = arch_kernel_thread(fn, arg, flags);
+ 
+ 	/* never reached in child process, only in parent */
+@@ -663,6 +792,10 @@ int do_fork(unsigned long clone_flags, unsigned long stack_start,
+ 
+ 	*p = *current;
+ 
++#ifdef CONFIG_SYSCALLTIMER
++	p->curr_syscall = 0;
++#endif
++
+ 	retval = -EAGAIN;
+ 	/*
+ 	 * Check if we are over our maximum process limit, but be sure to
+diff --git a/kernel/ksyms.c b/kernel/ksyms.c
+index d1e66c7..b025947 100644
+--- a/kernel/ksyms.c
++++ b/kernel/ksyms.c
+@@ -87,7 +87,9 @@ EXPORT_SYMBOL(try_inc_mod_count);
+ /* process memory management */
+ EXPORT_SYMBOL(do_mmap_pgoff);
+ EXPORT_SYMBOL(do_munmap);
++#ifndef NO_MM
+ EXPORT_SYMBOL(do_brk);
++#endif
+ EXPORT_SYMBOL(exit_mm);
+ EXPORT_SYMBOL(exit_files);
+ EXPORT_SYMBOL(exit_fs);
+@@ -111,17 +113,24 @@ EXPORT_SYMBOL(kmem_cache_free);
+ EXPORT_SYMBOL(kmem_cache_size);
+ EXPORT_SYMBOL(kmalloc);
+ EXPORT_SYMBOL(kfree);
++#ifdef NO_MM
++EXPORT_SYMBOL(ksize);
++#endif
+ EXPORT_SYMBOL(vfree);
+ EXPORT_SYMBOL(__vmalloc);
++#ifndef NO_MM
+ EXPORT_SYMBOL(vmap);
++#endif
+ EXPORT_SYMBOL(vmalloc_to_page);
+ EXPORT_SYMBOL(mem_map);
+ EXPORT_SYMBOL(remap_page_range);
+ EXPORT_SYMBOL(max_mapnr);
+ EXPORT_SYMBOL(high_memory);
+ EXPORT_SYMBOL(vmtruncate);
++#ifndef NO_MM
+ EXPORT_SYMBOL(find_vma);
+ EXPORT_SYMBOL(get_unmapped_area);
++#endif
+ EXPORT_SYMBOL(init_mm);
+ #ifdef CONFIG_HIGHMEM
+ EXPORT_SYMBOL(kmap_high);
+@@ -303,11 +312,13 @@ EXPORT_SYMBOL(dcache_dir_ops);
+ /* for stackable file systems (lofs, wrapfs, cryptfs, etc.) */
+ EXPORT_SYMBOL(default_llseek);
+ EXPORT_SYMBOL(dentry_open);
++#ifndef NO_MM
+ EXPORT_SYMBOL(filemap_nopage);
+ EXPORT_SYMBOL(filemap_sync);
+ EXPORT_SYMBOL(filemap_fdatawrite);
+ EXPORT_SYMBOL(filemap_fdatasync);
+ EXPORT_SYMBOL(filemap_fdatawait);
++#endif
+ EXPORT_SYMBOL(lock_page);
+ EXPORT_SYMBOL(unlock_page);
+ EXPORT_SYMBOL(wakeup_page_waiters);
+@@ -365,7 +376,9 @@ EXPORT_SYMBOL(unregister_binfmt);
+ EXPORT_SYMBOL(search_binary_handler);
+ EXPORT_SYMBOL(prepare_binprm);
+ EXPORT_SYMBOL(compute_creds);
++#ifndef NO_MM
+ EXPORT_SYMBOL(remove_arg_zero);
++#endif
+ EXPORT_SYMBOL(set_binfmt);
+ 
+ /* sysctl table registration */
+@@ -439,13 +452,21 @@ EXPORT_SYMBOL(brw_kiovec);
+ EXPORT_SYMBOL(kiobuf_wait_for_io);
+ 
+ /* dma handling */
++#ifdef CONFIG_GENERIC_ISA_DMA
+ EXPORT_SYMBOL(request_dma);
+ EXPORT_SYMBOL(free_dma);
+ EXPORT_SYMBOL(dma_spin_lock);
++#endif
+ #ifdef HAVE_DISABLE_HLT
+ EXPORT_SYMBOL(disable_hlt);
+ EXPORT_SYMBOL(enable_hlt);
+ #endif
++#ifdef CONFIG_CANCam
++EXPORT_SYMBOL(request_dma);
++EXPORT_SYMBOL(free_dma);
++EXPORT_SYMBOL(dma_spin_lock);
++#endif
++
+ 
+ /* resource handling */
+ EXPORT_SYMBOL(request_resource);
+@@ -530,8 +551,10 @@ EXPORT_SYMBOL(single_release);
+ EXPORT_SYMBOL(seq_release_private);
+ 
+ /* Program loader interfaces */
++#ifndef NO_MM
+ EXPORT_SYMBOL(setup_arg_pages);
+ EXPORT_SYMBOL(copy_strings_kernel);
++#endif
+ EXPORT_SYMBOL(do_execve);
+ EXPORT_SYMBOL(flush_old_exec);
+ EXPORT_SYMBOL(kernel_read);
+diff --git a/kernel/panic.c b/kernel/panic.c
+index d979610..0a81907 100644
+--- a/kernel/panic.c
++++ b/kernel/panic.c
+@@ -76,8 +76,9 @@ NORET_TYPE void panic(const char * fmt, ...)
+ 
+ 	notifier_call_chain(&panic_notifier_list, 0, NULL);
+ 
+-	if (panic_timeout > 0)
+-	{
++	if (panic_timeout < 0) {
++		machine_halt();
++	} else if (panic_timeout > 0) {
+ 		/*
+ 	 	 * Delay timeout seconds before rebooting the machine. 
+ 		 * We can't use the "normal" timers since we just panicked..
+diff --git a/kernel/printk.c b/kernel/printk.c
+index 4a5e7fe..3980e8a 100644
+--- a/kernel/printk.c
++++ b/kernel/printk.c
+@@ -153,6 +153,25 @@ static int __init console_setup(char *str)
+ 	return 1;
+ }
+ 
++#ifdef CONFIG_UCLINUX
++/*
++ * DAVIDM - put this in so 2.0 and 2.4 NETtel images work with the
++ *          same boot args.
++ */
++
++static int __init CONSOLE_setup(char *str)
++{
++	/*
++	 *	2.4 does not want the /dev/ options on the front
++	 */
++	if (strncmp(str, "/dev/", 5) == 0)
++		return(console_setup(str + 5));
++	return(console_setup(str));
++}
++
++__setup("CONSOLE=", CONSOLE_setup);
++#endif
++
+ __setup("console=", console_setup);
+ 
+ /*
+@@ -352,7 +371,13 @@ static void call_console_drivers(unsigned long start, unsigned long end)
+ 			((end - cur_index) > 2) &&
+ 			LOG_BUF(cur_index + 0) == '<' &&
+ 			LOG_BUF(cur_index + 1) >= '0' &&
+-			LOG_BUF(cur_index + 1) <= '7' &&
++//+++ modify by siyou 2004/9/22 09:37下午
++// mainly for not to print level 9 messages.
++// _call_console_drivers() will check log level of console to print.
++// our level 9 will higher than the default log level.
++			//LOG_BUF(cur_index + 1) <= '7' &&
++			LOG_BUF(cur_index + 1) <= '9' &&
++//--- modify by siyou 2004/9/22 09:37下午
+ 			LOG_BUF(cur_index + 2) == '>')
+ 		{
+ 			msg_level = LOG_BUF(cur_index + 1) - '0';
+@@ -416,7 +441,11 @@ asmlinkage int printk(const char *fmt, ...)
+ 	char *p;
+ 	static char printk_buf[1024];
+ 	static int log_level_unknown = 1;
+-
++#ifdef CONFIG_RTL865XB	
++	/*add a watchdog reset here since printk might consumes a lot of time if message is lengthy*/
++	#define REG32(reg)	(*(volatile unsigned int *)(reg))
++	REG32(0xbd01203c)=7<<21; /*reset watchdog and selects 2^18 watchdog cycle*/
++#endif	
+ 	if (oops_in_progress) {
+ 		/* If a crash is occurring, make sure we can't deadlock */
+ 		spin_lock_init(&logbuf_lock);
+@@ -438,7 +467,13 @@ asmlinkage int printk(const char *fmt, ...)
+ 	 */
+ 	for (p = printk_buf; *p; p++) {
+ 		if (log_level_unknown) {
+-			if (p[0] != '<' || p[1] < '0' || p[1] > '7' || p[2] != '>') {
++//+++joel modify 2004/7/7 04:57下午 alpha use '<9>' to log in kernel		    
++#if 1
++			if (p[0] != '<' || p[1] < '0' || p[1] > '9' || p[2] != '>') {
++#else
++            		if (p[0] != '<' || p[1] < '0' || p[1] > '7' || p[2] != '>') {
++#endif			    
++//---joel modify 2004/7/7 04:57下午 alpha use printk("<9><224>.....") to log in kernel 				
+ 				emit_log_char('<');
+ 				emit_log_char(default_message_loglevel + '0');
+ 				emit_log_char('>');
+@@ -585,21 +620,40 @@ void register_console(struct console * console)
+ {
+ 	int     i;
+ 	unsigned long flags;
+-
++	int def_console=0;
+ 	/*
+ 	 *	See if we want to use this console driver. If we
+ 	 *	didn't select a console we take the first one
+ 	 *	that registers here.
+ 	 */
+ 	if (preferred_console < 0) {
++		#ifdef CONFIG_RTL865X
++		if(_chip_is_shared_pci_mode()){
++			def_console=1;
++			#ifdef CONFIG_GDB_CONSOLE
++			if(strcmp(console->name,"gdb")==0&&console_drivers){
++				//can't let gdb register earlier than console driver
++				//since we only have one UART in this case.
++				return;
++			}
++			#endif /*CONFIG_GDB_CONSOLE*/
++		}
++		#endif /*CONFIG_RTL865X*/
++
+ 		if (console->index < 0)
+-			console->index = 0;
++			console->index = def_console;
+ 		if (console->setup == NULL ||
+ 		    console->setup(console, NULL) == 0) {
+ 			console->flags |= CON_ENABLED | CON_CONSDEV;
+ 			preferred_console = 0;
+ 		}
+ 	}
++#ifdef CONFIG_RTL865X
++	else if(_chip_is_shared_pci_mode())
++		return; 	//In this case, there is only one console and already 
++				//registered so can't support second console registration
++#endif
++
+ 
+ 	/*
+ 	 *	See if this console matches one we selected on
+@@ -695,4 +749,4 @@ void tty_write_message(struct tty_struct *tty, char *msg)
+ 	if (tty && tty->driver.write)
+ 		tty->driver.write(tty, 0, msg, strlen(msg));
+ 	return;
+-}
++} 
+diff --git a/kernel/ptrace.c b/kernel/ptrace.c
+index 3c8cc6d..20a83a5 100644
+--- a/kernel/ptrace.c
++++ b/kernel/ptrace.c
+@@ -232,3 +232,4 @@ int ptrace_writedata(struct task_struct *tsk, char * src, unsigned long dst, int
+ 	}
+ 	return copied;
+ }
++
+diff --git a/kernel/sched.c b/kernel/sched.c
+index 1cfda76..793c105 100644
+--- a/kernel/sched.c
++++ b/kernel/sched.c
+@@ -534,6 +534,11 @@ asmlinkage void schedule_tail(struct task_struct *prev)
+ 	__schedule_tail(prev);
+ }
+ 
++#ifdef CONFIG_SYSCALLTIMER
++extern void timepeg_schedule_switchout(void);
++extern void timepeg_schedule_switchin(void);
++#endif
++
+ /*
+  *  'schedule()' is the scheduler function. It's a very simple and nice
+  * scheduler: it's not perfect, but certainly works for most things.
+@@ -692,7 +697,13 @@ repeat_schedule:
+ 	 * This just switches the register state and the
+ 	 * stack.
+ 	 */
++#ifdef CONFIG_SYSCALLTIMER
++	timepeg_schedule_switchout();
++#endif
+ 	switch_to(prev, next, prev);
++#ifdef CONFIG_SYSCALLTIMER
++	timepeg_schedule_switchin();
++#endif
+ 	__schedule_tail(prev);
+ 
+ same_process:
+diff --git a/kernel/signal.c b/kernel/signal.c
+index 77371a0..d40a085 100644
+--- a/kernel/signal.c
++++ b/kernel/signal.c
+@@ -1277,7 +1277,7 @@ out:
+ #endif /* __sparc__ */
+ #endif
+ 
+-#if !defined(__alpha__) && !defined(__ia64__)
++#if !defined(__alpha__) && !defined(__ia64__) && !defined(__arm__)
+ /*
+  * For backwards compatibility.  Functionality superseded by sigprocmask.
+  */
+@@ -1305,7 +1305,8 @@ sys_ssetmask(int newmask)
+ }
+ #endif /* !defined(__alpha__) */
+ 
+-#if !defined(__alpha__) && !defined(__ia64__) && !defined(__mips__)
++#if !defined(__alpha__) && !defined(__ia64__) && !defined(__mips__) && \
++    !defined(__arm__)
+ /*
+  * For backwards compatibility.  Functionality superseded by sigaction.
+  */
+@@ -1322,4 +1323,4 @@ sys_signal(int sig, __sighandler_t handler)
+ 
+ 	return ret ? ret : (unsigned long)old_sa.sa.sa_handler;
+ }
+-#endif /* !alpha && !__ia64__ && !defined(__mips__) */
++#endif /* !alpha && !__ia64__ && !defined(__mips__) && !defined(__arm__) */
+diff --git a/kernel/softirq.c b/kernel/softirq.c
+index 2b5f3d9..51af62c 100644
+--- a/kernel/softirq.c
++++ b/kernel/softirq.c
+@@ -16,6 +16,7 @@
+ #include <linux/smp_lock.h>
+ #include <linux/init.h>
+ #include <linux/tqueue.h>
++#include <linux/compiler.h>
+ 
+ /*
+    - No shared variables, all the data are CPU local.
+@@ -58,20 +59,44 @@ static inline void wakeup_softirqd(unsigned cpu)
+ 		wake_up_process(tsk);
+ }
+ 
+-asmlinkage void do_softirq()
++static inline int softirqd_is_waken(unsigned cpu)
++{
++	struct task_struct * tsk = ksoftirqd_task(cpu);
++
++	return tsk && tsk->state == TASK_RUNNING;
++}
++
++/*
++ * the higher this number the less likely ksoftirqd will be waken by
++ * a short irq flood peak, but the higher unfariness the softirq load
++ * will generate against the regular scheduler tasks.
++ * Each loop will allow one more block to pass through to the
++ * higher layer. If further blocks keeps arriving we giveup and we
++ * offload the work in a scheduler friendly way. After ksoftirqd
++ * is started we will stop wasting time here, so under attack
++ * we're still competely fair.
++ */
++#define MAX_SOFTIRQ_LOOPS 8
++
++static void __do_softirq(int ksoftirqd)
+ {
+ 	int cpu = smp_processor_id();
+ 	__u32 pending;
+ 	unsigned long flags;
+ 	__u32 mask;
++	int loops;
+ 
+ 	if (in_interrupt())
+ 		return;
+ 
+ 	local_irq_save(flags);
+ 
+-	pending = softirq_pending(cpu);
++	if (!ksoftirqd && softirqd_is_waken(cpu))
++		pending = 0;
++	else
++		pending = softirq_pending(cpu);
+ 
++	loops = 0;
+ 	if (pending) {
+ 		struct softirq_action *h;
+ 
+@@ -101,13 +126,26 @@ restart:
+ 		}
+ 		__local_bh_enable();
+ 
+-		if (pending)
+-			wakeup_softirqd(cpu);
++		if (!softirqd_is_waken(cpu)) {
++			if (unlikely(++loops >= MAX_SOFTIRQ_LOOPS)) {
++				if (pending)
++					wakeup_softirqd(cpu);
++			} else {
++				mask = ~pending;
++				local_bh_disable();
++				goto restart;
++			}
++		}
+ 	}
+ 
+ 	local_irq_restore(flags);
+ }
+ 
++asmlinkage void do_softirq()
++{
++	__do_softirq(0);
++}
++
+ /*
+  * This function must run with irq disabled!
+  */
+@@ -386,7 +424,7 @@ static int ksoftirqd(void * __bind_cpu)
+ 		__set_current_state(TASK_RUNNING);
+ 
+ 		while (softirq_pending(cpu)) {
+-			do_softirq();
++			__do_softirq(1);
+ 			if (current->need_resched)
+ 				schedule();
+ 		}
+diff --git a/kernel/sysctl.c b/kernel/sysctl.c
+index 2a8a7ba..fd215b7 100644
+--- a/kernel/sysctl.c
++++ b/kernel/sysctl.c
+@@ -33,6 +33,7 @@
+ #include <linux/swap.h>
+ 
+ #include <asm/uaccess.h>
++#include <asm/semaphore.h>
+ 
+ #ifdef CONFIG_ROOT_NFS
+ #include <linux/nfs_fs.h>
+@@ -44,7 +45,9 @@
+ extern int panic_timeout;
+ extern int C_A_D;
+ extern int bdf_prm[], bdflush_min[], bdflush_max[];
++#ifndef NO_MM
+ extern int sysctl_overcommit_memory;
++#endif
+ extern int max_threads;
+ extern atomic_t nr_queued_signals;
+ extern int max_queued_signals;
+@@ -105,7 +108,9 @@ int proc_dol3crvec(ctl_table *table, int write, struct file *filp,
+ extern int acct_parm[];
+ #endif
+ 
++#ifndef NO_MM
+ extern int pgt_cache_water[];
++#endif
+ 
+ static int parse_table(int *, int, void *, size_t *, void *, size_t,
+ 		       ctl_table *, void **);
+@@ -117,7 +122,9 @@ static struct ctl_table_header root_table_header =
+ 	{ root_table, LIST_HEAD_INIT(root_table_header.ctl_entry) };
+ 
+ static ctl_table kern_table[];
++#ifndef NO_MM
+ static ctl_table vm_table[];
++#endif
+ #ifdef CONFIG_NET
+ extern ctl_table net_table[];
+ #endif
+@@ -154,7 +161,9 @@ static void unregister_proc_table(ctl_table *, struct proc_dir_entry *);
+ 
+ static ctl_table root_table[] = {
+ 	{CTL_KERN, "kernel", NULL, 0, 0555, kern_table},
++#ifndef NO_MM
+ 	{CTL_VM, "vm", NULL, 0, 0555, vm_table},
++#endif
+ #ifdef CONFIG_NET
+ 	{CTL_NET, "net", NULL, 0, 0555, net_table},
+ #endif
+@@ -278,6 +287,7 @@ static ctl_table kern_table[] = {
+ 	{0}
+ };
+ 
++#ifndef NO_MM
+ static ctl_table vm_table[] = {
+ 	{VM_GFP_DEBUG, "vm_gfp_debug", 
+ 	 &vm_gfp_debug, sizeof(int), 0644, NULL, &proc_dointvec},
+@@ -314,6 +324,7 @@ static ctl_table vm_table[] = {
+ 	 &block_dump, sizeof(int), 0644, NULL, &proc_dointvec},
+ 	{0}
+ };
++#endif /* NO_MM */
+ 
+ static ctl_table proc_table[] = {
+ 	{0}
+diff --git a/kernel/timer.c b/kernel/timer.c
+index 1c626d5..b071b98 100644
+--- a/kernel/timer.c
++++ b/kernel/timer.c
+@@ -24,6 +24,7 @@
+ #include <linux/kernel_stat.h>
+ 
+ #include <asm/uaccess.h>
++#include <asm/io.h>
+ 
+ /*
+  * Timekeeping variables
+@@ -495,7 +496,23 @@ static void update_wall_time_one_tick(void)
+ 	    /* Reduce by this step the amount of time left  */
+ 	    time_adjust -= time_adjust_step;
+ 	}
++#if 0
++//#if defined(CONFIG_MTD_NETtel) && !defined(CONFIG_TIMEPEG)
++{
++	extern void *cpu_mmcrp;
++	register long ms;
++	/* Work around for glitching problem of SC520 - Rev A1 silicon */
++	if (cpu_mmcrp) {
++		/* Use SC520 millisecond timer */
++		ms = *((volatile unsigned short *) (cpu_mmcrp + 0xc60));
++		xtime.tv_usec += (ms * 1000) + time_adjust_step;
++	} else {
++		xtime.tv_usec += tick + time_adjust_step;
++	}
++}
++#else
+ 	xtime.tv_usec += tick + time_adjust_step;
++#endif
+ 	/*
+ 	 * Advance the phase, once it gets to one microsecond, then
+ 	 * advance the tick more.

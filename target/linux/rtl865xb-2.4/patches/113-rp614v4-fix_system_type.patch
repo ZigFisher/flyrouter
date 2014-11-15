@@ -1,0 +1,11 @@
+--- linux/arch/mips/realtek/rtl865x/prom.c	2009-01-17 17:37:03.000000000 +0200
++++ linux/arch/mips/realtek/rtl865x/prom.c2	2009-01-17 17:37:49.000000000 +0200
+@@ -29,7 +29,7 @@
+ 
+ const char *get_system_type(void)
+ {
+-	return "Philips Nino";
++	return "RTL865xB";
+ }
+ 
+ /* Do basic initialization */

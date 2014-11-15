@@ -1,0 +1,199 @@
+(* $Id: README,v 1.13 2004/03/18 20:54:57 jal2 Exp $ *)
+
+at76c503 - linux driver for Atmel at76c503 based usb wlan adapters
+------------------------------------------------------------------
+
+This is another driver for the Atmel based USB WLAN adaptors. I am
+developing this driver in private. I am not associated with Atmel or
+any corporation that builds devices with this chip. My only
+information source is the driver from
+http://atmelwlandriver.sourceforge.net.
+
+Look at http://at76c503a.berlios.de/ for more accurate information,
+mailing lists and links. This README is probably outdated.
+
+
+Known devices with this chip are:
+- Belkin F5D6050
+- Dynalink/Askey WLL013
+- Linksys WUSB11 v2.6
+- Netgear MA101B
+and many more.
+
+Reqirements:
+------------
+
+- Kernel 2.4.x. I am developing the driver on 2.4.23, but it
+  reportedly also works on 2.4.20, 2.4.19, 2.4.18 and 2.4.16.
+- kernel 2.6.x: 2.6.1-4 were reported to work fine. 
+
+
+Installation:
+-------------
+
+make
+make install
+
+(with kernel 2.6 you must be run for both steps).
+
+
+Running:
+--------
+
+Plug in the adapter. If you already used it under Windows or with the
+driver from atmelwlandriver.sourceforge.net, replug the device
+(ie. plug out and in again).
+
+If you have hotplug installed, the drivers should now be loaded. If not,
+load them by hand:
+
+modprobe -v at76c503-rfmd
+or
+insmod usbdfu.o; insmod at76c503.o; insmod at76c503-rfmd.o
+
+You can give the network device another name than wlanX by giving
+the module the netdev_name parameter. Eg.
+insmod at76c503-rfmd.o netdev_name=eth%d
+would give the first device the name eth0, the second eth1 etc...
+
+Check if the modules are loaded with lsmod. It should look like this:
+
+...
+at76c503-rfmd          38656   0  (unused)
+at76c503               34004   0  [at76c503-rfmd]
+usbdfu                  9144   0  [at76c503-rfmd]
+...
+
+setup networking (replace <iface> with wlan0, wlan1, ..., <ch> with a
+channel number (1..14) <essid> with your network id (a string), <ip>
+with an IP address)
+
+iwconfig <iface> channel <ch> mode ad-hoc essid <essid>
+ifconfig <iface> <ip>
+
+Example:
+iwconfig wlan2 mode ad-hoc channel 10 essid okuwlan
+ifconfig wlan2 192.168.0.4
+
+Test it by pinging another host with a wlan adaptor.
+
+Note that the firmware survives reboots of the computer, but not
+unplugging the device.
+
+If you get problems:
+Look with dmesg, if there are error messages.
+
+Power Save Modes in Infrastructure Mode
+---------------------------------------
+You can activate 802.11 power save mode by executing
+    iwconfig wlanX power on period N
+The default period value is 0 and the smallest possible period
+of power save (listen interval) is two beacon intervals.
+This should lower power consumption, but decrease data throughput and
+increase delays.
+
+There is an Atmel specific power save mode called "smart power save"
+which switches the device into active state (by a NULL packet to the AP)
+as soon as there are pending packets at the AP for the STA and put it
+back into doze state after the next beacon. This saves the need for
+sending PS_POLL packets.
+It can only be activated by
+   iwpriv wlanX powersave_mode 3
+I don't know if the listen_interval is used in this mode, too.
+If yes, you can only set it earlier by iwconfig, e.g.
+   iwconfig wlanX power on period N
+   iwpriv wlanX powersave_mode 3
+
+
+Private Parameters
+------------------
+
+In addition to the parameters of iwconfig, some can be set by iwpriv:
+- long preamble:  iwpriv wlanX short_preamble 0
+- short preamble: iwpriv wlanX short_preamble 1
+- amount of debug messages:   iwpriv wlanX set_debug N
+  with N a combination of bits, see DBG_* in at76c503.c
+- power save mode: iwpriv wlanX powersave_mode N (* N = 1,2,3 
+  for none, save, smart save *)
+- scan channel time: iwpriv wlanX scan_times <min_ch_time> <max_ch_time>
+  (this may be required for 0.90.x firmware, i.e. Intersil radios)
+
+Be aware that shared key authentication requires a WEP key.
+
+at76c503.o module parameters
+----------------------------
+The above private parameters can be set by module parameters (inside
+/etc/modules.conf or on the "modprobe" command line) as well (see
+at76c503a.c for a short explanation and the default values):
+
+debug
+scan_min_time
+scan_max_time
+scan_mode
+preamble_type
+auth_mode
+pm_mode
+pm_period
+
+Known Problems
+--------------
+
+1) Bugs of the firmware 0.90.0-44 (the latest available for device with
+  Intersil radio after Atmel stopped support for Intersil radio
+  chipsets):
+  - active scan doesn't send ProbeReq neither in adhoc or in
+    infrastructure (managed) mode
+
+    * If your ad-hoc peer sends the beacon in longer intervals,
+      the Atmel driver may not find it. Try to increase the max
+      channel time to 500 or 1000 (default 120) by calling
+              iwpriv wlanX scan_times 10 <max channel time>
+      If you found a working value, add the module parameter
+      scan_max_time to /etc/modules.conf .
+
+    * You cannot connect to an access point which hides its SSID and
+      requires the STA to probe it!
+
+  - After joining an existing IBSS of a 2MBit card, the basic rates are
+    wrong in the beacon, e.g.
+    a 2 MBit card broadcasts a basic rate set of 1 + 2 MBit/s,
+    but the Atmel device sends out basic rates of 1,2,5.5 and 11 MBit/s
+    Subsequently it cannot connect to the 2 MBit card, because it sends
+    it's data packets to broadcast addresses with 11 MBit/s.
+
+  - power saving modes does not work
+
+2) firmware 1.101.0-84
+  - if a 2MBit card joins an IBSS (ad-hoc mode) initiated by the Atmel
+    device (which currently broadcasts 1+2 MBit/s as the basic rates
+    and 5.5 and 11 MBit/s as (additional) operational rates), the
+    Atmel device sends out broadcast packets (e.g. ARP requests) with
+    11 MBit/s. This may be fixed by changing the tx rate in iwconfig
+    from "auto" (default) to 1M or 2M.
+    I'm not sure if this is a firmware bug or a problem in the driver.
+    
+
+
+Thanks to (in no particular order):
+- the authors (Stavros et.al.) of the usbvnet driver (atmelwlandriver.sourceforge.net)
+- Joerg Albert for lots of patches
+- Brad Hards and Bas Vermeulen for the firmware code, which I ported to kernel space
+- David Gibson, I used his orinoco driver for learning
+- the author(s) of the usbnet driver
+- the author(s) of the rtl8150 driver
+- lots of other authors of usb and wlan drivers, where I stole code from
+- Pavel Roskin for testing, debugging and his patches
+- Nick Jones for rewriting the iw_handler interface
+
+Oliver Kurth, Mon,  6 Jan 2003 22:39:47 +0100
+updated by Joerg Albert, Thu, 1 May 2003 and later
+
+
+
+
+
+
+
+
+
+

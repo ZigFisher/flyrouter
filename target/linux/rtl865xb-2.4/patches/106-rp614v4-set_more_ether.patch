@@ -1,0 +1,16 @@
+--- linux/drivers/net/re865x/re865x_nic.c	2005-12-21 04:30:32.000000000 +0200
++++ linux/drivers/net/re865x/re865x_nic-new.c	2009-01-09 14:06:33.000000000 +0200
+@@ -417,8 +417,11 @@
+ 	uint16 vid;
+ 	int32 portmask;
+ } vlanSetting[]={
+-	{8,  0x1 },
+-	{9,  0x1e }
++	{8,   0x10 },
++	{9,   0x8 },
++	{10,  0x4 },
++	{11,  0x2 },
++	{12,  0x1 }
+ };
+ 
+ #define MAX_PORT_NUM 9

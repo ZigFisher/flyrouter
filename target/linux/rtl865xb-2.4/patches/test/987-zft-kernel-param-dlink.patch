@@ -1,0 +1,11 @@
+--- linux-2.4.26-rp614v4v106/arch/mips/realtek/rtl865x/prom.c	2009-02-13 18:46:43.000000000 +0200
++++ linux-2.4.26-rp614v4v106_/arch/mips/realtek/rtl865x/prom.c	2009-02-13 18:45:45.000000000 +0200
+@@ -37,7 +37,7 @@
+ {
+ 	unsigned long mem_size;
+ #ifdef CONFIG_MTD
+-	strcpy(arcs_cmdline, "root=/dev/mtdblock2");
++	strcpy(arcs_cmdline, "root=/dev/mtdblock2 rootfstype=squashfs ro panic=5 console=ttyS1,38400 init=/sbin/preinit");
+ #endif
+ 	mips_machgroup = MACH_GROUP_PHILIPS;
+ 	mips_machtype = MACH_PHILIPS_NINO;

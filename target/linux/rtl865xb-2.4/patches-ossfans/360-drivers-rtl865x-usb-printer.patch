@@ -1,0 +1,192 @@
+Index: linux-2.4.27/drivers/usb/devio.c
+===================================================================
+--- linux-2.4.27.orig/drivers/usb/devio.c	2004-08-08 03:26:05.000000000 +0400
++++ linux-2.4.27/drivers/usb/devio.c	2008-03-21 14:37:48.000000000 +0300
+@@ -44,6 +44,9 @@
+ #include <linux/usbdevice_fs.h>
+ #include <asm/uaccess.h>
+ 
++//+++Add by shiang for usb printer hotplug detection 2004/12/08
++#include <linux/devfs_fs_kernel.h>
++//---Add by shiang for usb printer hotplug detection 2004/12/08
+ 
+ struct async {
+         struct list_head asynclist;
+@@ -1236,6 +1239,11 @@
+ 	case USBDEVFS_IOCTL:
+ 		ret = proc_ioctl(ps, (void *) arg);
+ 		break;
++//+++Add by shiang for usb printer hotplug detection. 2004/12/08
++	case USBDEVFS_PRINTERDEV_MINOR_ID:
++		//printk("Got USBDEVFS_DEVICE_MINOR_ID ioctl from user space!arg=%d\n", *((int *)arg));
++		ret =proc_getprinter_minor_id(ps, (void *)arg);
++//---Add by shiang for usb printer hotplug detection. 2004/12/08
+ 	}
+ 	up_read(&ps->devsem);
+ 	if (ret >= 0)
+@@ -1265,3 +1273,84 @@
+ 	open:		usbdev_open,
+ 	release:	usbdev_release,
+ };
++
++//+++Add by shiang for usb printer hotplug detection 2004/12/08
++/* The follwoing definition is defined in printer.c, but we copy it to here for usblp data structure.
++     It's a work-around solution to resolve the alpha-styel printer hotplug detection problem when we have devfs.
++     
++Problem description: when a usb printer was removed from the usb bus. By deafult, our hotplug will trigger the corresponding
++     handler to deal with it! In my original design, I tried to open the /dev/usb directory and traverse the whole	directoy to find out
++     some specific files(i.e. the printer device files). It'll make the my handler dead when I call readidr(). I have no idea about
++     why it could happen.
++*/
++#define USBLP_FIRST_PROTOCOL	1
++#define USBLP_LAST_PROTOCOL	3
++#define USBLP_MAX_PROTOCOLS	(USBLP_LAST_PROTOCOL+1)
++
++struct usblp {
++	struct usb_device 	*dev;			/* USB device */
++	devfs_handle_t		devfs;			/* devfs device */
++	struct semaphore	sem;			/* locks this struct, especially "dev" */
++	char			*writebuf;		/* write transfer_buffer */
++	char			*readbuf;		/* read transfer_buffer */
++	char			*statusbuf;		/* status transfer_buffer */
++	struct urb		*readurb, *writeurb;	/* The urbs */
++	wait_queue_head_t	wait;			/* Zzzzz ... */
++	int			readcount;		/* Counter for reads */
++	int			ifnum;			/* Interface number */
++	/* Alternate-setting numbers and endpoints for each protocol
++	 * (7/1/{index=1,2,3}) that the device supports: */
++	struct {
++		int				alt_setting;
++		struct usb_endpoint_descriptor	*epwrite;
++		struct usb_endpoint_descriptor	*epread;
++	}			protocol[USBLP_MAX_PROTOCOLS];
++	int			current_protocol;
++	int			minor;			/* minor number of device */
++	int			wcomplete;		/* writing is completed */
++	int			rcomplete;		/* reading is completed */
++	unsigned int		quirks;			/* quirks flags */
++	unsigned char		used;			/* True if open */
++	unsigned char		present;		/* True if not disconnected */
++	unsigned char		bidir;			/* interface is bidirectional */
++	unsigned char		*device_id_string;	/* IEEE 1284 DEVICE ID string (ptr) */
++							/* first 2 bytes are (big-endian) length */
++};
++
++/* shiang: This ioctl function is used to get the minor number of the printer device, by the minor number and 
++		naming rule of usb printer defined in printer.c, we can get the printer device file name(/dev/usb/lpX,
++		X= minor-number) of the specific printer device.
++
++		Input:  interface number for detection.
++		Output:minor number
++*/
++static int proc_getprinter_minor_id(struct dev_state *ps, void *arg)
++{
++	struct usb_device *dev = ps->dev;
++	struct usb_interface *iface = NULL;
++	unsigned int  ifnum;
++	unsigned int minor_num= 0;
++	struct usblp *printer;
++	int ret;
++
++	if (get_user(ifnum, (unsigned int *)arg))
++		return -EFAULT;
++	if ((ret = findintfif(ps->dev, ifnum)) < 0)
++		return ret;
++	iface = usb_ifnum_to_if(ps->dev, ifnum);
++	if (!iface)
++		return -EINVAL;
++	if (!iface->private_data)
++		return -ENODATA;
++	
++	printer=(struct usblp*)(iface->private_data);
++	minor_num = printer->minor;
++	printk("minor_num=%d, printer->minor=%d!\n", minor_num, printer->minor);
++	if (copy_to_user(arg, &minor_num, sizeof(minor_num)))
++		return -EFAULT;
++	
++	return 0;
++	
++}
++
++//---Add by shiang for usb printer hotplug detection 2004/12/08
+Index: linux-2.4.27/drivers/usb/printer.c
+===================================================================
+--- linux-2.4.27.orig/drivers/usb/printer.c	2004-08-08 03:26:05.000000000 +0400
++++ linux-2.4.27/drivers/usb/printer.c	2008-03-21 14:37:48.000000000 +0300
+@@ -76,6 +76,11 @@
+ #define IOCNR_HP_SET_CHANNEL		4
+ #define IOCNR_GET_BUS_ADDRESS		5
+ #define IOCNR_GET_VID_PID		6
++//+++Add by shiang for usb printing-on-the-fly 2004/11/26
++#define IOCNR_SOFT_RESET                7
++#define IOCNR_GET_DEVICE_UID		8
++//---Add by shiang for usb printing-on-the-fly 2004/11/26
++
+ /* Get device_id string: */
+ #define LPIOC_GET_DEVICE_ID(len) _IOC(_IOC_READ, 'P', IOCNR_GET_DEVICE_ID, len)
+ /* The following ioctls were added for http://hpoj.sourceforge.net: */
+@@ -582,12 +587,64 @@
+ 				dbg("usblp%d is VID=0x%4.4X, PID=0x%4.4X",
+ 					usblp->minor, twoints[0], twoints[1]);
+ 				break;
++//+++Add by shiang for printing-on-the-fly 2004/11/26
++			case IOCNR_SOFT_RESET:
++				if (_IOC_DIR(cmd) != _IOC_NONE) {
++					retval = -EINVAL;
++					goto done;
++				}
++				retval = usblp_reset(usblp);
++				break;
++
++			case  IOCNR_GET_DEVICE_UID:
++			{
++				char buf[1024];
++				int len, total = 0;
++				if (_IOC_DIR(cmd) != _IOC_READ) {
++					retval = -EINVAL;
++					goto done;
++				}
++				memset(buf, 0 , 1024);
++				if (usblp->dev->descriptor.iManufacturer)
++					if ( (len = usb_string(usblp->dev, usblp->dev->descriptor.iManufacturer, buf, 256)) > 0)
++						total += len;		
++				buf[total] = ';' ; 
++				total +=1;
++				
++				printk("len =%d, total=%d!\n", len, total);
++				if (usblp->dev->descriptor.iProduct)
++					if ( (len = usb_string(usblp->dev, usblp->dev->descriptor.iProduct, (char *)(buf+total), 256)) > 0 )
++						total += len;					
++				buf[total] = ';' ; 
++				total +=1;
++				printk("len =%d, total=%d!\n", len, total);				
++				if (usblp->dev->descriptor.iSerialNumber)
++					if ( (len = usb_string(usblp->dev, usblp->dev->descriptor.iSerialNumber, (char *)(buf+total), 256)) > 0)
++						total +=len;
++				
++				printk("the buf(size=%d)=%s!\n", total, buf);
++				if (copy_to_user((unsigned char *)arg,
++						(unsigned char *)buf,
++						sizeof(buf))) {
++					retval = -EFAULT;
++					goto done;
++				}
++				
++				break;
++			}
++
++//---Add by shiang for printing-on-the-fly 2004/11/26
+ 
+ 			default:
+ 				retval = -ENOTTY;
+ 		}
+ 	else	/* old-style ioctl value */
+ 		switch (cmd) {
++//+++Add by shiang for printing-on-the-fly and do printer reset! 2004/11/26
++//			case LPRESET:
++//                                usblp_reset(usblp);
++//				break;
++//+++Add by shiang for printing-on-the-fly and do printer reset! 2004/11/26
+ 
+ 			case LPGETSTATUS:
+ 				if (usblp_read_status(usblp, usblp->statusbuf)) {

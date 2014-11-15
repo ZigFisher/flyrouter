@@ -1,0 +1,51 @@
+#!/bin/sh
+#
+# fwconvert <fwid> <internal.h> <external.h>
+#
+# Convert firmware from the form used in the Atmel driver source to the form
+# used for our driver.
+#
+#   <fwid>       - The unique ID string used in the appropriate #defines (i.e.
+#                  "RFMD" or "I3861")
+#   <internal.h> - The atmelwlandriver-style header file containing the
+#                  internal firmware
+#   <external.h> - The atmelwlandriver-style header file containing the
+#                  external firmware
+#
+# The initial comments (copyright messages, etc) from the beginning of the
+# internal .h file are preserved at the beginning of the converted output.
+#
+# The resulting converted .h file is sent to standard output.
+
+fwid="$1"
+intfile="$2"
+extfile="$3"
+
+cat <<EOF
+/****************************************************************************
+ * The following firmware has been taken (and reformatted slighly) from the *
+ * Atmel (atmelwlandriver) driver source.                                   *
+ *                                                                          *
+ *   Target:                                                                *
+ *   Version:                                                               *
+ ****************************************************************************/
+
+EOF
+
+awk '/{/ { nextfile } ! /^$/ { print }' < "$intfile"
+
+echo ""
+echo "#define FW_${fwid}_INTERNAL { \\"
+
+awk '/{/ { p=1; sub(".*{",""); } p { gsub("[[:blank:]};]*",""); printf "%s", $0; }' < "$intfile" | \
+  sed -e 's/\([^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,\)/\1 \\|/g' | \
+  tr '|' '\n'
+echo "}"
+
+echo ""
+echo "#define FW_${fwid}_EXTERNAL { \\"
+awk '/{/ { p=1; sub(".*{",""); } p { gsub("[[:blank:]};]*",""); printf "%s", $0; }' < "$extfile" | \
+  sed -e 's/\([^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,[^,]*,\)/\1 \\|/g' | \
+  tr '|' '\n'
+echo "}"
+

@@ -1,0 +1,17 @@
+--- linux/drivers/usb/Makefile	2005-12-21 04:30:28.000000000 +0200
++++ linux/drivers/usb/Makefile-new	2009-01-15 22:07:46.000000000 +0200
+@@ -95,10 +95,10 @@
+ endif
+ 
+ subdir-$(CONFIG_USB_OHCI_RTL865XB) +=host
+-ifeq ($(CONFIG_USB_OHCI_RTL865XB),y)
+-	obj-y	+= host/usb-ohci-rtl865x.o
+-	obj-y	+= host/sys_pool.o
+-endif
++#ifeq ($(CONFIG_USB_OHCI_RTL865XB),y)
++	obj-$(CONFIG_USB_OHCI_RTL865XB)	+= host/usb-ohci-rtl865x.o
++	obj-$(CONFIG_USB_OHCI_RTL865XB)	+= host/sys_pool.o
++#endif
+ 
+ ifeq ($(CONFIG_USB_OHCI_RTL8652),y)
+ 	obj-y	+= host/usb-ohci-rtl8652.o

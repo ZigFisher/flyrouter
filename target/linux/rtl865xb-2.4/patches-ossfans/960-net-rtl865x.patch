@@ -1,0 +1,220 @@
+diff --git a/net/ipv4/tcp_output.c b/net/ipv4/tcp_output.c
+index fcf42c3..4187137 100644
+--- a/net/ipv4/tcp_output.c
++++ b/net/ipv4/tcp_output.c
+@@ -265,7 +265,6 @@ int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb)
+ 
+ 			TCP_ECN_send(sk, tp, skb, tcp_header_size);
+ 		}
+-		tp->af_specific->send_check(sk, th, skb->len, skb);
+ 
+ 		if (tcb->flags & TCPCB_FLAG_ACK)
+ 			tcp_event_ack_sent(sk);
+@@ -274,7 +273,18 @@ int tcp_transmit_skb(struct sock *sk, struct sk_buff *skb)
+ 			tcp_event_data_sent(tp, skb);
+ 
+ 		TCP_INC_STATS(TcpOutSegs);
++#ifdef CONFIG_RTL865XB_SW_LSO	
++		//disable software checksum calculate 2005/3
++		if((!sk->route_caps&NETIF_F_NO_CSUM) || (sk->saddr==sk->daddr) || sk->saddr==0x7f000001 || sk->daddr==0x7f000001)
++#endif			
++		tp->af_specific->send_check(sk, th, skb->len, skb);
+ 
++
++//#ifdef CONFIG_RTL865XB_SW_LSO	
++#if 0
++		// let rome_driver know the data length of the skb 2005/3
++		skb->data_len=skb->len-tcp_header_size;
++#endif
+ 		err = tp->af_specific->queue_xmit(skb, 0);
+ 		if (err <= 0)
+ 			return err;
+@@ -512,9 +522,13 @@ int tcp_sync_mss(struct sock *sk, u32 pmtu)
+ 	mss_now = pmtu - tp->af_specific->net_header_len - sizeof(struct tcphdr);
+ 
+ 	/* Clamp it (mss_clamp does not include tcp options) */
++#ifdef CONFIG_RTL865XB_SW_LSO
++	tp->mss_clamp=65535;
++#endif
+ 	if (mss_now > tp->mss_clamp)
+ 		mss_now = tp->mss_clamp;
+ 
++
+ 	/* Now subtract optional transport overhead */
+ 	mss_now -= tp->ext_header_len;
+ 
+@@ -525,9 +539,14 @@ int tcp_sync_mss(struct sock *sk, u32 pmtu)
+ 	/* Now subtract TCP options size, not including SACKs */
+ 	mss_now -= tp->tcp_header_len - sizeof(struct tcphdr);
+ 
++#ifdef CONFIG_RTL865XB_SW_LSO
++	if(mss_now>CONFIG_RTL865XB_PS_MSS)
++		mss_now=CONFIG_RTL865XB_PS_MSS;
++#else
+ 	/* Bound mss with half of window */
+ 	if (tp->max_window && mss_now > (tp->max_window>>1))
+ 		mss_now = max((tp->max_window>>1), 68U - tp->tcp_header_len);
++#endif	
+ 
+ 	/* And store cached results */
+ 	tp->pmtu_cookie = pmtu;
+@@ -1175,7 +1194,11 @@ static inline void tcp_connect_init(struct sock *sk)
+ 	if (tp->user_mss)
+ 		tp->mss_clamp = tp->user_mss;
+ 	tp->max_window = 0;
++#ifdef CONFIG_RTL865XB_SW_LSO
++	tcp_sync_mss(sk, 65535);  //2005/03/30
++#else
+ 	tcp_sync_mss(sk, dst->pmtu);
++#endif
+ 
+ 	if (!tp->window_clamp)
+ 		tp->window_clamp = dst->window;
+diff --git a/net/ipv4/tcp_ipv4.c b/net/ipv4/tcp_ipv4.c
+index 1d89d5f..6ee3d7e 100644
+--- a/net/ipv4/tcp_ipv4.c
++++ b/net/ipv4/tcp_ipv4.c
+@@ -1789,7 +1789,15 @@ no_tcp_socket:
+ bad_packet:
+ 		TCP_INC_STATS_BH(TcpInErrs);
+ 	} else {
++/*+++joel for i/o data the device do not response tcp-rst when we have no this port server.*/
++/*from symatic security client suggest the port 113 do not steal it,others steal tcp-syn if no service.*/
++#ifdef ALPHA_TCP_SYN_STEALTH
++			if(ntohs(skb->h.th->dest)==113)
++			tcp_v4_send_reset(skb);
++#else
+ 		tcp_v4_send_reset(skb);
++#endif	
++//---	
+ 	}
+ 
+ discard_it:
+diff --git a/net/ipv4/tcp.c b/net/ipv4/tcp.c
+index bfc0f87..ee463e2 100644
+--- a/net/ipv4/tcp.c
++++ b/net/ipv4/tcp.c
+@@ -962,9 +962,15 @@ tcp_copy_to_page(struct sock *sk, char *from, struct sk_buff *skb,
+ {
+ 	int err = 0;
+ 	unsigned int csum;
++#ifdef CONFIG_RTL865XB_SW_LSO	
++	if((sk->route_caps&NETIF_F_NO_CSUM)&&(sk->saddr!=sk->daddr) && sk->saddr==0x7f000001 && sk->daddr==0x7f000001)
++	{
++		memcpy(page_address(page)+off,from,copy);		
++	}
++	else
++#endif		
++		csum = csum_and_copy_from_user(from, page_address(page)+off, copy, 0, &err);
+ 
+-	csum = csum_and_copy_from_user(from, page_address(page)+off,
+-				       copy, 0, &err);
+ 	if (!err) {
+ 		if (skb->ip_summed == CHECKSUM_NONE)
+ 			skb->csum = csum_block_add(skb->csum, csum, skb->len);
+@@ -980,17 +986,28 @@ tcp_copy_to_page(struct sock *sk, char *from, struct sk_buff *skb,
+ static inline int
+ skb_add_data(struct sk_buff *skb, char *from, int copy)
+ {
+-	int err = 0;
++	
+ 	unsigned int csum;
+ 	int off = skb->len;
++#ifdef CONFIG_RTL865XB_SW_LSO
++	if(skb->ip_summed != CHECKSUM_NONE)
++	{
++		memcpy(skb_put(skb, copy),from,copy);
++		return 0;
++	}
++	else
++	{
++#endif		
++                int err = 0;
++		csum = csum_and_copy_from_user(from, skb_put(skb, copy),copy, 0, &err);
+ 
+-	csum = csum_and_copy_from_user(from, skb_put(skb, copy),
+-				       copy, 0, &err);
+ 	if (!err) {
+ 		skb->csum = csum_block_add(skb->csum, csum, off);
+ 		return 0;
+ 	}
+-
++#ifdef CONFIG_RTL865XB_SW_LSO
++	}
++#endif
+ 	__skb_trim(skb, off);
+ 	return -EFAULT;
+ }
+@@ -1083,6 +1100,9 @@ new_segment:
+ 				/* We have some space in skb head. Superb! */
+ 				if (copy > skb_tailroom(skb))
+ 					copy = skb_tailroom(skb);
++#ifdef CONFIG_RTL865XB_SW_LSO
++				if(sk->route_caps&NETIF_F_NO_CSUM) skb->ip_summed = CHECKSUM_HW;
++#endif				
+ 				if ((err = skb_add_data(skb, from, copy)) != 0)
+ 					goto do_fault;
+ 			} else {
+diff --git a/net/bluetooth/bnep/netdev.c b/net/bluetooth/bnep/netdev.c
+index b0f2495..bb4487a 100644
+--- a/net/bluetooth/bnep/netdev.c
++++ b/net/bluetooth/bnep/netdev.c
+@@ -51,16 +51,42 @@
+ #define BT_DBG( A... )
+ #endif
+ 
+-#define BNEP_TX_QUEUE_LEN 20
++#define BNEP_TX_QUEUE_LEN 40 //20
++
++static unsigned long linknum; //+++ add by siyou 2005/4/12 11:56上午 ---//
++#define VLAN_ID		9
++#define EXT_PORT	6
++//+++ add by siyou 2005/4/12 12:10下午
++void alpha_netif_rx(struct sk_buff *skb)
++{
++	if ( 0 != rtl8651_fwdEngineExtPortRecv(skb, skb->data, skb->len, VLAN_ID, 1<<EXT_PORT, linknum) )
++		 dev_kfree_skb(skb);
++}
++//--- add by siyou 2005/4/12 12:10下午
++
+ 
+ static int bnep_net_open(struct net_device *dev)
+ {
++	//+++ add by siyou 2005/4/12 11:53上午
++	if(0!=devglue_regExtDevice(dev->name, VLAN_ID, EXT_PORT, &linknum))
++		printk("XXX Can't register a link ID for device %s on extPort 0x%x!!!\n", dev->name,EXT_PORT );
++	else
++		printk("Device %s on vlan ID  using Link ID %d. Ext port is %d\n", dev->name, linknum, EXT_PORT);
++	//--- add by siyou 2005/4/12 11:53上午
++	
+ 	netif_start_queue(dev);
+ 	return 0;
+ }
+ 
+ static int bnep_net_close(struct net_device *dev)
+ {
++	//+++ add by siyou 2005/4/12 11:53上午
++	if(0!=devglue_unregExtDevice(linknum))
++		printk("XXX Can't unregister a link ID for device %s on extPort 0x%x!!!\n", dev->name,6 );
++	else
++		printk("Device %s on vlan ID  using Link ID %d was unregistered.\n", dev->name,  linknum, 6);
++	//--- add by siyou 2005/4/12 11:53上午
++	
+ 	netif_stop_queue(dev);
+ 	return 0;
+ }
+diff --git a/net/bluetooth/bnep/core.c b/net/bluetooth/bnep/core.c
+index a9cfae9..31c730c 100644
+--- a/net/bluetooth/bnep/core.c
++++ b/net/bluetooth/bnep/core.c
+@@ -365,6 +365,10 @@ static inline int bnep_rx_frame(struct bnep_session *s, struct sk_buff *skb)
+ 	
+ 	s->stats.rx_packets++;
+ 	nskb->dev       = dev;
++	//+++ add by siyou 2005/4/12 12:14下午
++	alpha_netif_rx(nskb);
++	return 0;
++	//--- add by siyou 2005/4/12 12:14下午
+ 	nskb->ip_summed = CHECKSUM_UNNECESSARY;
+ 	nskb->protocol  = eth_type_trans(nskb, dev);
+ 	netif_rx_ni(nskb);

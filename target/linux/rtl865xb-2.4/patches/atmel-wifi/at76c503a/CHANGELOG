@@ -1,0 +1,45 @@
+$Id: CHANGELOG,v 1.3 2003/07/11 20:53:32 jal2 Exp $
+
+- added switch to cope with Intersil firmware 0.84.0 which does
+  not send FCS in rx data
+- new module at76c503-rfmd-acc.o for SMC2664W, which got RMFD radio,
+  but need a special firmware (Accton OEM products).
+- added regulatory domains MKK1 and Israel
+- added rudimentary ethtool support for SuSE's future hotplug
+- added nickname ioctl for iwconfig
+- added test of valid channel in reg. domain
+- added big endian patch (by Kevin Cernekee), changed defines in
+  ieee802_11.h
+- supress unsupported iwconfig modes (monitor, master) - patch by
+  Pavel Roskin
+
+version 0.10 (2003-06-01)
+------------
+- added iwpriv commands to set scan channel times,
+  scan mode; added module parameters for all iwpriv
+  commands
+- debug output is now controlled by a bit mask,
+  see DBG_* defines in at76c503.c
+- added tx data padding (Stavros advised to do so)
+- added rx data fragmentation support
+- added power management support
+- new iwpriv cmd "list_bss" to dump the current bss table
+  to syslog
+- fixed error when the driver gets reloaded and
+  the device kept powered for firmware 0.100.x, 1.101.y
+- fixed hanging of SMP kernels
+- new params set with iwconfig get active immediately,
+  no need to bring the netdevice down/up anymore
+- bss table is no longer limited in size (solves problem
+  at crowded places, e.g. CeBIT), old entries get removed
+- added iwspy support
+- Tim's "link level patch"
+- added iwpriv commands for preamble type
+- added shared secret authentication (incl. iwpriv command)
+- support hidden SSID, fixed bug with ANY SSID
+- Alex' "first phase of rx optimization" patch (email 2003-02-23)
+- Alex' deprecation patch (email 2003-02-21)
+
+version 0.9 (2003-03-21)
+-----------
+- taken from Oliver's website

@@ -1,0 +1,167 @@
+diff --git a/init/do_mounts.c b/init/do_mounts.c
+index cbdee28..d670793 100644
+--- a/init/do_mounts.c
++++ b/init/do_mounts.c
+@@ -276,10 +245,7 @@ kdev_t __init name_to_kdev_t(char *line)
+ 			dev++;
+ 		} while (dev->name);
+ 	}
+-	offs = simple_strtoul(line, &end, base?10:16);
+-	if (*end)
+-		offs = 0;
+-	return to_kdev_t(base + offs);
++	return to_kdev_t(base + simple_strtoul(line,NULL,base?10:16));
+ }
+ 
+ static int __init root_dev_setup(char *line)
+@@ -360,7 +326,6 @@ retry:
+ 				flags |= MS_RDONLY;
+ 				goto retry;
+ 			case -EINVAL:
+-		        case -EBUSY:
+ 				continue;
+ 		}
+ 	        /*
+@@ -901,7 +858,9 @@ void prepare_namespace(void)
+ 	sys_mkdir("/dev", 0700);
+ 	sys_mkdir("/root", 0700);
+ 	sys_mknod("/dev/console", S_IFCHR|0600, MKDEV(TTYAUX_MAJOR, 1));
+-#ifdef CONFIG_DEVFS_FS
++
++//cfliu: Mark this out. This is temporarily for testing devfs. We don't want devfs be mounted when boot up.
++#if 0//def CONFIG_DEVFS_FS
+ 	sys_mount("devfs", "/dev", "devfs", 0, NULL);
+ 	do_devfs = 1;
+ #endif
+diff --git a/init/main.c b/init/main.c
+index 00cbdb6..18c8a88 100644
+--- a/init/main.c
++++ b/init/main.c
+@@ -81,7 +81,11 @@ extern int irda_device_init(void);
+  * with a gcc that is known to be too old from the very beginning.
+  */
+ #if __GNUC__ < 2 || (__GNUC__ == 2 && __GNUC_MINOR__ < 91)
++#if !defined(CONFIG_V850E) && !defined(CONFIG_NIOS)
+ #error Sorry, your GCC is too old. It builds incorrect kernels.
++#else
++#warning Sorry, your GCC is too old. It builds incorrect kernels.
++#endif
+ #endif
+ 
+ extern char _stext, _etext;
+@@ -167,6 +171,46 @@ void __init calibrate_delay(void)
+ 	unsigned long ticks, loopbit;
+ 	int lps_precision = LPS_PREC;
+ 
++#ifdef FIXED_BOGOMIPS
++	int bogus;
++
++/* FIXED_BOGOMIPS converted to __delay units.  */
++#define FIXED_LOOPS_PER_JIFFY	(unsigned long)(FIXED_BOGOMIPS * (500000 / HZ))
++
++/* The maximum error in FIXED_LOOPS_PER_JIFFY that we will tolerate.  */
++#define FIXED_LPJ_TOLERANCE	(unsigned long)(FIXED_LOOPS_PER_JIFFY * 0.10)
++
++	/* Make sure fixed delay - T% is zero ticks.  */
++	ticks = jiffies;
++	while (ticks == jiffies) /* Synchronize with start of tick */
++		/* nothing */;
++	ticks = jiffies;
++	__delay(FIXED_LOOPS_PER_JIFFY - FIXED_LPJ_TOLERANCE);
++	bogus = (jiffies != ticks);
++
++	if (! bogus) {
++		/* Make sure fixed delay + T% is one tick.  The delay here
++		   is very short because we're actually continuing timing from
++		   the tick synchronization above (we don't resynchronize).  */
++		__delay(2 * FIXED_LPJ_TOLERANCE);
++		bogus = (jiffies != ticks + 1);
++	}
++	
++	if (! bogus) {
++		/* Use the precomputed value.  */
++		loops_per_jiffy = FIXED_LOOPS_PER_JIFFY;
++		printk("Delay loop constant: %lu.%02lu BogoMIPS (precomputed)\n",
++		       (unsigned long)FIXED_BOGOMIPS,
++		       ((unsigned long)(FIXED_BOGOMIPS * 100)) % 100);
++		return;
++	} else {
++		printk("Precomputed BogoMIPS value (%lu.%02lu) inaccurate!\n",
++		       (unsigned long)FIXED_BOGOMIPS,
++		       ((unsigned long)(FIXED_BOGOMIPS * 100)) % 100);
++		/* ... and fall through to normal bogomips calculation.  */
++	}
++#endif /* FIXED_BOGOMIPS */
++
+ 	loops_per_jiffy = (1<<12);
+ 
+ 	printk("Calibrating delay loop... ");
+@@ -354,6 +398,7 @@ asmlinkage void __init start_kernel(void)
+ {
+ 	char * command_line;
+ 	extern char saved_command_line[];
++
+ /*
+  * Interrupts are still disabled. Do necessary setups, then
+  * enable them
+@@ -545,9 +590,33 @@ static void __init do_basic_setup(void)
+ #endif
+ }
+ 
++#ifdef CONFIG_RTL865X
++int _chip_is_shared_pci_mode(){
++	if(0==(*((volatile unsigned int *)0xbc805030)&0x80000000)){
++		#ifdef CONFIG_PCI
++			goto maybe8650B_208;
++		#else
++			return 0;
++		#endif
++	}
++maybe8650B_208:
++	if(0x05005788==(*((volatile unsigned int *)0xbc805104)&0x07f0ffff)){
++		//chip is 8650B 208 package with PCI bonding and PCI kernel option is enabled.
++		return 1;
++	}
++	return 0;
++}
++#endif
++
++
++static char rtl865x_uart1[]={"uart1"};
+ static void run_init_process(char *init_filename)
+ {
+ 	argv_init[0] = init_filename;
++#ifdef CONFIG_RTL865X
++	if(_chip_is_shared_pci_mode())
++		argv_init[1]=rtl865x_uart1;
++#endif
+ 	execve(init_filename, argv_init, envp_init);
+ }
+ 
+@@ -578,7 +647,25 @@ static int init(void * unused)
+ 	if(unshare_files())
+ 		panic("unshare");
+ 	put_files_struct(files);
+-	
++
++#ifdef CONFIG_RTL865X
++        if(_chip_is_shared_pci_mode()){
++//+++Modify by shiang for devfs support 2004/10/20
++#ifdef CONFIG_DEVFS_FS
++	//shiang: we need to change the tty name as "tts/1" when devfs enabled.
++                if (open("/dev/tts/1", O_RDWR, 0) < 0)
++                        printk("Warning: unable to open an initial console.\n");
++                else
++                        printk("initial console created on /dev/tts/1\n");
++#else  //shiang: original code
++		if (open("/dev/ttyS1", O_RDWR, 0) < 0)
++                        printk("Warning: unable to open an initial console.\n");
++                else
++                        printk("initial console created on /dev/ttyS1\n");
++#endif
++//---Modify by shiang for devfs support 2004/10/20
++        }else
++#endif
+ 	if (open("/dev/console", O_RDWR, 0) < 0)
+ 		printk("Warning: unable to open an initial console.\n");
+ 

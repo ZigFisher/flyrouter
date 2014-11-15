@@ -1,0 +1,13 @@
+diff --git a/lib/inflate.c b/lib/inflate.c
+index 771d227..5d1b5da 100644
+--- a/lib/inflate.c
++++ b/lib/inflate.c
+@@ -996,7 +996,7 @@ STATIC int inflate()
+ 
+   /* return success */
+ #ifdef DEBUG
+-  fprintf(stderr, "<%u> ", h);
++  printk("<%u> ", h);
+ #endif /* DEBUG */
+   return 0;
+ }

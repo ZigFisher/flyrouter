@@ -1,0 +1,2035 @@
+Index: linux-2.4.27/CREDITS
+===================================================================
+--- linux-2.4.27.orig/CREDITS	2004-08-08 03:26:04.000000000 +0400
++++ linux-2.4.27/CREDITS	2008-03-21 14:35:41.000000000 +0300
+@@ -157,6 +157,14 @@
+ S: Calgary, Alberta
+ S: Canada
+ 
++N: Miles Bader
++E: miles@gnu.org
++D: v850 port (uClinux)
++S: NEC Corporation
++S: 1753 Shimonumabe, Nakahara-ku
++S: Kawasaki 211-8666
++S: Japan
++
+ N: Ralf Baechle
+ E: ralf@gnu.org
+ P: 1024/AF7B30C1 CF 97 C2 CC 6D AE A7 FE  C8 BA 9C FC 88 DE 32 C3
+Index: linux-2.4.27/Documentation/Configure.help
+===================================================================
+--- linux-2.4.27.orig/Documentation/Configure.help	2004-08-08 03:26:04.000000000 +0400
++++ linux-2.4.27/Documentation/Configure.help	2008-03-21 14:35:41.000000000 +0300
+@@ -2672,6 +2672,13 @@
+   byte order. These modes require different kernels. Say Y if your
+   machine is little endian, N if it's a big endian machine.
+ 
++Generate big endian code
++CONFIG_CPU_BIG_ENDIAN
++  Some ARM machines can be configured for either little or big endian
++  byte order. These modes require different kernels. Say Y if your
++  machine is big endian (like the ARM7TDMI based S3C3410x from 
++  Samsung), N if it's a little endian machine.
++
+ Use power LED as a heartbeat
+ CONFIG_HEARTBEAT
+   Use the power-on LED on your machine as a load meter.  The exact
+@@ -2806,6 +2813,41 @@
+   If you want to compile it as a module, say 'M' here and read
+   Documentation/modules.txt.  If unsure, say 'N'.
+ 
++PPTP conntrack and NAT support
++CONFIG_IP_NF_PPTP
++  This module adds support for PPTP (Point to Point Tunnelling Protocol, 
++  RFC2637) conncection tracking and NAT. 
++
++  If you are running PPTP sessions over a stateful firewall or NAT box,
++  you may want to enable this feature.  
++
++  Please note that not all PPTP modes of operation are supported yet.
++  For more info, read top of the file net/ipv4/netfilter/ip_conntrack_pptp.c
++
++  If you want to compile it as a module, say M here and read
++  Documentation/modules.txt.  If unsure, say `N'.
++
++GRE protocol conntrack and NAT support
++CONFIG_IP_NF_CT_PROTO_GRE
++  This module adds generic support for connection tracking and NAT of the
++  GRE protocol (RFC1701, RFC2784).  Please note that this will only work
++  with GRE connections using the key field of the GRE header.
++
++  You will need GRE support to enable PPTP support.
++
++  If you want to compile it as a module, say `M' here and read
++  Documentation/modules.txt.  If unsire, say `N'.
++
++H.323 (netmeeting) support
++CONFIG_IP_NF_H323
++  H.323 is a standard signalling protocol used by teleconferencing
++  softwares like netmeeting. With the ip_conntrack_h323 and
++  the ip_nat_h323 modules you can support the protocol on a connection
++  tracking/NATing firewall.
++
++  If you want to compile it as a module, say 'M' here and read
++  Documentation/modules.txt.  If unsure, say 'N'.
++
+ TFTP protocol support
+ CONFIG_IP_NF_TFTP
+   TFTP connection tracking helper, this is required depending
+@@ -6163,6 +6205,15 @@
+   operating on your network. Read <file:Documentation/nfsroot.txt> for
+   details.
+ 
++ARP Limiting
++CONFIG_NET_ARP_LIMIT
++  Limits the maximum number of active MAC addresses in the kernel ARP
++  cache.
++  This is to restrict the number of clients that can use the computer
++  as a gateway.  This solution is not entirely exact, as it will still
++  respond to different ARP requests in different circumstances, but
++  will only reliably talk to the specified maximum number
++
+ IP tunneling
+ CONFIG_NET_IPIP
+   Tunneling means encapsulating data of one protocol type within
+@@ -7612,6 +7663,59 @@
+   the performances of the driver, and the size of your syslog files!
+   Keep the debugging level to 0 during normal operations.
+ 
++IP Security Protocol (IPSEC) (EXPERIMENTAL)
++CONFIG_IPSEC
++  This unit is experimental code.
++  Pick 'y' for static linking, 'm' for module support or 'n' for none.
++  This option adds support for network layer packet encryption and/or
++  authentication with participating hosts.  The standards start with:
++  RFCs 2411, 2407 and 2401.  Others are mentioned where they refer to
++  specific features below.  There are more pending which can be found
++  at:  ftp://ftp.ietf.org/internet-drafts/draft-ietf-ipsec-*.
++  A description of each document can also be found at: 
++  http://ietf.org/ids.by.wg/ipsec.html.
++  Their charter can be found at: 
++  http://www.ietf.org/html.charters/ipsec-charter.html
++  Snapshots and releases of the current work can be found at: 
++  http://www.freeswan.org/
++
++IPSEC: IP-in-IP encapsulation
++CONFIG_IPSEC_IPIP
++  This option provides support for tunnel mode IPSEC.  It is recommended
++  to enable this.
++
++IPSEC: Authentication Header
++CONFIG_IPSEC_AH
++  This option provides support for the IPSEC Authentication Header
++  (IP protocol 51) which provides packet layer sender and content
++  authentication.  It is recommended to enable this.  RFC2402
++
++HMAC-MD5 algorithm
++CONFIG_IPSEC_AUTH_HMAC_MD5
++  Provides support for authentication using the HMAC MD5
++  algorithm with 96 bits of hash used as the authenticator.  RFC2403
++
++HMAC-SHA1 algorithm
++CONFIG_IPSEC_AUTH_HMAC_SHA1
++  Provides support for Authentication Header using the HMAC SHA1
++  algorithm with 96 bits of hash used as the authenticator.  RFC2404
++
++IPSEC: Encapsulating Security Payload
++CONFIG_IPSEC_ESP
++  This option provides support for the IPSEC Encapsulation Security
++  Payload (IP protocol 50) which provides packet layer content
++  hiding.  It is recommended to enable this.  RFC2406
++
++3DES algorithm
++CONFIG_IPSEC_ENC_3DES
++  Provides support for Encapsulation Security Payload protocol, using
++  the triple DES encryption algorithm.  RFC2451
++
++IPSEC Debugging Option
++CONFIG_IPSEC_DEBUG
++  Enables IPSEC kernel debugging.  It is further controlled by the
++  user space utility 'klipsdebug'.
++
+ ForeRunner HE Series
+ CONFIG_ATM_HE
+   This is a driver for the Marconi ForeRunner HE-series ATM adapter
+@@ -11813,6 +11917,22 @@
+   say M here and read Documentation/modules.txt. This is recommended.
+   The module will be called 8139cp.o.
+ 
++Support for external PHY's on RTL-8139C+.
++CONFIG_8139CP_EXTERNAL_PHY
++  If you want to have access to external PHY's, then enable this.  Unless
++  you also change CONFIG_8139CP_PHY_NUM, then you will continue using the
++  internal PHY.
++
++  It is unlikely you want to change this.
++
++Which PHY should the RTL-8139C+ MAC use.
++CONFIG_8139CP_PHY_NUM
++  If you have the MAC hooked up to some external PHY's then you might want
++  to use one besides the internal one.  The internal PHY is 32.
++
++  If you don't know what you are doing, it is unlikely you want to change
++  this.
++
+ RealTek RTL-8139 PCI Fast Ethernet Adapter support
+ CONFIG_8139TOO
+   This is a driver for the Fast Ethernet PCI network cards based on
+@@ -14106,6 +14226,14 @@
+   <linux-mtd@lists.infradead.org> if you want to help to make it more
+   reliable.
+ 
++INFTL (Inverse Flash Translation Layer) support
++CONFIG_INFTL
++  This provides support for the Inverse NAND Flash Translation Layer which
++  is used on M-Systems' DiskOnChip devices (in particular the newer
++  Millennium Plus parts). It uses a kind of pseudo filesystem on a flash
++  device to emulate a block device with 512-byte sectors, on top of which
++  you put a 'normal' file system.
++ 
+ Detect flash chips by Common Flash Interface (CFI) probe
+ CONFIG_MTD_CFI
+   The Common Flash Interface specification was developed by Intel,
+@@ -14599,6 +14727,16 @@
+   <file:Documentation/modules.txt>. The module will be called
+   doc2001.o
+ 
++Millennium Plus support
++CONFIG_MTD_DOC2001PLUS
++  This is a driver for the M-Systems DiskOnChip Millennium Plus
++  devices.
++  
++  If you use this device, you probably also want to enable the NFTL
++  'NAND Flash Translation Layer' option below, which is used to
++  emulate a block device by using a kind of file system on the flash
++  chips.
++
+ Probe for DiskOnChip devices
+ CONFIG_MTD_DOCPROBE
+   This isn't a real config option, it's derived.
+@@ -17234,34 +17372,61 @@
+ 
+ NTFS file system support (read-only)
+ CONFIG_NTFS_FS
+-  NTFS is the file system of Microsoft Windows NT. Say Y if you want
+-  to get read access to files on NTFS partitions of your hard drive.
+-  The Linux NTFS driver supports most of the mount options of the VFAT
+-  driver, see <file:Documentation/filesystems/ntfs.txt>. Saying Y here
+-  will give you read-only access to NTFS partitions.
++  NTFS is the file system of Microsoft Windows NT/2000/XP. For more
++  information see <file:Documentation/filesystems/ntfs.txt>. Saying Y
++  here would allow you to read from NTFS partitions.
+ 
+-  This code is also available as a module ( = code which can be
++  This file system is also available as a module ( = code which can be
+   inserted in and removed from the running kernel whenever you want).
+   The module will be called ntfs.o. If you want to compile it as a
+   module, say M here and read <file:Documentation/modules.txt>.
+ 
+-NTFS write support (DANGEROUS)
++  If you are not using Windows NT/2000/XP in addition to Linux on your
++  computer it is safe to say N.
++
++CONFIG_NTFS_DEBUG
++  If you are experiencing any problems with the NTFS file system, say
++  Y here. This will result in additional consistency checks to be
++  performed by the driver as well as additional debugging messages to
++  be written to the system log. Note that debugging messages are
++  disabled by default. To enable them, supply the option debug_msgs=1
++  at the kernel command line when booting the kernel or as an option
++  to insmod when loading the ntfs module. Once the driver is active,
++  you can enable debugging messages by doing (as root):
++    echo 1 > /proc/sys/fs/ntfs-debug
++  Replacing the "1" with "0" would disable debug messages.
++
++  If you leave debugging messages disabled, this results in little
++  overhead, but enabling debug messages results in very significant
++  slowdown of the system.
++
++  When reporting bugs, please try to have available a full dump of
++  debugging messages while the misbehaviour was occurring.
++
+ CONFIG_NTFS_RW
+-  If you say Y here, you will (maybe) be able to write to NTFS file
+-  systems as well as read from them. The read-write support in NTFS
+-  is far from being complete and is not well tested. If you say Y
+-  here, back up your NTFS volume first, since it will probably get
+-  damaged. Also, download the Linux-NTFS project distribution from
+-  Sourceforge at <http://linux-ntfs.sf.net/> and always run the
+-  included ntfsfix utility after writing to an NTFS partition from
+-  Linux to fix some of the damage done by the driver. You should run
+-  ntfsfix _after_ unmounting the partition in Linux but _before_
+-  rebooting into Windows. When Windows next boots, chkdsk will be
+-  run automatically to fix the remaining damage.
+-  Please note that write support is limited to Windows NT4 and
+-  earlier versions.
++  This enables the partial, but safe, write support in the NTFS driver.
+ 
+-  If unsure, say N.
++  The only supported operation is overwriting existing files, without
++  changing the file length.  No file or directory creation, deletion or
++  renaming is possible.  Note only non-resident files can be written to
++  so you may find that some very small files (<500 bytes or so) cannot
++  be written to.
++
++  While we cannot guarantee that it will not damage any data, we have
++  so far not received a single report where the driver would have
++  damaged someones data so we assume it is perfectly safe to use.
++
++  Note:  While write support is safe in this version (a rewrite from
++  scratch of the NTFS support), it should be noted that the old NTFS
++  write support, is not safe.
++
++  This is currently useful with TopologiLinux.  TopologiLinux is run
++  on top of any DOS/Microsoft Windows system without partitioning your
++  hard disk.  Unlike other Linux distributions TopologiLinux does not
++  need its own partition.  For more information see
++  <http://topologi-linux.sourceforge.net/>
++
++  It is perfectly safe to say N here.
+ 
+ System V/Xenix/V7/Coherent file system support
+ CONFIG_SYSV_FS
+@@ -19326,6 +19491,27 @@
+   <file:Documentation/modules.txt>.
+   The module will be called i2c-velleman.o.
+ 
++Motorla Coldfire GPIO adapter
++CONFIG_I2C_MCF_GPIO
++  This driver supports using a pair of GPIO pins on the Motorola 
++  Coldfire series of microcontrollers as an I2C adapter.  Say Y if 
++  you have need for an I2C interface on such a processor.  You will 
++  be further prompted to select which GPIO pins will be used for 
++  I2C data (SDA) and I2C clock (SCL).
++  
++  Currently, this driver supports the MCF5204, MCF5206, MCF5206e, 
++  MCF5249, MCF5272, MCF5307, and MCF5407 processors.  The MCF5282 
++  is not currently supported.
++
++  This driver has only undergone basic testing on MCF5272 hardware.  
++  Please be aware that issues may be present when attempting to use 
++  this driver with untested processors.
++  
++  This support is also available as a module.  If you want to compile
++  it as a module, say M here and read
++  <file:Documentation/modules.txt>.
++  The module will be called i2c-adap-mcf_gpio.o.
++  
+ I2C PCF 8584 interfaces
+ CONFIG_I2C_ALGOPCF
+   This allows you to use a range of I2C adapters called PCF adapters.
+@@ -20409,6 +20595,18 @@
+   get killed. If you say Y here, the watchdog cannot be stopped once
+   it has been started.
+ 
++Triscend A7 Watchdog timer
++CONFIG_TA7_WDT
++  If you would like to add support for the Triscend A7 watchdog
++  device, say Y here, otherwise N. The watchdog device remains
++  disabled until the first time data is written to it. The watchdog
++  can be pinged, stopped, started, or have its timeout value changed
++  using ioctl calls. The watchdog timeout specified should be in
++  clock cycles. Reading from the watchdog device returns 4 bytes
++  containing the watchdogs current value. Writing to the watchdog
++  device is the equivalent of pinging it. If the watchdog is not
++  pinged within the timeout period, the A7 is reset.
++
+ WDT Watchdog timer
+ CONFIG_WDT
+   If you have a WDT500P or WDT501P watchdog board, say Y here,
+@@ -22235,6 +22433,16 @@
+   hardware debugging with a logic analyzer and need to see all traffic
+   on the bus.
+ 
++AU1000 serial console
++CONFIG_AU1000_SERIAL_CONSOLE
++  If you have an Alchemy AU1000 processor (MIPS based) and you want
++  to use a console on a serial port, say Y.  Otherwise, say N.
++
++AU1000 serial support
++CONFIG_AU1000_UART
++  If you have an Alchemy AU1000 processor (MIPS based) and you want
++  to use serial ports, say Y.  Otherwise, say N.
++
+ AU1000 ethernet controller on SGI MIPS system
+ CONFIG_MIPS_AU1000_ENET
+   If you have an Alchemy Semi AU1000 ethernet controller
+@@ -25950,6 +26158,57 @@
+   Say Y if you want support for the SA-110 processor.
+   Otherwise, say N.
+ 
++NET+ARM Processor type
++CONFIG_NETARM_NET15
++  The NET+ARM(tm) processor family by NETsilicon(R) is an
++  implementation of the ARM7TDMI architecture, with some integrated
++  peripherals for serial, parallel and ethernet interfaces. These
++  chips differ in cache, speed and other capabilities.
++  Please select your processor type.
++
++NET+ARM NET+40 board Rev2
++CONFIG_NETARM_NET40_REV2
++  This refers to the NET+40 board revision, not processor version.
++  The board can have different DRAM configurations, Rev. 2 uses one
++  bank of SDRAM.
++  If unsure, say N.
++
++NET+ARM NET+40 board Rev4
++CONFIG_NETARM_NET40_REV4
++  This refers to the NET+40 board revision, not processor version.
++  The board can have different DRAM configurations, Rev. 4 uses two
++  banks of FastPage or EDO DRAM.
++  If unsure, say Y.
++
++NET+ARM PLL Bypass Patch
++CONFIG_NETARM_PLL_BYPASS
++  Say Y here if your NetARM is set to PLL bypass mode, i.e. the
++  PLLTST* input is driven low and the system clock is provided
++  by an external TTL oscillator.
++  This was necessary for some early revisions of the Net+40 chip,
++  where the internal PLL did not work properly. It is also used
++  on the NETsilicon NET+40 development board (at least on the
++  one I know).
++  If unsure, say N.
++
++NET+ARM EMLIN Board
++CONFIG_NETARM_EMLIN
++  The EMLIN is an in-house prototype of a NetARM board with
++  additional peripherals and slightly different memory layout.
++  Say Y here if you are using one. If unsure, say N.
++
++System uses an external crystal oscillator
++CONFIG_USE_OSC
++  If the system clock is derived from an external crystal oscillator,
++  say Y here, otherwise N. If you say Y here, you will be required to
++  specify the frequency of the oscillator in Hz.
++
++Set flash/sdram size and base addr
++CONFIG_SET_MEM_PARAM
++  If you want to use a memory configuration that differs from
++  the default values, say Y here and enter the parameters in
++  the next 4 fields. If unsure, say N.
++
+ Tulsa
+ CONFIG_SA1100_PFS168
+   The Radisys Corp. PFS-168 (aka Tulsa) is an Intel® StrongArm® SA-1110 based
+@@ -26145,6 +26404,24 @@
+   correct operation of some network protocols. With an IP-only
+   configuration it is safe to say N, otherwise say Y.
+ 
++Attached romfs in RAM
++CONFIG_RAM_ATTACHED_ROMFS
++  Attempts to properly handle an attached romfs by moving it from the
++  start of the bss region to the end of the bss and then reserving it
++  with the rest of kernel memory. This allows it to be used with the
++  Generic uClinux RAM/ROM filesystem support MTD driver selectable via
++  CONFIG_MTD_UCLINUX. This requires support in the entry code in order
++  to work right. 
++  
++  Only implemented for NetARM thus far.
++
++RAM Kernel self loades from ROM
++CONFIG_RELOCATE
++  The kernel runs from RAM,  but is started from ROM.  It copies itself
++  to it's final destination and then starts running from RAM.
++
++  This allows a RAM kernel to be booted from flash on a uCdimm for example.
++  
+ DC21285 serial port support
+ CONFIG_SERIAL_21285
+   If you have a machine based on a 21285 (Footbridge) StrongARM(R)/
+@@ -27693,6 +27970,64 @@
+   To use this option, you have to check that the "/proc file system
+   support" (CONFIG_PROC_FS) is enabled, too.
+ 
++C5471 serial port support
++CONFIG_SERIAL_C5471
++  If you are using a C5471, and want to use /dev/ttyS*, then say Y here.
++  Also, turn off CONFIG_SERIAL. The C5471 does not employ a 16550
++  compatible UART, so the standard Linux serial driver won't work.
++
++C5471 watchdog support
++CONFIG_C5471_WDT
++  If you want watchdog functionality (see CONFIG_WATCHDOG) and you
++  have a C5471 EVM, say Y here, otherwise N.  This will build in
++  watchdog functionality using a C5471 timer.
++
++C5471 general purpose I/O Support
++CONFIG_C5471_GIO
++  If you want support for user-space access to the C5471 general
++  purpose I/O (GIO) pins, say Y here, otherwise N.
++  This will build in the GIO device driver (for /dev/gio[n])
++
++DSC21 serial port support
++CONFIG_SERIAL_DSC21
++  If you are using a DSC21, and want to use /dev/ttyS*, then say Y here.
++  Also, turn off CONFIG_SERIAL. The dsc21 does not employ a 16550
++  compatible UART, so the standard Linux serial driver won't work.
++
++DSC21 serial console support
++CONFIG_SERIAL_DSC21_CONSOLE
++  If you want to have a printk/login console over the DSC21's serial
++  port then say Y here. Note that if you do this, you won't be able
++  to use that port for anything else.
++
++Disable BDM signals
++CONFIG_BDM_DISABLE
++  This option turns off the ColdFire debug module early in the boot process.
++  This helps to reduce the electromagnetic emmissions from the BDM header.
++  Since this is a software disable, it can be prevented via the BDM.
++
++Alternative kernel page allocator
++CONFIG_CONTIGUOUS_PAGE_ALLOC
++  On systems with very little memory,  a power of 2 allocator can
++  rapidly reduce the amount of free memory leaving a lot of that allocated
++  memory unused.  Say you nneed to allocate 34K,  you would actually
++  allocate 64K and waste 28K doing so.  This allocator allocates on 4K
++  boundaries reducing this wastage significantly.  It is perhaps a little
++  slower and can suffer a little more from fragmentation, although in
++  practice it is still better than uses a power of two.  Contact
++  davidm@snapgear.com with any problems usesing this allocator.
++
++Look at memory allocation
++CONFIG_MEM_MAP
++  Provides and entry "/proc/mem_map" that gives you an ascii representation
++  of the page allocations in the kernel,  and what they are being used for.
++
++Reduce kernel task size
++CONFIG_SMALL_TASKS
++  By default,  8K is used for a task in the m68k kernel.  This option
++  reduces it to 4K,  of which approximately 3.2K is kernel stack.  Be
++  warned,  this substantially reduces the kernel stack.
++
+ PPC4xx DMA controller support
+ CONFIG_PPC4xx_DMA
+   Select this to enable support for the PPC4xx general purpose DMA
+@@ -28515,6 +28850,15 @@
+ 
+   If unsure, say N.
+ 
++Printk debugging info on coredump
++CONFIG_COREDUMP_PRINTK
++  When a user process coredumps then we printk a whole lot of information.
++  This is v. useful for debugging.
++
++  If you select this option and the build complains about not being able to
++  find user_stack, then you need to define it in you
++  include/arch/asm-arch/ptrace.h file.
++
+ Hotplug firmware loading support (EXPERIMENTAL)
+ CONFIG_FW_LOADER
+   This option is provided for the case where no in-kernel-tree modules require
+Index: linux-2.4.27/Documentation/README.NetARM
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/Documentation/README.NetARM	2008-03-21 14:35:41.000000000 +0300
+@@ -0,0 +1,90 @@
++
++  Release Notes for the NetARM Version 
++ ======================================
++
++
++This is a port of uClinux to the NetSilicon's NET+ARM processor. It
++has been tested on a NET+40 development kit and on our own board
++named "emlin".
++
++It is not yet finished (by far) and should be seen as something like
++an alpha version.
++
++The kernel can boot from a built-in ramdisk image (download separately,
++or ask me). This image file named "ramdisk.inc" is included by
++arch/armnommu/kernel/head-arm-netarm.S. You can place a symbolic link
++to your actual image file there.
++
++Serial and ethernet drivers are working so far. Ethernet is much more
++stable when the kernel is compiled with the arm-elf toolchain (instead
++of arm-uclinux).
++MTD flash erase and write functions work.
++/proc file system is available.
++Various ethernet functions work (ifconfig, route, nfs).
++
++Most other features are not yet tested.
++
++
++Differences to the CVS repository of uClinux 2.4.17, as of Apr 02, 2002:
++------------------------------------------------------------------------
++new files:
++
++Documentation/README.NetARM (this file)
++include/asm-armnommu/arch-netarm/*
++arch/armnommu/mach-netarm/*
++arch/armnommu/def-configs/netarm
++arch/armnommu/kernel/head-arm-netarm.S	(startup code)
++arch/armnommu/kernel/ramdisk.inc	(symbolic link to a ramdisk image)
++drivers/char/serial_netarm.c	(driver for the NetARM's built-in serial interfaces)
++drivers/net/netarmeth.c		(driver for the NetARM's built-in ethernet controller)
++drivers/net/netarmeth.h
++
++modified files:
++
++Documentation/Configure.help 	(a few new entries)
++Makefile 			(architecture armnommu, cross-compiler arm-elf-)
++arch/armnommu/Makefile 		(new case #if CONFIG_ARCH_NETARM...)
++arch/armnommu/config.in 	(new system type)
++arch/armnommu/kernel/Makefile 
++arch/armnommu/kernel/arch.c 	(NetARM fixup)
++arch/armnommu/kernel/entry-armv.S (NetARM macros)
++arch/armnommu/kernel/setup.c 
++arch/armnommu/mm/fault-common.c 
++arch/armnommu/mm/init.c 	(special treatment for NetARM in free_initmem)
++arch/armnommu/mm/proc-arm6,7.S 
++arch/armnommu/tools/mach-types 	(replace with recent list from Russel King)
++arch/armnommu/vmlinux-armv.lds.in 
++drivers/block/Config.in 
++drivers/block/rd.c 
++drivers/char/Config.in 
++drivers/char/Makefile 		(added serial_netarm.o)
++drivers/char/tty_io.c 		(added #ifdef CONFIG_SERIAL_NETARM_CONSOLE...)
++drivers/ieee1394/Config.in 	(preparations for a new 1394 driver, not essential)
++drivers/ieee1394/Makefile 	(dto.)
++drivers/mtd/mtdblock.c 		(some more debug output, not essential)
++drivers/mtd/mtdblock_ro.c 	(dto.)
++drivers/mtd/mtdchar.c 		(dto.)
++drivers/net/Config.in 
++drivers/net/Makefile 
++fs/binfmt_flat.c 
++include/asm-armnommu/io.h 
++include/asm-armnommu/mach/dma.h 
++include/asm-armnommu/uaccess.h 
++include/linux/compiler.h 
++mmnommu/bootmem.c 	(invalid address warning in function reserve_bootmem_core)
++------------------------------------------------------------------------
++
++
++To do:
++------
++Rework memory management parameters, so that all RAM is controlled by the
++memory manager (and the ramdisk data can be freed after unpacking).
++Currently the lowest 2 MB are "off limits" for the memory manager.
++
++Implement a "real" boot loader, separate boot loader, kernel, ramdisk image.
++
++
++
++Rolf Peukert
++IMMS gGmbH
++rolf.peukert@imms.de
+Index: linux-2.4.27/Documentation/filesystems/ntfs.txt
+===================================================================
+--- linux-2.4.27.orig/Documentation/filesystems/ntfs.txt	2001-12-21 20:41:53.000000000 +0300
++++ linux-2.4.27/Documentation/filesystems/ntfs.txt	2008-03-21 14:35:41.000000000 +0300
+@@ -1,68 +1,115 @@
+-NTFS Overview
+-=============
++The Linux NTFS filesystem driver
++================================
+ 
+-Legato Systems, Inc. (http://www.legato.com) have sponsored Anton Altaparmakov
+-to develop NTFS on Linux since June 2001.
+ 
+-To mount an NTFS volume, use the filesystem type 'ntfs'. The driver
+-currently works only in read-only mode, with no fault-tolerance supported.
++Table of contents
++=================
++
++- Overview
++- Supported mount options
++- Features
++- Known bugs and (mis-)features
++- Using Software RAID with NTFS
++- Limitiations when using the MD driver
++- ChangeLog
++
++
++Overview
++========
++
++To mount an NTFS 1.2/3.x (Windows NT4/2000/XP) volume, use the filesystem
++type 'ntfs'. The driver currently works only in read-only mode, with no
++fault-tolerance or journalling supported.
++
++For fault tolerance and raid support (i.e. volume and stripe sets), you can use
++the kernel's Software RAID / MD driver. See section "Using Software RAID with
++NTFS" for details.
+ 
+-If you enable the dangerous(!) write support, make sure you can recover
+-from a complete loss of data. Also, download the Linux-NTFS project
+-distribution from Sourceforge at http://sourceforge.net/projects/linux-ntfs/
+-and always run the included ntfsfix utility after performing a write to an
+-NTFS partition from Linux to fix some of the damage done by the Linux NTFS
+-driver and to schedule an automatic chkdsk when Windows reboots. You should
+-run ntfsfix _after_ unmounting the partition in Linux but _before_ rebooting
+-into Windows. During the next reboot into Windows, chkdsk will be run
+-automatically fixing the remaining damage. If no errors are found it is a
+-good indication that the driver + ntfsfix together worked to full
+-satisfaction. (-;
+-
+-Please note that the experimental write support is limited to Windows NT4 and
+-earlier versions at the moment.
+-
+-If you think you have discovered a bug please have look at the "Known bugs"
+-section below to see whether it isn't known already.
+-
+-For ftdisk support, limited success was reported with volume sets on top of
+-the md driver, although mirror and stripe sets should work as well - if the
+-md driver can be talked into using the same layout as Windows NT. However,
+-using the md driver will fail if any of your NTFS partitions have an odd
+-number of sectors.
+ 
+ Supported mount options
+ =======================
+ 
+-iocharset=name		Character set to use when returning file names.
++In addition to the generic mount options described by the manual page for the
++mount command (man 8 mount, also see man 5 fstab), the NTFS driver supports the
++following mount options:
++
++iocharset=name		Deprecated option. Still supported but please use
++			nls=name in the future. See description for nls=name.
++
++nls=name		Character set to use when returning file names.
+ 			Unlike VFAT, NTFS suppresses names that contain
+ 			unconvertible characters. Note that most character
+ 			sets contain insufficient characters to represent all
+ 			possible Unicode characters that can exist on NTFS. To
+ 			be sure you are not missing any files, you are advised
+-			to use the iocharset=utf8 which should be capable of
+-			representing all Unicode characters.
++			to use nls=utf8 which is capable of representing all
++			Unicode characters.
+ 
+-utf8=<bool>		Use UTF-8 for converting file names. - It is preferable
+-			to use iocharset=utf8 instead, but if the utf8 NLS is
+-			not available, you can use this utf8 option, which
+-			enables the driver's builtin utf8 conversion functions.
++utf8=<bool>		Option no longer supported. Currently mapped to
++			nls=utf8 but please use nls=utf8 in the future and
++			make sure utf8 is compiled either as module or into
++			the kernel. See description for nls=name.
+ 
+ uid=
+ gid=
+-umask=			These options work as documented in mount(8).
+-			By default, the files are owned by root and
+-			not readable by anyone else.
+-
+-posix=<bool>		If enabled, the file system distinguishes between
+-			upper and lower case. The 8.3 alias names are presented
+-			as hard links instead of being suppressed.
+-
+-show_sys_files=<bool>	If enabled, show all system files as normal files. Note
+-			that $MFT does not appear unless specifically
+-			requested. For example in bash, use: "ls -l \$MFT".
+-			Be careful not to write anything to them or you could
+-			crash the kernel and/or corrupt your file system!
++umask=			Provide default owner, group, and access mode mask.
++			These options work as documented in mount(8). By
++			default, the files/directories are owned by root and
++			he/she has read and write permissions, as well as
++			browse permission for directories. No one else has any
++			access permissions. I.e. the mode on all files is by
++			default rw------- and for directories rwx------, a
++			consequence of the default fmask=0177 and dmask=0077.
++			Using a umask of zero will grant all permissions to
++			everyone, i.e. all files and directories will have mode
++			rwxrwxrwx.
++
++fmask=
++dmask=			Instead of specifying umask which applies both to
++			files and directories, fmask applies only to files and
++			dmask only to directories.
++
++sloppy=<BOOL>		If sloppy is specified, ignore unknown mount options.
++			Otherwise the default behaviour is to abort mount if
++			any unknown options are found.
++
++show_sys_files=<BOOL>	If show_sys_files is specified, show the system files
++			in directory listings. Otherwise the default behaviour
++			is to hide the system files.
++			Note that even when show_sys_files is specified, "$MFT"
++			will not be visible due to bugs/mis-features in glibc.
++			Further, note that irrespective of show_sys_files, all
++			files are accessible by name, i.e. you can always do
++			"ls -l \$UpCase" for example to specifically show the
++			system file containing the Unicode upcase table.
++
++case_sensitive=<BOOL>	If case_sensitive is specified, treat all file names as
++			case sensitive and create file names in the POSIX
++			namespace. Otherwise the default behaviour is to treat
++			file names as case insensitive and to create file names
++			in the WIN32/LONG name space. Note, the Linux NTFS
++			driver will never create short file names and will
++			remove them on rename/delete of the corresponding long
++			file name.
++			Note that files remain accessible via their short file
++			name, if it exists. If case_sensitive, you will need to
++			provide the correct case of the short file name.
++
++errors=opt		What to do when critical file system errors are found.
++			Following values can be used for "opt":
++			  continue: DEFAULT, try to clean-up as much as
++				    possible, e.g. marking a corrupt inode as
++				    bad so it is no longer accessed, and then
++				    continue.
++			  recover:  At present only supported is recovery of
++				    the boot sector from the backup copy. If a
++				    read-only mount, the recovery is done in
++				    memory only and not written to disk.
++			Note that the options are additive, i.e. specifying:
++			   errors=continue,errors=recover
++			This means the driver will attempt to recover and if
++			that fails it will clean-up as much as possible and
++			continue.
+ 
+ mft_zone_multiplier=	Set the MFT zone multiplier for the volume (this
+ 			setting is not persistent across mounts and can be
+@@ -82,173 +129,264 @@
+ 				2		25%
+ 				3		37.5%
+ 				4		50%
++			Note this option is irrelevant for read-only mounts.
++
++
++Features
++========
++
++- This is a complete rewrite of the NTFS driver that used to be in the kernel.
++  This new driver implements NTFS read support and is functionally equivalent
++  to the old ntfs driver.
++- The new driver has full support for sparse files on NTFS 3.x volumes which
++  the old driver isn't happy with.
++- The new driver supports execution of binaries due to mmap() now being
++  supported.
++- A comparison of the two drivers using:
++	time find . -type f -exec md5sum "{}" \;
++  run three times in sequence with each driver (after a reboot) on a 1.4GiB
++  NTFS partition, showed the new driver to be 20% faster in total time elapsed
++  (from 9:43 minutes on average down to 7:53). The time spent in user space
++  was unchanged but the time spent in the kernel was decreased by a factor of
++  2.5 (from 85 CPU seconds down to 33).
++- The driver does not support short file names in general. For backwards
++  compatibility, we implement access to files using their short file names if
++  they exist. The driver will not create short file names however, and a rename
++  will discard any existing short file name.
++
+ 
+ Known bugs and (mis-)features
+ =============================
+ 
+-- Do not use the driver for writing as it corrupts the file system. If you do
+-  use it, get the Linux-NTFS tools and use the ntfsfix utility after
+-  dismounting a partition you wrote to.
++- The link count on each directory inode entry is set to 1, due to Linux not
++  supporting directory hard links. This may well confuse some user space
++  applications, since the directory names will have the same inode numbers.
++  This also speeds up ntfs_read_inode() immensely. And we haven't found any
++  problems with this approach so far. If you find a problem with this, please
++  let us know.
+ 
+-- Writing of extension records is not supported properly.
+ 
+-Please send bug reports/comments/feed back/abuse to the Linux-NTFS development
++Please send bug reports/comments/feedback/abuse to the Linux-NTFS development
+ list at sourceforge: linux-ntfs-dev@lists.sourceforge.net
+ 
++
++Using Software RAID with NTFS
++=============================
++
++For support of volume and stripe sets, use the kernel's Software RAID / MD
++driver and set up your /etc/raidtab appropriately (see man 5 raidtab).
++
++Linear volume sets, i.e. linear raid, as well as stripe sets, i.e. raid level 0,
++have been tested and work fine (though see section "Limitiations when using the
++MD driver with NTFS volumes" especially if you want to use linear raid). Even
++though untested, there is no reason why mirrors, i.e. raid level 1, and stripes
++with parity, i.e. raid level 5, should not work, too.
++
++You have to use the "persistent-superblock 0" option for each raid-disk in the
++NTFS volume/stripe you are configuring in /etc/raidtab as the persistent
++superblock used by the MD driver would damange the NTFS volume.
++
++Windows by default uses a stripe chunk size of 64k, so you probably want the
++"chunk-size 64k" option for each raid-disk, too.
++
++For example, if you have a stripe set consisting of two partitions /dev/hda5
++and /dev/hdb1 your /etc/raidtab would look like this:
++
++raiddev /dev/md0
++	raid-level	0
++	nr-raid-disks	2
++	nr-spare-disks	0
++	persistent-superblock	0
++	chunk-size	64k
++	device		/dev/hda5
++	raid-disk	0
++	device		/dev/hdb1
++	raid-disl	1
++
++For linear raid, just change the raid-level above to "raid-level linear", for
++mirrors, change it to "raid-level 1", and for stripe sets with parity, change
++it to "raid-level 5".
++
++Note for stripe sets with parity you will also need to tell the MD driver which
++parity algorithm to use by specifying the option "parity-algorithm which",
++where you need to replace "which" with the name of the algorithm to use (see
++man 5 raidtab for available algorithms) and you will have to try the different
++available algorithms until you find one that works. Make sure you are working
++read-only when playing with this as you may damage your data otherwise. If you
++find which algorithm works please let us know (email the linux-ntfs developers
++list linux-ntfs-dev@lists.sourceforge.net or drop in on IRC in channel #ntfs
++on the irc.openprojects.net network) so we can update this documentation.
++
++Once the raidtab is setup, run for example raid0run -a to start all devices or
++raid0run /dev/md0 to start a particular md device, in this case /dev/md0.
++
++Then just use the mount command as usual to mount the ntfs volume using for
++example:	mount -t ntfs -o ro /dev/md0 /mnt/myntfsvolume
++
++It is advisable to do the mount read-only to see if the md volume has been
++setup correctly to avoid the possibility of causing damage to the data on the
++ntfs volume.
++
++
++Limitiations when using the MD driver
++=====================================
++
++Using the md driver will not work properly if any of your NTFS partitions have
++an odd number of sectors. This is especially important for linear raid as all
++data after the first partition with an odd number of sectors will be offset by
++one or more sectors so if you mount such a partition with write support you
++will cause massive damage to the data on the volume which will only become
++apparent when you try to use the volume again under Windows.
++
++So when using linear raid, make sure that all your partitions have an even
++number of sectors BEFORE attempting to use it. You have been warned!
++
++
+ ChangeLog
+ =========
+ 
+-NTFS 1.1.21:
+-	- Fixed bug with reading $MFT where we try to read higher mft records
+-	  before having read the $DATA attribute of $MFT. (Note this is only a
+-	  partial solution which will only work in the case that the attribute
+-	  list is resident or non-resident but $DATA is in the first 1024
+-	  bytes. But this should be enough in the majority of cases. I am not
+-	  going to bother fixing the general case until someone finds this to
+-	  be a problem for them, which I doubt very much will ever happen...)
+-	- Fixed bogus BUG() call in readdir().
+-
+-NTFS 1.1.20:
+-	- Fixed two bugs in ntfs_readwrite_attr(). Thanks to Jan Kara for
+-	  spotting the out of bounds one.
+-	- Check return value of set_blocksize() in ntfs_read_super() and make
+-	  use of get_hardsect_size() to determine the minimum block size.
+-	- Fix return values of ntfs_vcn_to_lcn(). This should stop
+-	  peoples start of partition being overwritten at random.
+-
+-NTFS 1.1.19:
+-	- Fixed ntfs_getdir_unsorted(), ntfs_readdir() and ntfs_printcb() to
+-	  cope with arbitrary cluster sizes. Very important for Win2k+. Also,
+-	  make them detect directories which are too large and truncate the
+-	  enumeration pretending end of directory was reached. Detect more
+-	  error conditions and overflows. All this fixes the problem where the
+-	  driver could end up in an infinite loop under certain circumstances.
+-	- Fixed potential memory leaks in Unicode conversion functions and
+-	  setup correct NULL return values.
+-
+-NTFS 1.1.18:
+-
+-	- Enhanced & bug fixed cluster deallocation (race fixes, etc.)
+-	- Complete rewrite of cluster allocation, now race free.
+-	- Fixed several bugs in the attribute modification codepaths.
+-	- Hopefully fixed bug where the first sectors of some people's
+-	  partitions would be overwritten by the mft. And in general fixed up
+-	  mft extension code a bit (still incomplete though).
+-	- Introduce splice_runlist() to allow generic splicing of two run
+-	  lists into one.
+-	- MFT zone is now implemented. [Stage 2 of 3; only lack dynamic
+-	  growing of mft zone but that is AFAIK not even done by Windows, and
+-	  the overhead would be so large that it is probably not worth doing
+-	  at all, so Stage 3 might never happen...]
+-	- Complete rewrite of $MFT extension and ntfs inode allocation code.
+-	- Made the NTFS driver initialization string show the compile options
+-	  used (i.e. whether read-only or read-write, whether a module, and
+-	  whether with debug support).
+-	- Modify ntfs_fill_mft_header() to set all fields and to accept more
+-	  arguments.
+-	- Get rid of superfluous add_mft_header().
+-	- Get rid of some unused code.
+-	- Fixed several bugs in and generally cleaned up ntfs_readdir,
+-	  ntfs_getdir_unsorted(), and ntfs_printcb. Now they spew out huge
+-	  amounts of debug output if debugging is enabled. This will be
+-	  removed once I know that this works for everyone.
+-	- ntfs_readdir now shows hidden files. The only files that are now
+-	  hidden are the first 16 inodes (i.e. the hard coded system files),
+-	  which is consistent with Windows NT4. Using the show_sys_files mount
+-	  option, these files are then shown, too.
+-	- Fixed the displaying of the "." and ".." directories. We still cannot
+-	  cope with more than 65536 files in a directory index block which is
+-	  not a problem and we now cannot cope with more than 32766 directory
+-	  index blocks which should not be a problem unless you have a
+-	  directory with an insanely large number of files in it. The exact
+-	  number depends on the length of the file names of the directory
+-	  entries and on the size of the dircetory index blocks.
+-	- Fixed all problems with the last file in a directory (e.g. the last
+-	  file should no longer disappear and tab completion should work). If
+-	  there are still disappearing files or any other problems with the
+-	  last file in a directory, please report them! Thanks.
+-	- Rewrote ntfs_extend_attr() to use the new cluster allocator and the
+-	  freshly introduced splice_runlists() function. This simplified
+-	  ntfs_extend_attr() a lot which in turn seems to have removed one or
+-	  more bugs from it.
+-	- Probably other things I have forgotten... (-;
+-	- Removed dollar signs from the names in the system file enumeration.
+-	  Apparently gcc doesn't support dollar signs on PPC architecture.
+-	  (Andrzej Krzysztofowicz)
+-
+-NTFS 1.1.17:
+-
+-	- Fixed system file handling. No longer need to use show_sys_files
+-	  option for driver to work fine. System files are now always treated
+-	  the same, but without the option, they are made invisible to
+-	  directory listings. As a result system files can once again be opened
+-	  even without the show_sys_files option. This is important for the
+-	  statfs system call to work properly, for example.
+-	- Implemented MFT zone including mount parameter to tune it (just like
+-	  in Windows via the registry, only we make it per mount rather than
+-	  global for the whole driver, so we are better but we have no way of
+-	  storing the value as we don't have a registry so either specify on
+-	  each mount or put it in /etc/fstab). [Stage 1 of 3, mount parameter
+-	  handling.]
+-	- Fixed fixup functions to handle corruption cases and to return error
+-	  codes to the caller.
+-	- Made fixup functions apply hotfixes where sensible. [Stage 1 of 2+,
+-	  in memory only.]
+-	- Fixed ommission of "NTFS: " string in ntfs_error() output.
+-	- Fixed stupid if statement bug in unistr.c. Thanks to Yann E. Morin
+-	  for spotting it. 
+-	- Get rid of all uses of max and min macros. This actually allowed for
+-	  optimizing the code in several places so it was a Good Thing(TM).
+-	- Make ntfs use generic_file_open to enforce the O_LARGEFILE flag.
+-	- Detect encrypted files and refuse to access them (return EACCES
+-	  error code to user space).
+-	- Fix handling of encrypted & compressed files so that an encrypted
+-	  file no longer is considered to be compressed (this was causing
+-	  kernel segmentation faults).
+-
+-NTFS 1.1.16:
+-
+-	- Removed non-functional uni_xlate mount options.
+-	- Clarified the semantics of the utf8 and iocharset mount options.
+-	- Threw out the non-functional mount options for using hard coded
+-	  character set conversion. Only kept utf8 one.
+-	- Fixed handling of mount options and proper handling of faulty mount
+-	  options on remount.
+-	- Cleaned up character conversion which basically became simplified a
+-	  lot due to the removal of the above mentioned mount options.
+-	- Made character conversion to be always consistent. Previously we
+-	  could output to the VFS file names which we would then not accept
+-	  back from the VFS so in effect we were generating ghost entries in
+-	  the directory listings which could not be accessed by any means.
+-	- Simplified time conversion functions drastically without sacrificing
+-	  accuracy. (-8
+-	- Fixed a use of a pointer before the check for the pointer being
+-	  NULL, reported by the Stanford checker.
+-	- Fixed several missing error checks, reported by the Stanford
+-	  checker and fixed by Rasmus Andersen.
+-
+-NTFS 1.1.15 (changes since kernel 2.4.4's NTFS driver):
+-
+-	- New mount option show_sys_files=<bool> to show all system files as
+-	  normal files.
+-	- Support for files and in general any attributes up to the full 2TiB
+-	  size supported by the NTFS filesystem. Note we only support up to
+-	  32-bits worth of inodes/clusters at this point.
+-	- Support for more than 128kiB sized runlists (using vmalloc_32()
+-	  instead of kmalloc()).
+-	- Fixed races in allocation of clusters and mft records.
+-	- Fixed major bugs in attribute handling / searching / collation.
+-	- Fixed major bugs in compressing a run list into a mapping pairs array.
+-	- Fixed major bugs in inode allocation. Especially file create and
+-	  mkdir.
+-	- Fixed memory leaks.
+-	- Fixed major bug in inode layout assignment of sequence numbers.
+-	- Lots of other bug fixes I can't think of right now...
+-	- Fixed NULL bug found by the Stanford checker in ntfs_dupuni2map().
+-	- Convert large stack variable to dynamically allocated one in
+-	  ntfs_get_free_cluster_count() (found by Stanford checker).
++Note, a technical ChangeLog aimed at kernel hackers is in fs/ntfs/ChangeLog.
+ 
+-Kernel 2.4.4:
++2.1.6b:
++	- Update kernel help documentation on NTFS write support.
+ 
++2.1.6a:
++	- Fix minor bug in handling of compressed directories that fixes the
++	  erroneous "du" and "stat" output people reported.
++2.1.5a:
++	- Minor bug fix in attribute list attribute handling that fixes the
++	  I/O errors on "ls" of certain fragmented files found by at least two
++	  people running Windows XP.
++2.1.4a:
++	- Minor update allowing compilation with all gcc versions (well, the
++	  ones the kernel can be compiled with anyway).
++2.1.3a:
++	- Major bug fixes for reading files and volumes in corner cases which
++	  were being hit by Windows 2k/XP users.
++2.1.2a:
++	- Major bug fixes aleviating the hangs in statfs experienced by some
++	  users.
++2.1.1a:
++	- Major bug fix aleviating the random hangs experienced by some users.
++	- Update handling of compressed files so people no longer get the
++	  frequently reported warning messages about initialized_size !=
++	  data_size.
++2.1.0a:
++	- Sync up with ntfs 2.1.0.
++2.1.0:
++	- Add configuration option for developmental write support.
++	- Initial implementation of file overwriting. (Writes to resident files
++	  are not written out to disk yet, so avoid writing to files smaller
++	  than about 1kiB.)
++	- Intercept/abort changes in file size as they are not implemented yet.
++2.0.25a:
++	- Sync up with ntfs 2.0.25.
++2.0.25:
++	- Minor bugfixes in error code paths and small cleanups.
++2.0.24:
++	- Small internal cleanups.
++	- Support for sendfile system call. (Christoph Hellwig)
++2.0.23(a):
++	- Massive internal locking changes to mft record locking. Fixes
++	  various race conditions and deadlocks.
++	- Fix ntfs over loopback for compressed files by adding an
++	  optimization barrier. (gcc was screwing up otherwise ?)
++	Thanks go to Christoph Hellwig for pointing these two out:
++	- Remove now unused function fs/ntfs/malloc.h::vmalloc_nofs().
++	- Fix ntfs_free() for ia64 and parisc.
++2.0.22a:
++	- Sync with NTFS 2.0.22 and kernel 2.4.19.
++2.0.22:
++	- Small internal cleanups.
++2.0.21a:
++	- Resync 2.4.18 kernel backport with latest 2.5.x kernel ntfs release.
++2.0.21:
++	These only affect 32-bit architectures:
++	- Check for, and refuse to mount too large volumes (maximum is 2TiB).
++	- Check for, and refuse to open too large files and directories
++	  (maximum is 16TiB).
++2.0.20:
++	- Support non-resident directory index bitmaps. This means we now cope
++	  with huge directories without problems.
++	- Fix a page leak that manifested itself in some cases when reading
++	  directory contents.
++	- Internal cleanups.
++2.0.19:
++	- Fix race condition and improvements in block i/o interface.
++	- Optimization when reading compressed files.
++2.0.18:
++	- Fix race condition in reading of compressed files.
++2.0.17:
++	- Cleanups and optimizations.
++2.0.16:
++	- Fix stupid bug introduced in 2.0.15 in new attribute inode API.
++	- Big internal cleanup replacing the mftbmp access hacks by using the
++	  new attribute inode API instead.
++2.0.15:
++	- Bug fix in parsing of remount options.
++	- Internal changes implementing attribute (fake) inodes allowing all
++	  attribute i/o to go via the page cache and to use all the normal
++	  vfs/mm functionality.
++2.0.14:
++	- Internal changes improving run list merging code and minor locking
++	  change to not rely on BKL in ntfs_statfs().
++2.0.13:
++	- Internal changes towards using iget5_locked() in preparation for
++	  fake inodes and small cleanups to ntfs_volume structure.
++2.0.12a:
++	- Resync 2.4.18 backport with 2.0.12.
++2.0.12:
++	- Internal cleanups in address space operations made possible by the
++	  changes introduced in the previous release.
++2.0.11:
++	- Internal updates and cleanups introducing the first step towards
++	  fake inode based attribute i/o.
++2.0.10:
++	- Microsoft says that the maximum number of inodes is 2^32 - 1. Update
++	  the driver accordingly to only use 32-bits to store inode numbers on
++	  32-bit architectures. This improves the speed of the driver a little.
++2.0.9:
++	- Change decompression engine to use a single buffer. This should not
++	  affect performance except perhaps on the most heavy i/o on SMP
++	  systems when accessing multiple compressed files from multiple
++	  devices simultaneously.
++	- Minor updates and cleanups.
++2.0.8:
++	- Remove now obsolete show_inodes and posix mount option(s).
++	- Restore show_sys_files mount option.
++	- Add new mount option case_sensitive, to determine if the driver
++	  treats file names as case sensitive or not.
++	- Mostly drop support for short file names (for backwards compatibility
++	  we only support accessing files via their short file name if one
++	  exists).
++	- Fix dcache aliasing issues wrt short/long file names.
++	- Cleanups and minor fixes.
++2.0.7:
++	- Just cleanups.
++2.0.6b:
++ 	- Remove relevant parts of the patch.
++2.0.6a:
++	- Backport from 2.5.x to 2.4.18.
++2.0.6:
++	- Major bugfix to make compatible with other kernel changes. This fixes
++	  the hangs/oopses on umount.
++	- Locking cleanup in directory operations (remove BKL usage).
++2.0.5:
++	- Major buffer overflow bug fix.
++	- Minor cleanups and updates for kernel 2.5.12.
++2.0.4:
++	- Cleanups and updates for kernel 2.5.11.
++2.0.3:
++	- Small bug fixes, cleanups, and performance improvements.
++2.0.2:
++	- Use default fmask of 0177 so that files are no executable by default.
++	  If you want owner executable files, just use fmask=0077.
++	- Update for kernel 2.5.9 but preserve backwards compatibility with
++	  kernel 2.5.7.
++	- Minor bug fixes, cleanups, and updates.
++2.0.1:
++	- Minor updates, primarily set the executable bit by default on files
++	  so they can be executed.
++2.0.0:
+ 	- Started ChangeLog.
+ 
+Index: linux-2.4.27/Documentation/intlat.txt
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/Documentation/intlat.txt	2008-03-21 14:35:41.000000000 +0300
+@@ -0,0 +1,114 @@
++Documentation/intlat.txt
++http://www.uow.edu.au/~andrewm/linux/
++
++Andrew Morton <andrewm@uow.edu.au>
++25 March 2000
++
++NOTE-NOTE-NOTE
++==============
++
++The intlat patch alters include/linux/threads.h! It changes NR_CPUS
++from 32 to 2.  If you have more than two CPUs then you should change
++this appropriately.
++
++This is because intlat generates a _lot_ of storage for its data
++structures - about 6,000 structures whose size is O(NR_CPUS *
++N_TIMEPEG_ARCS).  THis can create a kernel which has a sixty megabyte
++footprint! Setting NR_CPUS to 2 results in a ~4 MByte kernel.
++
++
++Installation and Usage
++======================
++
++1: Grab the timepeg+intlat patch and the 'tpt' tool from the above
++   URL.  Build tpt and install it somewhere.
++
++2: Apply the patch to your kernel.
++
++3: Run 'make menuconfig' or whatever.
++
++4: Enable timepegs under 'Kernel Hacking'
++
++5: Enable intlat under 'Kernel Hacking'
++
++5: make clean && make dep && make bzImage && make modules
++
++Now run your kernel, and once it has booted run 'tpt'.  This will dump
++all the current timepegs and zero the timepeg accumulators.  You
++probably want to do this because the kernel boot process introduces
++once-off metrics which you aren't likely to be interested in.
++
++Now force the kernel to traverse the code paths which you are
++interested in (run some n/w traffic, force paging, etc).
++
++Now run
++
++	tpt -s | sort -nr +5
++
++to display the sorted list of interrupt blockages.
++
++
++Details
++=======
++
++intlat is a tool which allows you to measure the amount of time which
++the kernel spends with interrupts disabled.  intlat considers
++interrupts to be disabled in two circumstances:
++
++1: The processor's IF status register flag is cleared in
++   non-interrupt context and
++
++2: The processor is in interrupt context and has not set the IF
++   flag.
++
++The output is in timepeg format.  It displays the file-and-line at
++which interrupts were disabled and the file-and-line at which they were
++reenabled.  The min, max and average interrupts-off times are
++displayed, as is the number of times this path was traversed.  All
++times are in microseconds.
++
++Example:
++
++foo()
++{
++	local_irq_save();
++	...
++	local_irq_save();
++	...
++	local_irq_restore();
++	...
++	local_irq_restore();
++}
++
++In this case intlat will tell you the amount of time between the first
++local_irq_save() and the last local_irq_restore().
++
++Another example:
++
++interrupt_routine()
++{
++	...
++	__sti();
++	...
++	__cli();
++	...
++}
++
++In this case intlat will tell you:
++
++1: The amount of time between the interrupt being taken and the __sti() and 
++
++2: the amount of time between the __cli() and the return from interrupt.
++
++These two times represent periods when interrupts are blocked.
++
++Note that the figures here will be a little inaccurate (low) because
++the intlat library doesn't notice the start-of-interupt until we hit
++do_IRQ() and it assumes that the interrupt completes at the end of
++do_IRQ().  This probably makes 5-10 uSecs difference.
++
++Because it is based on timepegs, intlat accumulates statistics on a
++per-CPU basis.  The per-CPU data is aggregated by the offline 'tpt'
++tool.
++
++
+Index: linux-2.4.27/Documentation/timepeg.txt
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/Documentation/timepeg.txt	2008-03-21 14:35:41.000000000 +0300
+@@ -0,0 +1,456 @@
++Documentation/timepegs.txt
++http://www.uow.edu.au/~andrewm/linux/
++
++Andrew Morton <andrewm@uow.edu.au>
++25 March 2000
++
++
++Quick start
++===========
++
++1: Grab the timepeg patch and the 'tpt' tool from the above URL. 
++   Build tpt and install it somewhere.
++
++2: Apply the patch it to your kernel.
++
++3: Run 'make menuconfig' or whatever.
++
++4: Enable timepegs under 'Kernel Hacking'
++
++5: make clean && make dep && make bzImage && make modules
++
++6: Decide what timing within the kernel you need to test.  For
++   example, let's see how long alloc_skb() takes:
++
++#include <asm/timepeg.h>
++foo()
++{
++	struct sk_buff *skb;
++
++	TIMEPEG("call alloc_skb");
++	skb = alloc_skb(1000, GFP_ATOMIC);
++	TIMEPEG("alloc_skb finished");
++}
++
++7: Compile this up, run the kernel and type:
++
++        tpt
++
++You will see output like:
++
++
++           Destination  Count     Average       Min           Max
++
++call alloc_skb ->
++    alloc_skb finished  4            8.01      7.04          9.36
++
++alloc_skb finished ->
++  call alloc_skb        4      409,940.74  2,883.09  1,388,510.40
++
++
++
++Which tells you that alloc_skb takes 8 microseconds.  Of course it gets
++more complicated than this...
++
++
++Overview
++========
++
++Timepegs provide a means of precisely measuring elapsed time within the
++kernel.  They use the Pentuim 'rdtsc' instruction for this.  They
++_may_ work on the Alpha - the code is there but untested.
++
++Example: suppose the programmer wishes to know how long it takes to get
++from sys_sento() right down into the network device driver he would
++use:
++
++In socket.c:
++
++#include <asm/timepeg.h>
++
++...
++
++asmlinkage long sys_sendto(int fd, void * buff, size_t len, unsigned flags,
++               struct sockaddr *addr, int addr_len)
++{
++	    struct socket *sock;
++	    char address[MAX_SOCK_ADDR];
++	    int err;
++	    struct msghdr msg;
++	    struct iovec iov;
++	
++	TIMEPEG("sys_sendto");
++	...
++
++and in the device driver:
++
++#include <asm/timepeg.h>
++
++static int net_send_packet(struct sk_buff *skb, struct net_device *dev)
++{
++	TIMEPEG("net_send_packet");
++	...
++
++
++Build this kernel, run some net traffic and then use the command
++
++	tpt
++
++to display the average, minimum, and maximum latency between these two
++timepegs.
++
++
++More details
++============
++
++If there are more than two timepegs in the entire kernel then things
++get more complicated because each timepeg can have an arbitrary number
++of predecessors (most-recently-encountered timepegs).
++
++For example:
++
++	final()
++	{
++		TIMEPEG("final");
++	}
++
++	middle_1()
++	{
++		TIMEPEG("middle_1");
++		final();
++	}
++
++	middle_2()
++	{
++		TIMEPEG("middle_2");
++		final();
++	)
++
++	first(int cond)
++	{
++		TIMEPEG("first");
++		if (cond)
++			middle_1();
++		else
++			middle_2();
++	}
++
++Generates the following timepeg graph:
++
++                   final
++                   /   \
++             w1   /     \  w2
++                 /       \
++                /         \
++            middle_1    middle_2
++                \         /
++                 \       /
++             w3   \     /  w4
++                   \   /
++                   first
++
++Where the nodes are timepeg-encounters and the weights on the edges are
++the minimum, maximum and average time to transit between the respective
++timepegs.
++
++The kernel's timepeg driver maintains a data structure which precisely
++models this graph.  It is a directed graph where each node represents a
++timepeg and each edge is the min, max and average transit time from the
++most previous timepeg ON THIS CPU!
++
++Timepeg transit times are accumulated on a per-CPU basis because it
++probably doesn't make a lot of sense to measure cross-CPU intervals.
++
++The timepeg graph may be read from the kernel at any time via the
++/proc/timepeg virtual file.
++
++When /proc/timepeg is open all timepeg instrumentation accumulation is
++suspended - this ensures that the read is consistent.
++
++When the read of /proc/timepeg completes all the kernel timepeg
++instrumentation is reset to zero values.  This allows you to rerun a
++scenario.
++
++There is a user-space application called 'tpt' (available from
++http://www.uow.edu.au/~andrewm/linux/) which may be used to display the
++/proc/timepeg information in a more understandable form.  It reverses
++the direction of all the edges (so they are displayed in time-order)
++and converts the raw 'rdtsc' information into microseconds (10 nSec
++resolution).
++
++Here is a sample output from 'tpt':
++
++
++                  Callee  Count     Average       Min           Max
++
++sock_sendmsg ->
++      dev_queue_xmit_nit  54      24,877.74     30.44    311,667.07
++            sock_sendmsg  42         377.93    338.23        667.07
++
++dev_queue_xmit_nit ->
++  cs89x0_net_send_packet  589         17.43       .75        169.78
++      dev_queue_xmit_nit  38          14.97      3.96         27.92
++
++cs89x0_net_send_packet ->
++  cs89x0_net_send_packet  211        796.56     96.28      1,617.11
++      dev_queue_xmit_nit  535     34,124.08     12.50  3,997,946.66
++            sock_sendmsg  54     821,295.57  1,114.60  6,414,591.98
++
++
++This shows that the latency between sock_sendmsg() and
++dev_queue_xmit_nit() is a minimum of 30.44 microseconds.
++
++It is possible to accumulate these results to obtain the time interval
++between timepegs which have one or more intervening timepegs (tpt could
++do this, but doesn't).  But be aware that the graph may have several
++paths from the first to the last.  You need to know what's going on in
++there.
++
++If tpt is invoked with the '-s' argument it produces an output format
++which is compatible with sort(1).  Use something like:
++
++	tpt -s | sort -nr +5
++
++Directed timepegs
++=================
++
++Normally a timepeg uses the time since the most-recently-hit timepeg on
++this CPU.  But suppose we want to know the time interval between two
++places (A and E) in the code which have a lot of intervening timepegs
++(B, C and D).  We would have to accumulate the timepeg information
++across all possible paths through these five nodes - calculate the min
++and max, calculate the average by weighting each node by the number of
++traversals.
++
++[ Actually, even this doesn't work, because the call graph could be:
++
++     A   X
++      \ /
++       B
++       |
++       C
++       |
++       D
++      / \
++     E   Y
++
++and we can't separate the X->Y path from the A->E path ]
++
++A 'directed timepeg' is one which accumulates the transit time from a
++particular nominated other timepeg, rather than from the
++most-recently-encountered timepeg.
++
++A directed timepeg is used in a similar manner to a normal timepeg:
++
++	DTIMEPEG("this_timepeg_id", "other_timepeg_id");
++
++Example:
++
++#include <asm/timepeg.h>
++
++E()
++{
++	TIMEPEG("E_tp");
++}
++
++D()
++{
++	TIMEPEG("D_tp");
++	E();
++}
++
++C()
++{
++	TIMEPEG("C_tp");
++	D();
++}
++
++B()
++{
++	TIMEPEG("B_tp");
++	C();
++}
++
++A()
++{
++	TIMEPEG("A_tp");
++	B();
++	DTIMEPEG("A_exit_tp", "A_tp");
++}
++
++The final DTIMEPEG() invokation will cause the 'A_exit_tp' timepeg to
++measure the time taken to travel from 'A_tp' to itself.
++
++The output of tpt would look like:
++
++A_tp ->
++   B_tp        1    11        1.56     1.56      1.56
++   A_exit_tp   1    40        4.44     4.44      4.44
++
++Telling us that it took 1.56 uSecs to get from A_tp to B_tp and that it
++took 4.44 uSecs to get from A_tp to A_exit_tp.
++
++Be aware that while normal timepegs compensate for the time spent
++within themselves, directed timepegs do not.  (They could, but that's
++not there yet).  In this example the time for the A_tp->A_exit_tp
++includes all the time spent calculating the intervening timepeg values.
++
++On my 400MHz Celeron a timepeg takes 2.33 microseconds.  See the
++'measure_2' and 'measure_4' timepegs in timepeg.c for how this was
++measured.
++
++
++Start and stop timepegs
++=======================
++
++[ New in 2.3.99-pre3-1 ]
++
++Normal timepegs and directed timepegs may be considered to do two
++things:
++
++1: They record the elapsed time since the more recent timepeg and
++
++2: They act as a starting time for the next timepeg.
++
++This is sometimes not the desired behaviour.  For example, the code:
++
++foo()
++{
++	TIMEPEG("tp1");
++	...
++	TIMEPEG("tp2");
++}
++
++will record two arcs (provided foo() is executed more than once).  One
++arc is tp1->tp2 and the other is tp2->tp1.  The latter is probably not
++interesting.
++
++Plus I found that the default (entry + exit) behaviour of timepegs got
++in the way for the intlat (interrupt latency) measurement work.  In
++this case I needed timepegs which act as starting points but not as
++stopping points and vice-versa.
++
++So 'stop' and 'start' timepegs may be used thusly:
++
++foo()
++{
++	TIMEPEG_MODE("tp1", TPH_MODE_START);
++	...
++	TIMEPEG_MODE("tp2", TPH_MODE_STOP);
++}
++
++Now, only one arc will be recorded.
++
++Another application:
++
++foo()
++{
++	TIMEPEG_MODE("tp1", TPH_MODE_START);
++	...
++	TIMEPEG_MODE("tp2", TPH_MODE_STOP);
++	...
++	TIMEPEG_MODE("tp3", TPH_MODE_STOP);
++	...
++	TIMEPEG_MODE("tp4", TPH_MODE_STOP);
++}
++
++In this case, the timepegs tp2, tp3 and tp4 will _each_ record the time
++since tp1, not the time since their most immediate predecessor.
++
++
++Usage details
++=============
++
++- Do not simply fill your code with timepegs and expect to be able to
++  decipher the output.  There is a lot going on in the kernel and you
++  will probably be swamped by the result.  Three or four timepegs are
++  probably a practical limit, but more would be reasonable if the call
++  chain is straightforward.
++
++- Of course interrupts make timepegs harder to understand.  They
++  cause more time variance and they also complicate the graph by
++  interposing interrupt-based timepeg nodes in places where you
++  wouldn't expect them.  This is usually OK as long as you understand
++  what your code is doing!
++
++  I guess it would be possible to eliminate interrupt noise from the
++  timepeg statistics by appropriate interception of the interrupt
++  front-end.  The need for this work will have to be demonstrated :)
++
++- Do NOT expect timepegs to work as you expect when they are used in
++  inline functions in header files:
++
++foo.h:
++
++    extern inline fast_func()
++    {
++        TIMEPEG("fast_func");
++        ...
++    }
++
++bar.c:
++    #include "foo.h"
++
++    f1()
++    {
++        fast_func();
++    }
++
++zot.c:
++
++    f2()
++    {
++        fast_func();
++    }
++
++In this example, the storage for the 'fast_func' timepeg will be
++created as static storage in both 'bar.o' and 'zot.o'.  They both have
++the same name and the downstream timepeg processing tools will blow up
++in mysterious ways.
++
++If the inline function is private to a particular translation unit then
++it is fine: even if the inline function is expanded several times, its
++static storage is commoned up.
++
++- When the system is booted, timepeg accounting is disabled.  The
++  first time /proc/timepeg is read from, this acts as a trigger to turn
++  on timepeg accounting.
++
++
++Implementation details
++======================
++
++- The timepg patch aims to be unintrusive.  Basically three new files
++  and a three-liner in arch/i386/kernel/config.in.  The files are:
++
++  arch/i386/kernel/timepeg.c
++  include/asm-i386/timepeg.h
++  Documentation/timepeg.txt
++
++- The timepeg code cannot be put in a library (.a) because it may be
++  used by kernel modules exclusively.
++
++- You may leave invokations of the TIMEPEG() and DTIMEPEG() macro in
++  your code - they evaluate to nothing if CONFIG_TIMEPEGS is not
++  enabled.
++
++- If a kernel module uses timepegs and it is removed, reading
++  /proc/timepeg will crash your machine.  Sorry.  One thing you can do
++  is to disable the periodic 'rmmod' which some systems run - on
++  RedHat-like systems, edit /etc/cron.d/kmod.
++
++- The tpt application is very cheesy, but does the job.
++
++- The tpt application uses the output of the local machine's
++  /proc/cpuinfo to determine your procesor frequency.  If 'tpt' is not
++  running on the machine under test, use its '-m' option to set the CPU
++  frequency (in MHz).
++
++- The TIMEPEG macros make a sterling effort to not perturb the thing
++  which is being measured - they read the processor's timestamp
++  registers at the earliest and latest possible opportunities and
++  compensate for the time in between.  But even with this, the timings
++  which the timepegs tell you may be greater than with uninstrumented
++  code because the timepeg code itself will compete for your caches.
++
++
+Index: linux-2.4.27/Documentation/usb/scanner-hp-sane.txt
+===================================================================
+--- /dev/null	1970-01-01 00:00:00.000000000 +0000
++++ linux-2.4.27/Documentation/usb/scanner-hp-sane.txt	2008-03-21 14:35:41.000000000 +0300
+@@ -0,0 +1,81 @@
++Copyright (C) 1999, 2000 David E. Nelson
++
++April 26, 2000
++
++CHANGES
++
++- Amended for Linux-2.3.99-pre6-3
++- Updated for multiple scanner support
++
++INTRODUCTION
++
++This document will hopefully provide enough info on how to get SANE
++working with a Hewlett Packard USB capable scanner using the USB
++interface.  The majority of HP Scanners support the Scanner Control
++Language (SCL) which is both published by HP and supported by SANE.
++The only HP Scanners that I'm aware of that do not support SCL are the
++4200C ,3300C, and the PhotoSmart S20.  All other HP scanners with USB
++interfaces should work (4100C, 5200C, 6200C, and 6300C) as do models
++that are derived from the models above. ie the 6350C which is a 6300C
++with a transparency adaptor included with the scanner at time of
++purchase.  Of course as HP releases new scanners this information may
++change.
++
++
++REQUIREMENTS
++
++In order to get this running you'll need USB support in your kernel in
++addition to USB Scanner support.  Please refer to scanner.txt for
++issues pertaining to Linux USB and USB Scanner support.
++
++An installed version of SANE which is available from
++http://www.mostang.com/sane/.  Testing has been performed using
++version SANE-1.0.1.  For instructions on building and installing SANE,
++refer to the various README files within the SANE distribution.
++
++The latest SANE HP backend is available from http://www.kirchgessner.net.
++At the time of this writing, version 0.83 was available.
++
++
++OK, I'VE INSTALLED SANE. SO WHAT DO I DO NOW?
++
++NOTE: $INSTALL_DIR is the location where SANE is installed.  It may be
++/usr/local, /usr, /opt or somewhere else.  If you don't know, ask your
++system administrator.
++
++1) Make sure that you have the libsane-hp.* libraries under the
++$INSTALL_DIR/lib/sane/ directory.  If you don't, then the HP backend
++was either not compiled or installed properly.
++
++2) Under the directory $INSTALL_DIR/etc/sane.d/ edit the following
++files: dll.conf, hp.conf.
++
++  dll.conf:  Make sure that the 'hp' entry is present and uncommented.
++
++  hp.conf: This should contain two lines:
++
++    /dev/usbscanner
++    option connect-device
++
++NOTE: If you are using multiple scanners, make sure to have the correct
++device, ie /dev/usbscanner0.  See scanner.txt for more info.
++
++3) You should now be able to use SANE (xscanimage or scanimage).
++
++Don't forget to read any relevant man pages regarding the usage of
++SANE.  If you have other entries uncommented in 'dll.conf', you may
++have to specify the device to (x)scanimage.  Again, `man` is your
++friend.  The xscanimage (1) man page has info on how to get 'The Gimp'
++to work with xscanimage.  Note that Gimp support must be compiled into
++SANE for it to work.  If you are dealing with a RedHat system, this
++means that you'll also need to install the gimp-devel rpm package
++prior to compiling SANE.
++
++NOTE: The issues regarding core dumping by (x)scanimage have (or seem
++to be thus far) been resolved with version 0.2+ of the USB scanner
++driver which should be available in linux-2.3.23.  If you notice
++otherwise, please contact me.
++
++David /\/elson
++dnelson@jump.net
++http://www.jump.net/~dnelson
+Index: linux-2.4.27/Makefile
+===================================================================
+--- linux-2.4.27.orig/Makefile	2004-08-08 03:26:07.000000000 +0400
++++ linux-2.4.27/Makefile	2008-03-21 14:36:38.000000000 +0300
+@@ -5,7 +5,9 @@
+ 
+ KERNELRELEASE=$(VERSION).$(PATCHLEVEL).$(SUBLEVEL)$(EXTRAVERSION)
+ 
++ifndef ARCH
+ ARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ -e s/arm.*/arm/ -e s/sa110/arm/)
++endif
+ KERNELPATH=kernel-$(shell echo $(KERNELRELEASE) | sed -e "s/-//g")
+ 
+ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
+@@ -16,10 +18,17 @@
+ HPATH   	= $(TOPDIR)/include
+ FINDHPATH	= $(HPATH)/asm $(HPATH)/linux $(HPATH)/scsi $(HPATH)/net $(HPATH)/math-emu
+ 
+-HOSTCC  	= gcc
++HOSTCC  	= unset GCC_EXEC_PREFIX; gcc
+ HOSTCFLAGS	= -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer
+ 
++# CROSS_COMPILE 	= m68k-elf-
++# CROSS_COMPILE 	= arm-elf-
++# CROSS_COMPILE 	= h8300-elf-
++# CROSS_COMPILE 	= nios-elf-
++# CROSS_COMPILE		= e1-coff-
++ifndef CROSS_COMPILE
+ CROSS_COMPILE 	=
++endif
+ 
+ #
+ # Include the make variables (CC, etc...)
+@@ -48,6 +57,8 @@
+ 	CONFIG_SHELL TOPDIR HPATH HOSTCC HOSTCFLAGS CROSS_COMPILE AS LD CC \
+ 	CPP AR NM STRIP OBJCOPY OBJDUMP MAKE MAKEFILES GENKSYMS MODFLAGS PERL AWK
+ 
++.PHONY: dummy
++
+ all:	do-it-all
+ 
+ #
+@@ -59,7 +70,18 @@
+ include .config
+ ifeq (.depend,$(wildcard .depend))
+ include .depend
+-do-it-all:	Version vmlinux
++ifndef CONFIG_UCLINUX
++	LINUX=vmlinux
++else
++	LINUX=linux
++endif
++#//+++Add by shiang for Product Name support 2005/09/05
++-include ../src/.config
++-include ../src/vendors/Realtek/$(CONFIG_PRODUCT)/Product.mk
++KERNEL_EXTRA_CFLAGS += $(ALPHA_GLOBAL_DEFINES)
++#//---Add by shiang for Product Name support 2005/09/05
++
++do-it-all:	Version $(LINUX)
+ else
+ CONFIGURATION = depend
+ do-it-all:	depend
+@@ -90,9 +112,17 @@
+ #
+ 
+ CPPFLAGS := -D__KERNEL__ -I$(HPATH)
++CPPFLAGS += $(KERNEL_EXTRA_CFLAGS)
+ 
++CONFIG_FULLDEBUG := y
++ifndef CONFIG_FULLDEBUG
+ CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O2 \
+ 	  -fno-strict-aliasing -fno-common
++else
++CFLAGS := $(CPPFLAGS) -Wall -Wstrict-prototypes -Wno-trigraphs -O1 \
++          -gdwarf-2 -fno-strict-aliasing -fno-common
++#CONFIG_FRAME_POINTER := y
++endif
+ ifndef CONFIG_FRAME_POINTER
+ CFLAGS += -fomit-frame-pointer
+ endif
+@@ -201,7 +231,7 @@
+ # files removed with 'make clean'
+ CLEAN_FILES = \
+ 	kernel/ksyms.lst include/linux/compile.h \
+-	vmlinux System.map \
++	$(LINUX) System.map \
+ 	.tmp* \
+ 	drivers/char/consolemap_deftbl.c drivers/video/promcon_tbl.c \
+ 	drivers/char/conmakehash \
+@@ -257,7 +287,6 @@
+ 	include/config \
+ 	$(TOPDIR)/include/linux/modules
+ 
+-
+ include arch/$(ARCH)/Makefile
+ 
+ # Extra cflags for kbuild 2.4.  The default is to forbid includes by kernel code
+@@ -282,20 +311,39 @@
+ Version: dummy
+ 	@rm -f include/linux/compile.h
+ 
+-boot: vmlinux
+-	@$(MAKE) CFLAGS="$(CFLAGS) $(CFLAGS_KERNEL)" -C arch/$(ARCH)/boot
++boot: $(LINUX)
++	@$(MAKE) CFLAGS="$(CFLAGS) $(CFLAGS_KERNEL)" LINUX="$(LINUX)" -C arch/$(ARCH)/boot
+ 
+-vmlinux: include/linux/version.h $(CONFIGURATION) init/main.o init/version.o init/do_mounts.o linuxsubdirs
++ifeq ($(CONFIG_BLK_DEV_BLKMEM),y)
++$(LINUX): include/linux/version.h $(CONFIGURATION) init/main.o init/version.o init/do_mounts.o linuxsubdirs
++image: $(IMAGEDIR)/rom_image
+ 	$(LD) $(LINKFLAGS) $(HEAD) init/main.o init/version.o init/do_mounts.o \
+ 		--start-group \
++		$(IMAGEDIR)/rom_image\
+ 		$(CORE_FILES) \
+ 		$(DRIVERS) \
+ 		$(NETWORKS) \
+ 		$(LIBS) \
+ 		--end-group \
+-		-o vmlinux
+-	$(NM) vmlinux | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | sort > System.map
++		-o $(LINUX)
++	$(NM) $(LINUX) | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | sort > System.map
++else
++$(LINUX): include/linux/version.h $(CONFIGURATION) init/main.o init/version.o init/do_mounts.o linuxsubdirs
++	$(LD) $(LINKFLAGS) $(HEAD) init/main.o init/version.o init/do_mounts.o \
++		--start-group \
++		$(CORE_FILES) \
++		$(DRIVERS) \
++		$(NETWORKS) \
++		$(LIBS) \
++		--end-group \
++		-o $(LINUX)
++	$(NM) $(LINUX) | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | sort > System.map
++	$(MAKE) 7_zimage -C arch/$(ARCH)/inflater
++###+++ Modify by shiang: Now don't copy it due to images directory not created yet.
++#	cp 7linux $(IMAGEDIR)/7linux
++###--- Modify by shiang: Now don't copy it due to images directory not created yet.
+ 
++endif
+ symlinks:
+ 	rm -f include/asm
+ 	( cd include ; ln -sf asm-$(ARCH) asm)
+@@ -500,7 +548,7 @@
+ ifdef CONFIG_MODVERSIONS
+ 	$(MAKE) update-modverfile
+ endif
+-	scripts/mkdep -- `find $(FINDHPATH) \( -name SCCS -o -name .svn \) -prune -o -follow -name \*.h ! -name modversions.h -print` > .hdepend
++	find $(FINDHPATH) \( -name SCCS -o -name .svn \) -prune -o -follow -name \*.h ! -name modversions.h -print | xargs scripts/mkdep --  > .hdepend
+ 	scripts/mkdep -- init/*.c > .depend
+ 
+ ifdef CONFIG_MODVERSIONS
+Index: linux-2.4.27/Rules.make
+===================================================================
+--- linux-2.4.27.orig/Rules.make	2004-02-18 16:36:30.000000000 +0300
++++ linux-2.4.27/Rules.make	2008-03-21 14:35:41.000000000 +0300
+@@ -266,7 +266,7 @@
+ 
+ else
+ 
+-$(TOPDIR)/include/linux/modversions.h:
++$(TOPDIR)/include/linux/modversions.h: $(TOPDIR)/include/linux/modsetver.h
+ 	@echo "#include <linux/modsetver.h>" > $@
+ 
+ endif # CONFIG_MODVERSIONS

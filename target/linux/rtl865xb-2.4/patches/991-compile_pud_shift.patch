@@ -1,0 +1,20 @@
+--- spca5xx-le.old/drivers/usb/spca5xx/spca_core.c.old	2008-01-21 12:36:11.000000000 +0100
++++ spca5xx-le.dev/drivers/usb/spca5xx/spca_core.c	2008-01-21 12:37:27.000000000 +0100
+@@ -538,7 +538,7 @@
+ 
+   if (!pgd_none (*pgd))
+     {
+-#if PUD_SHIFT
++#ifdef PUD_SHIFT
+       pud_t *pud = pud_offset (pgd, adr);
+       if (!pud_none (*pud))
+ 	{
+@@ -555,7 +555,7 @@
+ 	      ret = (unsigned long) page_address (pte_page (pte));
+ 	      ret |= (adr & (PAGE_SIZE - 1));
+ 	    }
+-#if PUD_SHIFT
++#ifdef PUD_SHIFT
+ 	}
+ #endif
+     }

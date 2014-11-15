@@ -1,0 +1,204 @@
+Index: linux-2.4.27/include/linux/skbuff.h
+===================================================================
+--- linux-2.4.27.orig/include/linux/skbuff.h	2004-08-08 03:26:06.000000000 +0400
++++ linux-2.4.27/include/linux/skbuff.h	2008-03-21 14:47:58.000000000 +0300
+@@ -92,6 +92,17 @@
+ struct nf_ct_info {
+ 	struct nf_conntrack *master;
+ };
++
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++struct nf_bridge_info {
++	atomic_t use;
++	struct net_device *physindev;
++	struct net_device *physoutdev;
++	unsigned int mask;
++	unsigned long hh[16 / sizeof(unsigned long)];
++};
++#endif
++
+ #endif
+ 
+ struct sk_buff_head {
+@@ -208,6 +219,9 @@
+ #ifdef CONFIG_NETFILTER_DEBUG
+         unsigned int nf_debug;
+ #endif
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	struct nf_bridge_info	*nf_bridge;	/* Saved data about a bridged frame - see br_netfilter.c */
++#endif
+ #endif /*CONFIG_NETFILTER*/
+ 
+ #if defined(CONFIG_HIPPI)
+@@ -1179,5 +1193,18 @@
+ static inline void nf_reset(struct sk_buff *skb) {}
+ #endif /* CONFIG_NETFILTER */
+ 
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++static inline void nf_bridge_put(struct nf_bridge_info *nf_bridge)
++{
++	if (nf_bridge && atomic_dec_and_test(&nf_bridge->use))
++		kfree(nf_bridge);
++}
++static inline void nf_bridge_get(struct nf_bridge_info *nf_bridge)
++{
++	if (nf_bridge)
++		atomic_inc(&nf_bridge->use);
++}
++#endif
++
+ #endif	/* __KERNEL__ */
+ #endif	/* _LINUX_SKBUFF_H */
+Index: linux-2.4.27/include/linux/if_bridge.h
+===================================================================
+--- linux-2.4.27.orig/include/linux/if_bridge.h	2001-11-22 22:47:12.000000000 +0300
++++ linux-2.4.27/include/linux/if_bridge.h	2008-03-21 14:46:25.000000000 +0300
+@@ -102,7 +102,8 @@
+ struct net_bridge_port;
+ 
+ extern int (*br_ioctl_hook)(unsigned long arg);
+-extern void (*br_handle_frame_hook)(struct sk_buff *skb);
++extern int (*br_handle_frame_hook)(struct sk_buff *skb);
++extern int (*br_should_route_hook)(struct sk_buff **pskb);
+ 
+ #endif
+ 
+Index: linux-2.4.27/net/ipv4/netfilter/ipt_LOG.c
+===================================================================
+--- linux-2.4.27.orig/net/ipv4/netfilter/ipt_LOG.c	2003-11-28 21:26:21.000000000 +0300
++++ linux-2.4.27/net/ipv4/netfilter/ipt_LOG.c	2008-03-21 14:46:25.000000000 +0300
+@@ -316,6 +316,18 @@
+ 	       loginfo->prefix,
+ 	       in ? in->name : "",
+ 	       out ? out->name : "");
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	if ((*pskb)->nf_bridge) {
++		struct net_device *physindev = (*pskb)->nf_bridge->physindev;
++		struct net_device *physoutdev = (*pskb)->nf_bridge->physoutdev;
++
++		if (physindev && in != physindev)
++			printk("PHYSIN=%s ", physindev->name);
++		if (physoutdev && out != physoutdev)
++			printk("PHYSOUT=%s ", physoutdev->name);
++	}
++#endif
++
+ 	if (in && !out) {
+ 		/* MAC logging for input chain only. */
+ 		printk("MAC=");
+Index: linux-2.4.27/net/ipv4/netfilter/ip_tables.c
+===================================================================
+--- linux-2.4.27.orig/net/ipv4/netfilter/ip_tables.c	2004-08-08 03:26:06.000000000 +0400
++++ linux-2.4.27/net/ipv4/netfilter/ip_tables.c	2008-03-21 14:46:25.000000000 +0300
+@@ -118,12 +118,19 @@
+ static inline int
+ ip_packet_match(const struct iphdr *ip,
+ 		const char *indev,
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++		const char *physindev,
++#endif
+ 		const char *outdev,
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++		const char *physoutdev,
++#endif
+ 		const struct ipt_ip *ipinfo,
+ 		int isfrag)
+ {
+ 	size_t i;
+ 	unsigned long ret;
++	unsigned long ret2 = 1;
+ 
+ #define FWINV(bool,invflg) ((bool) ^ !!(ipinfo->invflags & invflg))
+ 
+@@ -153,7 +160,15 @@
+ 			& ((const unsigned long *)ipinfo->iniface_mask)[i];
+ 	}
+ 
+-	if (FWINV(ret != 0, IPT_INV_VIA_IN)) {
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	for (i = 0, ret2 = 0; i < IFNAMSIZ/sizeof(unsigned long); i++) {
++		ret2 |= (((const unsigned long *)physindev)[i]
++			^ ((const unsigned long *)ipinfo->iniface)[i])
++			& ((const unsigned long *)ipinfo->iniface_mask)[i];
++	}
++#endif
++
++	if (FWINV(ret != 0 && ret2 != 0, IPT_INV_VIA_IN)) {
+ 		dprintf("VIA in mismatch (%s vs %s).%s\n",
+ 			indev, ipinfo->iniface,
+ 			ipinfo->invflags&IPT_INV_VIA_IN ?" (INV)":"");
+@@ -166,7 +181,15 @@
+ 			& ((const unsigned long *)ipinfo->outiface_mask)[i];
+ 	}
+ 
+-	if (FWINV(ret != 0, IPT_INV_VIA_OUT)) {
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	for (i = 0, ret2 = 0; i < IFNAMSIZ/sizeof(unsigned long); i++) {
++		ret2 |= (((const unsigned long *)physoutdev)[i]
++			^ ((const unsigned long *)ipinfo->outiface)[i])
++			& ((const unsigned long *)ipinfo->outiface_mask)[i];
++	}
++#endif
++
++	if (FWINV(ret != 0 && ret2 != 0, IPT_INV_VIA_OUT)) {
+ 		dprintf("VIA out mismatch (%s vs %s).%s\n",
+ 			outdev, ipinfo->outiface,
+ 			ipinfo->invflags&IPT_INV_VIA_OUT ?" (INV)":"");
+@@ -265,6 +288,9 @@
+ 	/* Initializing verdict to NF_DROP keeps gcc happy. */
+ 	unsigned int verdict = NF_DROP;
+ 	const char *indev, *outdev;
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	const char *physindev, *physoutdev;
++#endif
+ 	void *table_base;
+ 	struct ipt_entry *e, *back;
+ 
+@@ -274,6 +300,13 @@
+ 	datalen = (*pskb)->len - ip->ihl * 4;
+ 	indev = in ? in->name : nulldevname;
+ 	outdev = out ? out->name : nulldevname;
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++	physindev = ((*pskb)->nf_bridge && (*pskb)->nf_bridge->physindev) ?
++		(*pskb)->nf_bridge->physindev->name : nulldevname;
++	physoutdev = ((*pskb)->nf_bridge && (*pskb)->nf_bridge->physoutdev) ?
++		(*pskb)->nf_bridge->physoutdev->name : nulldevname;
++#endif
++
+ 	/* We handle fragments by dealing with the first fragment as
+ 	 * if it was a normal packet.  All other fragments are treated
+ 	 * normally, except that they will NEVER match rules that ask
+@@ -309,7 +342,15 @@
+ 		IP_NF_ASSERT(e);
+ 		IP_NF_ASSERT(back);
+ 		(*pskb)->nfcache |= e->nfcache;
+-		if (ip_packet_match(ip, indev, outdev, &e->ip, offset)) {
++		if (ip_packet_match(ip, indev,
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++		    physindev,
++#endif
++		    outdev,
++#if defined(CONFIG_BRIDGE) || defined(CONFIG_BRIDGE_MODULE)
++		    physoutdev,
++#endif
++		    &e->ip, offset)) {
+ 			struct ipt_entry_target *t;
+ 
+ 			if (IPT_MATCH_ITERATE(e, do_match,
+@@ -1700,7 +1741,7 @@
+ 			     off_t start_offset, char *buffer, int length,
+ 			     off_t *pos, unsigned int *count)
+ {
+-	if ((*count)++ >= start_offset) {
++	if (*count >= start_offset) {
+ 		unsigned int namelen;
+ 
+ 		namelen = sprintf(buffer + *pos, "%s\n",
+@@ -1711,6 +1752,7 @@
+ 		}
+ 		*pos += namelen;
+ 	}
++	(*count)++;
+ 	return 0;
+ }
+ 

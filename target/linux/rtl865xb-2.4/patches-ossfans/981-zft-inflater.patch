@@ -1,0 +1,1507 @@
+diff -urN linux-2.4.27_orig/arch/mips/inflater/Decoder.c linux-2.4.27/arch/mips/inflater/Decoder.c
+--- linux-2.4.27_orig/arch/mips/inflater/Decoder.c	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/Decoder.c	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,834 @@
++// Decoder.cpp
++
++#include "Decoder.h"
++#include "lzma_decoder.h"
++
++#define MyMin(a,b) a < b ? a : b
++#define MyMax(a,b) a > b ? a : b
++
++#define NULL   0
++
++#ifndef E_INVALIDARG
++#define E_INVALIDARG    -1
++#endif
++
++#define RETURN_IF_NOT_S_OK(x) { int __result_ = (x); if(__result_ != 0) return __result_; }
++
++/**********************************	Dictionary Size	***********************************/
++#define DEF_DICTIONARY_SIZE               0x200000   
++#define DEF_LITERAL_POS_STATE_BITS        0
++#define DEF_LITERAL_CONTEXT_BITS          3
++#define DEF_POS_STATE_BITS                2
++
++
++static void *freememstart;
++#if 0  //Mark by shiang
++extern void (*prnt)(unsigned int, char *);      /* Gen reference to Yamon print function */
++#endif
++void pprintf(char *ptr);          		/* Generate our own printf */
++void *mmalloc(int);
++
++
++void pprintf(char *ptr)
++{
++#if 0   //Modify by shiang, here the printf fnction is relocated in 0x80000dd0  
++  unsigned int *tempptr = (unsigned int  *)0x90000534;
++  prnt = ( void (*)(unsigned int, char *)) *tempptr;
++  (*prnt)(0,ptr);
++#endif
++}
++    
++   
++void *mmalloc(int size)
++{       
++    unsigned char *p;
++    void *r;
++                
++    r = freememstart;
++    p = (unsigned char *)r;
++  
++    p = p + size;
++    freememstart = (void *)p;
++        
++    return(r);
++} 
++ 
++
++
++/********************************  RangeCoder	********************************************/
++
++
++void CRangeDecoder_Normalize(CRangeDecoder *rDecoder)
++{
++   while (rDecoder->Range < kTopValue)
++   {
++      rDecoder->Code = (rDecoder->Code << 8) | *(rDecoder->local_ptr++);
++      rDecoder->Range <<= 8;
++   }
++}
++
++      
++void CRangeDecoder_Init(CRangeDecoder *rDecoder, unsigned char *stream)
++{
++   int i=0;
++   rDecoder->local_ptr = stream;
++   rDecoder->Code = 0;
++   rDecoder->Range = (unsigned int)-1;
++
++   for(i = 0; i < 5; i++)
++   {
++      rDecoder->Code = (rDecoder->Code << 8) | *(rDecoder->local_ptr++);
++   }
++}
++
++
++void CRangeDecoder_ReleaseStream(CRangeDecoder *rDecoder)
++{ 
++  /* Stream.ReleaseStream(); */ 
++} 
++
++    
++UINT32 CRangeDecoder_GetThreshold(CRangeDecoder *rDecoder, UINT32 total)
++{
++   return (rDecoder->Code) / ((rDecoder->Range) /= total);
++}
++
++      
++void CRangeDecoder_Decode(CRangeDecoder *rDecoder, UINT32 start, UINT32 size, UINT32 total)
++{
++   rDecoder->Code -= start * (rDecoder->Range);
++   rDecoder->Range *= size;
++
++   while (rDecoder->Range < kTopValue)
++   {
++      rDecoder->Code = (rDecoder->Code << 8) | *(rDecoder->local_ptr++);
++      rDecoder->Range <<= 8;
++   }
++}   
++
++
++UINT32 CRangeDecoder_DecodeDirectBits(CRangeDecoder *rDecoder, UINT32 numTotalBits)
++{
++   UINT32 t,i = 0;
++   UINT32 range = rDecoder->Range;
++   UINT32 code = rDecoder->Code;        
++   UINT32 result = 0;
++   for (i = numTotalBits; i > 0; i--)
++   {
++      range >>= 1;
++      t = (code - range) >> 31;
++      code -= range & (t - 1);
++      result = (result << 1) | (1 - t);
++            
++      if (range < kTopValue)
++      {
++         code = (code << 8) | *(rDecoder->local_ptr++);
++         range <<= 8; 
++      }
++   }
++   rDecoder->Range = range;
++   rDecoder->Code = code;
++
++   return result;
++}
++
++      
++UINT32 CRangeDecoder_DecodeBit(CRangeDecoder *rDecoder, UINT32 size0, UINT32 numTotalBits)
++{
++   UINT32 newBound = ((rDecoder->Range) >> numTotalBits) * size0;
++   UINT32 symbol;
++   if (rDecoder->Code < newBound)
++   {
++      symbol = 0;
++      rDecoder->Range = newBound;
++   }
++   else
++   {
++      symbol = 1;
++      rDecoder->Code -= newBound;
++      rDecoder->Range -= newBound;
++   }
++
++   while (rDecoder->Range < kTopValue)
++   {
++      rDecoder->Code = (rDecoder->Code << 8) | *(rDecoder->local_ptr++);
++      rDecoder->Range <<= 8;
++   }
++
++   return symbol;
++}
++
++
++UINT32 CRangeDecoder_GetProcessedSize(CRangeDecoder *rDecoder)
++{
++  return 0;
++}
++
++
++/********************************  AriBitCoder	********************************************/
++
++
++void CMyBitDecoder_Init(CMyBitDecoder *bitDecoder)
++{
++  bitDecoder->Probability = kBitModelTotal/2;
++}
++
++
++UINT32 CMyBitDecoder_Decode(CMyBitDecoder *bitDecoder, CRangeDecoder *rangeDecoder)
++{
++    UINT32 newBound = (rangeDecoder->Range >> kNumBitModelTotalBits) * (bitDecoder->Probability);
++    if (rangeDecoder->Code < newBound)
++    {
++      rangeDecoder->Range = newBound;
++      bitDecoder->Probability += (kBitModelTotal - bitDecoder->Probability) >> (bitDecoder->aNumMoveBits);
++      if (rangeDecoder->Range < kTopValue)
++      {
++        rangeDecoder->Code = (rangeDecoder->Code << 8) | *(rangeDecoder->local_ptr++);;
++        rangeDecoder->Range <<= 8;
++      }
++      return 0;
++    }
++    else
++    {
++      rangeDecoder->Range -= newBound;
++      rangeDecoder->Code -= newBound;
++      bitDecoder->Probability -= (bitDecoder->Probability) >> (bitDecoder->aNumMoveBits);
++      if (rangeDecoder->Range < kTopValue)
++      {
++        rangeDecoder->Code = (rangeDecoder->Code << 8) | *(rangeDecoder->local_ptr++);
++        rangeDecoder->Range <<= 8;
++      }
++      return 1;
++    }
++}
++
++
++/********************************  BitTreeCoder	********************************************/
++
++
++void CBitTreeDecoder_Init(CBitTreeDecoder *btDecoder)
++{
++  UINT32 i;
++
++  for(i = 1; i < (1 << btDecoder->NumBitLevels); i++)
++    CMyBitDecoder_Init(&(btDecoder->Models[i]));
++}
++
++
++UINT32 CBitTreeDecoder_Decode(CBitTreeDecoder *btDecoder, CMyRangeDecoder *rangeDecoder)
++{
++   UINT32 bitIndex, modelIndex = 1;
++   RC_INIT_VAR
++
++   for(bitIndex = btDecoder->NumBitLevels; bitIndex > 0; bitIndex--)
++   {
++     RC_GETBIT(btDecoder->numMoveBits, btDecoder->Models[modelIndex].Probability, modelIndex)
++   }
++   RC_FLUSH_VAR
++
++   return modelIndex - (1 << btDecoder->NumBitLevels);
++}
++
++	
++UINT8 CReverseBitTreeDecoder2_Create(CReverseBitTreeDecoder2 *rbtDecoder2, UINT32 numBitLevels)
++{
++   rbtDecoder2->NumBitLevels = numBitLevels;
++   rbtDecoder2->Models = (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << numBitLevels));
++   if (rbtDecoder2->Models != NULL)
++     return (1);
++   else
++     return (-1);
++}
++
++
++void CReverseBitTreeDecoder2_Init(CReverseBitTreeDecoder2 *rbtDecoder2)
++{
++   UINT32 i;
++   UINT32 numModels = 1 << (rbtDecoder2->NumBitLevels);
++
++   for(i = 1; i < numModels; i++)
++     CMyBitDecoder_Init(&(rbtDecoder2->Models[i]));
++}
++
++
++UINT32 CReverseBitTreeDecoder2_Decode(CReverseBitTreeDecoder2 *rbtDecoder2, CMyRangeDecoder *rangeDecoder)
++{
++   UINT32 modelIndex = 1;
++   UINT32 symbol = 0;
++   UINT32 bitIndex;
++   RC_INIT_VAR
++   for(bitIndex = 0; bitIndex < rbtDecoder2->NumBitLevels; bitIndex++)
++   {
++     RC_GETBIT2(rbtDecoder2->numMoveBits, rbtDecoder2->Models[modelIndex].Probability, modelIndex, ; , symbol |= (1 << bitIndex))
++   }
++   RC_FLUSH_VAR
++   return symbol;
++}
++
++
++void CReverseBitTreeDecoder_Init(CReverseBitTreeDecoder *rbtDecoder)
++{
++  UINT32 i;
++
++  for(i = 1; i < (1 << (rbtDecoder->NumBitLevels)); i++)
++     CMyBitDecoder_Init(&(rbtDecoder->Models[i]));
++}
++
++
++UINT32 CReverseBitTreeDecoder_Decode(CReverseBitTreeDecoder *rbtDecoder, CMyRangeDecoder *rangeDecoder)
++{
++   UINT32 modelIndex = 1;
++   UINT32 symbol = 0;
++   UINT32 bitIndex;
++   RC_INIT_VAR
++
++   for(bitIndex = 0; bitIndex < (rbtDecoder->NumBitLevels); bitIndex++)
++   {
++     RC_GETBIT2(rbtDecoder->numMoveBits, rbtDecoder->Models[modelIndex].Probability, modelIndex, ; , symbol |= (1 << bitIndex))
++   }
++   RC_FLUSH_VAR
++
++   return symbol;
++}
++
++
++
++/********************************  LenCoder	********************************************/
++
++
++void CDecoderLength_Initialize(CDecoderLength *decoderLength)
++{
++  int i;
++
++  decoderLength->_choice.aNumMoveBits = kNumMoveBits;  
++  decoderLength->_choice2.aNumMoveBits = kNumMoveBits;  
++
++  for(i=0; i < kNumPosStatesMax; i++)
++  {
++    decoderLength->_lowCoder[i].numMoveBits 	= kNumMoveBits;
++    decoderLength->_lowCoder[i].NumBitLevels 	= kNumLenBits;
++    decoderLength->_lowCoder[i].Models	     	= (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << kNumLenBits));
++
++    decoderLength->_midCoder[i].numMoveBits 	= kNumMoveBits;
++    decoderLength->_midCoder[i].NumBitLevels 	= kNumMidBits;
++    decoderLength->_midCoder[i].Models	     	= (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << kNumMidBits));
++  }
++
++  decoderLength->_highCoder.numMoveBits 	= kNumMoveBits;
++  decoderLength->_highCoder.NumBitLevels 	= kNumHighBits;
++  decoderLength->_highCoder.Models		= (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << kNumHighBits));
++}
++
++
++void CDecoderLength_Create(CDecoderLength *decoderLength, UINT32 numPosStates)
++{ 
++  decoderLength->_numPosStates = numPosStates; 
++}
++
++
++void CDecoderLength_Init(CDecoderLength *decoderLength)
++{
++  UINT32 posState;
++
++//Ramesh ???
++  CDecoderLength_Initialize(decoderLength);
++
++  CMyBitDecoder_Init(&(decoderLength->_choice));
++
++  for (posState = 0; posState < decoderLength->_numPosStates; posState++)
++  {
++    CBitTreeDecoder_Init(&(decoderLength->_lowCoder[posState]));
++    CBitTreeDecoder_Init(&(decoderLength->_midCoder[posState]));
++  }
++
++  CMyBitDecoder_Init(&(decoderLength->_choice2));
++  CBitTreeDecoder_Init(&(decoderLength->_highCoder));
++}
++
++
++UINT32 CDecoderLength_Decode(CDecoderLength *decoderLength, CMyRangeDecoder *rangeDecoder, UINT32 posState)
++{
++  if (CMyBitDecoder_Decode(&(decoderLength->_choice),rangeDecoder) == 0)  
++  {
++    return (CBitTreeDecoder_Decode(&(decoderLength->_lowCoder[posState]),rangeDecoder));
++  }
++  if (CMyBitDecoder_Decode(&(decoderLength->_choice2),rangeDecoder) == 0)  
++  {
++    return (kNumLowSymbols + CBitTreeDecoder_Decode(&(decoderLength->_midCoder[posState]),rangeDecoder));
++  }
++  return (kNumLowSymbols + kNumMidSymbols + CBitTreeDecoder_Decode(&(decoderLength->_highCoder),rangeDecoder));
++}
++
++
++
++/********************************  LiteralCoder	********************************************/
++
++
++void CDecoder2_Init(CDecoder2 *decoder2)
++{
++  int i,j;
++  for (i = 0; i < 3; i++)
++  {
++    for (j = 1; j < (1 << 8); j++)
++    {
++      CMyBitDecoder_Init(&(decoder2->_decoders[i][j]));
++      decoder2->_decoders[i][j].aNumMoveBits = kNumMoveBits;
++    }
++  }
++}
++
++
++BYTE CDecoder2_DecodeNormal(CDecoder2 *decoder2,CMyRangeDecoder *rangeDecoder)
++{
++  UINT32 symbol = 1;
++  RC_INIT_VAR
++
++  do
++  {
++    RC_GETBIT(kNumMoveBits, decoder2->_decoders[0][symbol].Probability, symbol);
++  }
++  while (symbol < 0x100);
++  RC_FLUSH_VAR
++
++  return symbol;
++}
++
++
++BYTE CDecoder2_DecodeWithMatchByte(CDecoder2 *decoder2,CMyRangeDecoder *rangeDecoder, BYTE matchByte)
++{
++  UINT32 symbol = 1;
++  RC_INIT_VAR
++
++  do
++  {
++    UINT32 bit;
++    UINT32 matchBit = (matchByte >> 7) & 1;
++    matchByte <<= 1;
++
++    RC_GETBIT2(kNumMoveBits, decoder2->_decoders[1 + matchBit][symbol].Probability, symbol, bit = 0, bit = 1)
++    if (matchBit != bit)
++    {
++      while (symbol < 0x100)
++      {
++        RC_GETBIT(kNumMoveBits, decoder2->_decoders[0][symbol].Probability, symbol)
++      }
++      break;
++    }
++  }
++  while (symbol < 0x100);
++  RC_FLUSH_VAR
++
++  return symbol;
++}
++
++
++void CDecoderLiteral_Create(CDecoderLiteral *decoderLiteral,UINT32 numPosBits, UINT32 numPrevBits)
++{
++  UINT32 numStates;
++  decoderLiteral->_numPosBits = numPosBits;
++  decoderLiteral->_posMask = (1 << numPosBits) - 1;
++  decoderLiteral->_numPrevBits = numPrevBits;
++  numStates = 1 << (decoderLiteral->_numPrevBits + decoderLiteral->_numPosBits);
++  decoderLiteral->_coders = (CDecoder2 *)mmalloc(sizeof(CDecoder2) * numStates);
++}
++
++
++void CDecoderLiteral_Init(CDecoderLiteral *decoderLiteral)
++{
++  UINT32 i;
++  UINT32 numStates = 1 << (decoderLiteral->_numPrevBits + decoderLiteral->_numPosBits);
++  for (i = 0; i < numStates; i++)
++  {
++    CDecoder2_Init(&(decoderLiteral->_coders[i]));
++  }
++}
++
++
++UINT32 CDecoderLiteral_GetState(CDecoderLiteral *decoderLiteral,UINT32 pos, BYTE prevByte)
++{ 
++  return ((pos & decoderLiteral->_posMask) << decoderLiteral->_numPrevBits) + (prevByte >> (8 - decoderLiteral->_numPrevBits)); 
++}
++
++
++BYTE CDecoderLiteral_DecodeNormal(CDecoderLiteral *decoderLiteral,CMyRangeDecoder *rangeDecoder, UINT32 pos, BYTE prevByte)
++{ 
++  UINT32 state;
++  state = CDecoderLiteral_GetState(decoderLiteral,pos,prevByte);
++  return CDecoder2_DecodeNormal(&(decoderLiteral->_coders[state]),rangeDecoder);
++}
++
++
++BYTE CDecoderLiteral_DecodeWithMatchByte(CDecoderLiteral *decoderLiteral,CMyRangeDecoder *rangeDecoder, UINT32 pos, BYTE prevByte, BYTE matchByte)
++{ 
++  UINT32 state;
++  state = CDecoderLiteral_GetState(decoderLiteral,pos,prevByte);
++  return CDecoder2_DecodeWithMatchByte(&(decoderLiteral->_coders[state]),rangeDecoder,matchByte);
++}
++
++
++
++
++/********************************  LZMA	********************************************/
++
++
++
++void CState_Init(CState *state)
++{ 
++  state->Index = 0; 
++}
++
++
++void UpdateChar(CState *state)
++{ 
++  state->Index = kLiteralNextStates[state->Index]; 
++}
++
++
++void UpdateMatch(CState *state)
++{ 
++  state->Index = kMatchNextStates[state->Index]; 
++}
++
++
++void UpdateRep(CState *state)
++{ 
++  state->Index = kRepNextStates[state->Index]; 
++}
++
++
++void UpdateShortRep(CState *state)
++{ 
++  state->Index = kShortRepNextStates[state->Index]; 
++}
++
++
++void CBaseCoder_Init(CBaseCoder *baseCoder)
++{
++  int i;
++  CState_Init(&(baseCoder->_state));
++  baseCoder->_previousByte = 0;
++  for(i = 0 ; i < kNumRepDistances; i++)
++    baseCoder->_repDistances[i] = 0;
++}
++
++
++
++/********************************  Decoder	********************************************/
++
++
++void RareOutputStream_OutStreamInit(RareOutputStream *routStream, unsigned char *ptr)
++{
++   routStream->_buffer = ptr;
++   routStream->_pos = 0;
++}
++
++
++void RareOutputStream_PutOneByte(RareOutputStream *routStream, BYTE b)
++{
++   routStream->_buffer[routStream->_pos++] = b;
++}
++
++
++unsigned char RareOutputStream_GetOneByte(RareOutputStream *routStream, unsigned int index)
++{
++   unsigned int pos = routStream->_pos + index;
++
++   return routStream->_buffer[pos]; 
++}
++
++
++void RareOutputStream_CopyBackBlock(RareOutputStream *routStream, unsigned int distance, unsigned int len)
++{
++   unsigned int pos = routStream->_pos - distance - 1;
++
++   for(; len > 0; len--)
++   {
++      routStream->_buffer[routStream->_pos++] = routStream->_buffer[pos++];
++   }
++}
++
++
++void CDecoder_CDecoder(CDecoder *decoder)
++{
++  init_RangeCoder_Variables();
++  init_AriBitCoder_Variables();
++  init_LenCoder_Variables();
++  init_LZMA_Variables();
++  Create(decoder);
++}
++
++
++int Create(CDecoder *decoder)
++{
++  int i;
++  for(i = 0; i < kNumPosModels; i++)
++  {
++      CReverseBitTreeDecoder2_Create(&(decoder->_posDecoders[i]), (((kStartPosModelIndex + i) >> 1) - 1));
++  }
++
++  return(0);
++}
++
++
++int Init(CDecoder *decoder, unsigned char *InPtr, unsigned char *OutPtr)
++{
++   int i,j;
++
++   CRangeDecoder_Init(&(decoder->_rangeDecoder),InPtr);
++   RareOutputStream_OutStreamInit(&(decoder->_outWindowStream), OutPtr);
++
++   for(i = 0; i < kNumStates; i++)
++   {
++      for (j = 0; j <= decoder->_posStateMask; j++)
++      {
++ 	 CMyBitDecoder_Init(&(decoder->_mainChoiceDecoders[i][j]));
++ 	 CMyBitDecoder_Init(&(decoder->_matchRepShortChoiceDecoders[i][j]));
++
++         decoder->_mainChoiceDecoders[i][j].aNumMoveBits = kNumMoveBitsForMainChoice;
++         decoder->_matchRepShortChoiceDecoders[i][j].aNumMoveBits = kNumMoveBitsForMainChoice;
++      }
++
++       CMyBitDecoder_Init(&(decoder->_matchChoiceDecoders[i]));
++       CMyBitDecoder_Init(&(decoder->_matchRepChoiceDecoders[i]));
++       CMyBitDecoder_Init(&(decoder->_matchRep1ChoiceDecoders[i]));
++       CMyBitDecoder_Init(&(decoder->_matchRep2ChoiceDecoders[i]));
++
++      decoder->_matchChoiceDecoders[i].aNumMoveBits = kNumMoveBitsForMainChoice;
++      decoder->_matchRepChoiceDecoders[i].aNumMoveBits = kNumMoveBitsForMainChoice;
++      decoder->_matchRep1ChoiceDecoders[i].aNumMoveBits = kNumMoveBitsForMainChoice;
++      decoder->_matchRep2ChoiceDecoders[i].aNumMoveBits = kNumMoveBitsForMainChoice;
++   }
++   
++   CDecoderLiteral_Init(&(decoder->_literalDecoder));
++   
++   for (i = 0; i < kNumLenToPosStates; i++)
++   {
++      decoder->_posSlotDecoder[i].numMoveBits = kNumMoveBitsForPosSlotCoder;
++      decoder->_posSlotDecoder[i].NumBitLevels = kNumPosSlotBits;
++      decoder->_posSlotDecoder[i].Models = (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << kNumPosSlotBits));
++      CBitTreeDecoder_Init(&(decoder->_posSlotDecoder[i]));
++   }    
++
++   for(i = 0; i < kNumPosModels; i++)
++   {
++      decoder->_posDecoders[i].numMoveBits = kNumMoveBitsForPosCoders;
++      CReverseBitTreeDecoder2_Init(&(decoder->_posDecoders[i]));
++   }
++   
++   CDecoderLength_Init(&(decoder->_lenDecoder));
++   CDecoderLength_Init(&(decoder->_repMatchLenDecoder));
++
++   decoder->_posAlignDecoder.numMoveBits = kNumMoveBitsForAlignCoders;
++   decoder->_posAlignDecoder.NumBitLevels = kNumAlignBits;
++   decoder->_posAlignDecoder.Models = (CMyBitDecoder *)mmalloc(sizeof(CMyBitDecoder) * (1 << kNumAlignBits));
++   CReverseBitTreeDecoder_Init(&(decoder->_posAlignDecoder));
++
++   return(0);
++}
++
++
++int CodeReal(CDecoder *decoder, unsigned char *InPtr,unsigned char *OutPtr, const UINT32 *inSize, const UINT32 *outSize,unsigned int *progress)
++{
++  CState state;
++  int i;
++  unsigned int nowPos32 = 0;
++  unsigned int size = (outSize == NULL) ? (unsigned int)(int)(-1) : *outSize;
++  int peviousIsMatch = -1;
++  BYTE previousByte = 0;
++  unsigned int repDistances[kNumRepDistances];
++  
++  RareOutputStream *stream 	= &(decoder->_outWindowStream);
++  CMyRangeDecoder  *rDecoder 	= &(decoder->_rangeDecoder);
++  CReverseBitTreeDecoder *rbtDecoder = &(decoder->_posAlignDecoder);
++  CDecoderLength  *lenDecoder  = &(decoder->_lenDecoder);
++  CDecoderLength  *repMatchLenDecoder  = &(decoder->_repMatchLenDecoder);
++  CDecoderLiteral *literalDecoder = &(decoder->_literalDecoder);
++
++  Init(decoder,InPtr,OutPtr);
++
++  CState_Init(&state);
++
++  for(i = 0 ; i < kNumRepDistances; i++)
++    repDistances[i] = 0;
++  
++  while(nowPos32 < size)
++  {
++   //*(volatile unsigned long*)GPIO_DATA_REG |= 0x40000000;
++	 
++    unsigned int nextPos = MyMin(nowPos32 + (1 << 18), size);
++
++    while(nowPos32 < nextPos)
++    {
++
++
++      unsigned int posState = (unsigned int)(nowPos32) & decoder->_posStateMask;
++	
++      if (CMyBitDecoder_Decode(&(decoder->_mainChoiceDecoders[state.Index][posState]), rDecoder) == kMainChoiceLiteralIndex)	
++      {
++
++       //*(volatile unsigned long*)GPIO_DATA_REG &= 0x00000000;  
++
++        UpdateChar(&state);
++        if(peviousIsMatch > 0) {
++           BYTE matchByte = RareOutputStream_GetOneByte(stream, (0 - repDistances[0] - 1));
++           previousByte = CDecoderLiteral_DecodeWithMatchByte(literalDecoder,rDecoder,(unsigned int)(nowPos32),previousByte,matchByte);
++           peviousIsMatch = -1;
++        } else {
++           previousByte = CDecoderLiteral_DecodeNormal(literalDecoder,rDecoder, (unsigned int)(nowPos32), previousByte);
++	 }
++	 //*(volatile unsigned long*)GPIO_DATA_REG |= 0x40000000;  
++	 
++	 RareOutputStream_PutOneByte(stream, previousByte);
++        nowPos32++;
++      }
++      else             
++      {
++        unsigned int distance, len;
++        peviousIsMatch = 1;
++
++        if(CMyBitDecoder_Decode(&(decoder->_matchChoiceDecoders[state.Index]), rDecoder) == kMatchChoiceRepetitionIndex)
++        {
++          //*(volatile unsigned long*)GPIO_DATA_REG &= 0x00000000;  
++          if(CMyBitDecoder_Decode(&(decoder->_matchRepChoiceDecoders[state.Index]), rDecoder) == 0)
++          {
++            if(CMyBitDecoder_Decode(&(decoder->_matchRepShortChoiceDecoders[state.Index][posState]), rDecoder) == 0)
++            {
++              UpdateShortRep(&state);
++              previousByte = RareOutputStream_GetOneByte(stream,(0 - repDistances[0] - 1));
++	      RareOutputStream_PutOneByte(stream, previousByte);
++              nowPos32++;
++              continue;
++            }
++            distance = repDistances[0];
++          }
++          else
++          {
++            if(CMyBitDecoder_Decode(&(decoder->_matchRep1ChoiceDecoders[state.Index]), rDecoder) == 0)
++              distance = repDistances[1];
++            else 
++            {
++              if(CMyBitDecoder_Decode(&(decoder->_matchRep2ChoiceDecoders[state.Index]), rDecoder) == 0)
++                distance = repDistances[2];
++              else
++              {
++                distance = repDistances[3];
++                repDistances[3] = repDistances[2];
++              }
++              repDistances[2] = repDistances[1];
++            }
++            repDistances[1] = repDistances[0];
++            repDistances[0] = distance;
++          }
++	  len = CDecoderLength_Decode(repMatchLenDecoder, rDecoder, posState) + kMatchMinLen;
++
++          UpdateRep(&state);
++        }
++        else
++        {
++	  unsigned int posSlot;
++          len = CDecoderLength_Decode(lenDecoder, rDecoder, posState) + kMatchMinLen;
++          UpdateMatch(&state);
++          posSlot = CBitTreeDecoder_Decode(&(decoder->_posSlotDecoder[GetLenToPosState(len)]), rDecoder);
++	  if (posSlot >= kStartPosModelIndex)
++          {
++            unsigned int numDirectBits = (posSlot >> 1) - 1;
++            distance = ((2 | (posSlot & 1)) << numDirectBits);
++
++            if (posSlot < kEndPosModelIndex)
++              distance += CReverseBitTreeDecoder2_Decode(&(decoder->_posDecoders[posSlot - kStartPosModelIndex]), rDecoder);
++            else
++            {
++              distance += (CRangeDecoder_DecodeDirectBits(rDecoder,(numDirectBits - kNumAlignBits)) << kNumAlignBits);
++              distance += CReverseBitTreeDecoder_Decode(rbtDecoder, rDecoder);
++            }
++          }
++          else
++            distance = posSlot;
++
++          repDistances[3] = repDistances[2];
++          repDistances[2] = repDistances[1];
++          repDistances[1] = repDistances[0];
++          repDistances[0] = distance;
++        }
++        if (distance >= nowPos32 || distance >= decoder->_dictionarySizeCheck)
++        {
++          if (distance == (unsigned int)(-1) && size == (unsigned int)(int)(-1))
++          {
++            return 0;
++          }
++        }
++
++        RareOutputStream_CopyBackBlock(stream,distance, len);
++        nowPos32 += len;
++        previousByte = RareOutputStream_GetOneByte(stream,(0 - 1));
++      }
++    }
++  }
++
++  return(0);
++}
++
++
++int SetDictionarySize(CDecoder *decoder, UINT32 dictionarySize)
++{
++  if (decoder->_dictionarySize != dictionarySize)
++  {
++    unsigned int blockSize;
++    decoder->_dictionarySize = dictionarySize;
++    decoder->_dictionarySizeCheck = MyMax(decoder->_dictionarySize, (unsigned int)(1));
++    blockSize = MyMax(decoder->_dictionarySizeCheck, (unsigned int)(1 << 12));
++  }
++
++  return(0);
++}
++
++
++int SetLiteralProperties(CDecoder *decoder, UINT32 numLiteralPosStateBits, UINT32 numLiteralContextBits)
++{
++  if (numLiteralPosStateBits > 8)
++    return E_INVALIDARG;
++  if (numLiteralContextBits > 8)
++    return E_INVALIDARG;
++
++  CDecoderLiteral_Create(&(decoder->_literalDecoder),numLiteralPosStateBits, numLiteralContextBits);
++
++  return(0);
++}
++
++
++int SetPosBitsProperties(CDecoder *decoder, UINT32 numPosStateBits)
++{
++  unsigned int numPosStates;
++
++  if (numPosStateBits > kNumPosStatesBitsMax)
++    return E_INVALIDARG;
++
++  numPosStates = 1 << numPosStateBits;
++  CDecoderLength_Create(&(decoder->_lenDecoder), numPosStates);
++  CDecoderLength_Create(&(decoder->_repMatchLenDecoder), numPosStates);
++  decoder->_posStateMask = numPosStates - 1;
++
++  return(0);
++}
++
++
++
++int cm_hwDecodeLZMA(unsigned char *pbDest, unsigned int uiDecompressedLength, unsigned char *pbSource, unsigned int uiCompressedLength, void *fptr)
++{
++   CDecoder MyDecoder;
++
++   freememstart = fptr;
++
++   CDecoder_CDecoder(&MyDecoder);
++
++   SetDictionarySize(&MyDecoder,DEF_DICTIONARY_SIZE);
++   SetLiteralProperties(&MyDecoder, DEF_LITERAL_POS_STATE_BITS, DEF_LITERAL_CONTEXT_BITS);
++   SetPosBitsProperties(&MyDecoder, DEF_POS_STATE_BITS);
++
++   /*======================================================
++   Decode
++   =======================================================*/
++   return CodeReal(&MyDecoder, pbSource + 0x20,pbDest,&uiCompressedLength,&uiDecompressedLength,0);
++}
++
++
+diff -urN linux-2.4.27_orig/arch/mips/inflater/Decoder.h linux-2.4.27/arch/mips/inflater/Decoder.h
+--- linux-2.4.27_orig/arch/mips/inflater/Decoder.h	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/Decoder.h	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,370 @@
++// Decoder.h
++
++#ifndef __LZARITHMETIC_DECODER_H
++#define __LZARITHMETIC_DECODER_H
++
++/*************************	Types 	******************************/
++
++typedef unsigned char   UINT8;
++typedef unsigned short  UINT16;
++typedef short 		INT16;
++typedef unsigned int 	UINT32;
++typedef UINT8 		BYTE;
++
++UINT32 kNumTopBits = 24;
++UINT32 kTopValue;
++
++/*************************	RangeCoder 	******************************/
++
++typedef struct {
++    UINT32 Range;
++    UINT32 Code;
++    UINT8  *local_ptr;	  
++} CRangeDecoder;
++
++//+++Modify by shiang 2004/12/10
++#if 0
++inline void init_RangeCoder_Variables()
++#else
++void init_RangeCoder_Variables()
++#endif
++//---Modify by shiang 2004/12/10
++{
++  kTopValue = (1 << kNumTopBits);
++}
++
++void CRangeDecoder_Normalize(CRangeDecoder *);
++void CRangeDecoder_Init(CRangeDecoder *, unsigned char *stream);
++void CRangeDecoder_ReleaseStream(CRangeDecoder *);
++UINT32 CRangeDecoder_GetThreshold(CRangeDecoder *, UINT32 total);
++void CRangeDecoder_Decode(CRangeDecoder *, UINT32 start, UINT32 size, UINT32 total);
++UINT32 CRangeDecoder_DecodeDirectBits(CRangeDecoder *, UINT32 numTotalBits);
++UINT32 CRangeDecoder_DecodeBit(CRangeDecoder *,UINT32 size0, UINT32 numTotalBits);
++UINT32 CRangeDecoder_GetProcessedSize(CRangeDecoder *);
++
++
++/*************************	AriBitCoder 	******************************/
++
++int kNumBitModelTotalBits  = 11;
++UINT32 kBitModelTotal;
++int kNumMoveReducingBits = 2;
++int kNumBitPriceShiftBits = 6;
++UINT32 kBitPrice;
++
++typedef struct {
++  UINT32 Probability;
++  int aNumMoveBits;
++} CMyBitDecoder;
++
++//+++Modify by shiang 2004/12/10
++#if 0
++//inline void init_AriBitCoder_Variables()
++#else
++void init_AriBitCoder_Variables()
++#endif
++//---Modify by shiang 2004/12/10
++{
++  kBitModelTotal = (1 << kNumBitModelTotalBits);
++  kBitPrice = 1 << kNumBitPriceShiftBits;
++}
++
++void CMyBitDecoder_Init(CMyBitDecoder *);
++UINT32 CMyBitDecoder_Decode(CMyBitDecoder *, CRangeDecoder *rangeDecoder);
++
++typedef CRangeDecoder CMyRangeDecoder;
++
++
++/*************************	RCDefs 	******************************/
++
++#define RC_INIT_VAR                            \
++  UINT32 range = rangeDecoder->Range;      \
++  UINT32 code = rangeDecoder->Code;        
++
++#define RC_FLUSH_VAR                          \
++  rangeDecoder->Range = range;            \
++  rangeDecoder->Code = code;
++
++#define RC_NORMALIZE                                    \
++    if (range < kTopValue)               \
++    {                                                              \
++      code = (code << 8) | *(rangeDecoder->local_ptr++);   \
++      range <<= 8; }
++
++#define RC_GETBIT2(aNumMoveBits, aProb, aModelIndex, Action0, Action1)                        \
++    {UINT32 aNewBound = (range >> kNumBitModelTotalBits) * aProb; \
++    if (code < aNewBound)                               \
++    {                                                             \
++      Action0;                                                    \
++      range = aNewBound;                                         \
++      aProb += (kBitModelTotal - aProb) >> aNumMoveBits;          \
++      aModelIndex <<= 1;                                          \
++    }                                                             \
++    else                                                          \
++    {                                                             \
++      Action1;                                                    \
++      range -= aNewBound;                                        \
++      code -= aNewBound;                                          \
++      aProb -= (aProb) >> aNumMoveBits;                           \
++      aModelIndex = (aModelIndex << 1) + 1;                       \
++    }}                                                             \
++    RC_NORMALIZE
++
++#define RC_GETBIT(aNumMoveBits, aProb, aModelIndex) RC_GETBIT2(aNumMoveBits, aProb, aModelIndex, ; , ;)               
++
++
++/*************************	BitTreeCoder 	******************************/
++
++
++typedef struct {
++  int 		numMoveBits;
++  UINT32 	NumBitLevels;
++  CMyBitDecoder *Models;    
++} CBitTreeDecoder;
++
++
++void CBitTreeDecoder_Init(CBitTreeDecoder *);
++UINT32 CBitTreeDecoder_Decode(CBitTreeDecoder *, CMyRangeDecoder *);
++
++typedef struct {
++  int numMoveBits;
++  UINT32 NumBitLevels;
++  CMyBitDecoder *Models;
++} CReverseBitTreeDecoder2;
++
++UINT8 CReverseBitTreeDecoder2_Create(CReverseBitTreeDecoder2 *, UINT32);
++void CReverseBitTreeDecoder2_Init(CReverseBitTreeDecoder2 *);
++UINT32 CReverseBitTreeDecoder2_Decode(CReverseBitTreeDecoder2 *, CMyRangeDecoder *);
++
++typedef struct {
++  int 		numMoveBits;
++  UINT32 	NumBitLevels;
++  CMyBitDecoder *Models;
++} CReverseBitTreeDecoder;
++
++
++void CReverseBitTreeDecoder_Init(CReverseBitTreeDecoder *);
++UINT32 CReverseBitTreeDecoder_Decode(CReverseBitTreeDecoder *, CMyRangeDecoder *);
++
++
++/*************************	LenCoder 	******************************/
++
++
++int kNumMoveBits = 5;
++int kNumPosStatesBitsMax = 4;
++UINT32 kNumPosStatesMax;
++int kNumPosStatesBitsEncodingMax = 4;
++UINT32 kNumPosStatesEncodingMax;
++int kNumLenBits = 3;
++UINT32 kNumLowSymbols;
++int kNumMidBits = 3;
++UINT32 kNumMidSymbols;
++int kNumHighBits = 8;
++UINT32 kNumSymbolsTotal;
++
++
++typedef struct {
++  CMyBitDecoder 	_choice;
++  CBitTreeDecoder 	_lowCoder[1 << 4];
++  CMyBitDecoder		_choice2;
++  CBitTreeDecoder	_midCoder[1 << 4];
++  CBitTreeDecoder	_highCoder;
++  UINT32		_numPosStates;
++} CDecoderLength;
++
++//+++Modify by shiang 2004/12/10
++#if 0
++inline void init_LenCoder_Variables()
++#else
++void init_LenCoder_Variables()
++#endif
++//---Modify by shiang 2004/12/10
++{
++  kNumPosStatesMax = (1 << kNumPosStatesBitsMax);
++  kNumPosStatesEncodingMax = (1 << kNumPosStatesBitsEncodingMax);
++  kNumLowSymbols = 1 << kNumLenBits;
++  kNumMidSymbols = 1 << kNumMidBits;
++  kNumSymbolsTotal = kNumLowSymbols + kNumMidSymbols + (1 << kNumHighBits);
++}
++
++
++void CDecoderLength_Initialize(CDecoderLength *);
++void CDecoderLength_Create(CDecoderLength *, UINT32 );
++void CDecoderLength_Init(CDecoderLength *);
++UINT32 CDecoderLength_Decode(CDecoderLength *, CMyRangeDecoder *rangeDecoder, UINT32 posState);
++
++
++
++/*************************	LiterCoder 	******************************/
++
++
++typedef struct {
++  CMyBitDecoder _decoders[3][1 << 8];
++} CDecoder2;
++
++
++void CDecoder2_Init(CDecoder2 *);
++BYTE CDecoder2_DecodeNormal(CDecoder2 *,CMyRangeDecoder *);
++BYTE CDecoder2_DecodeWithMatchByte(CDecoder2 *,CMyRangeDecoder *, BYTE );
++
++
++typedef struct {
++  CDecoder2 	*_coders;
++  UINT32	_numPrevBits;
++  UINT32	_numPosBits;
++  UINT32	_posMask;	
++} CDecoderLiteral;
++
++
++void CDecoderLiteral_Create(CDecoderLiteral *,UINT32 , UINT32 );
++void CDecoderLiteral_Init(CDecoderLiteral *);
++UINT32 CDecoderLiteral_GetState(CDecoderLiteral *,UINT32 , BYTE );
++BYTE CDecoderLiteral_DecodeNormal(CDecoderLiteral *,CMyRangeDecoder *, UINT32 , BYTE );
++BYTE CDecoderLiteral_DecodeWithMatchByte(CDecoderLiteral *,CMyRangeDecoder *, UINT32 , BYTE , BYTE );
++
++
++
++/*************************	LZMA 	******************************/
++
++
++const UINT32 kNumRepDistances = 4;
++
++const BYTE kNumStates = 12;
++
++const BYTE kLiteralNextStates[12] = {0, 0, 0, 0, 1, 2, 3, 4,  5,  6,   4, 5};
++const BYTE kMatchNextStates[12]   = {7, 7, 7, 7, 7, 7, 7, 10, 10, 10, 10, 10};
++const BYTE kRepNextStates[12]     = {8, 8, 8, 8, 8, 8, 8, 11, 11, 11, 11, 11};
++const BYTE kShortRepNextStates[12]= {9, 9, 9, 9, 9, 9, 9, 11, 11, 11, 11, 11};
++const int kNumPosSlotBits = 6; 
++const int kDicLogSizeMin = 0; 
++const int kDicLogSizeMax = 32; 
++int kDistTableSizeMax; 
++
++const UINT32 kNumLenToPosStates = 4;
++inline UINT32 GetLenToPosState(UINT32 len)
++{
++  len -= 2;
++  if (len < kNumLenToPosStates)
++    return len;
++  return kNumLenToPosStates - 1;
++}
++
++const int kMatchMinLen = 2;
++
++int intkMatchMaxLen;
++
++const int kNumAlignBits = 4;
++int kAlignTableSize;
++UINT32 kAlignMask;
++
++const int kStartPosModelIndex = 4;
++const int kEndPosModelIndex = 14;
++int kNumPosModels;
++
++int kNumFullDistances;
++
++const int kMainChoiceLiteralIndex = 0;
++const int kMainChoiceMatchIndex = 1;
++
++const int kMatchChoiceDistanceIndex= 0;
++const int kMatchChoiceRepetitionIndex = 1;
++
++const int kNumMoveBitsForMainChoice = 5;
++const int kNumMoveBitsForPosCoders = 5;
++
++const int kNumMoveBitsForAlignCoders = 5;
++
++const int kNumMoveBitsForPosSlotCoder = 5;
++
++const int kNumLitPosStatesBitsEncodingMax = 4;
++const int kNumLitContextBitsMax = 8;
++
++
++typedef struct {
++  BYTE Index;
++} CState;
++
++void CState_Init(CState *);
++void UpdateChar(CState *);
++void UpdateMatch(CState *);
++void UpdateRep(CState *);
++void UpdateShortRep(CState *);
++
++
++typedef struct {
++  CState _state;
++  BYTE _previousByte;
++  UINT32 _repDistances[4];
++} CBaseCoder;
++
++//+++Modify by shiang 2004/12/10
++#if 0
++inline void init_LZMA_Variables()
++#else
++void init_LZMA_Variables()
++#endif
++//---Modify by shiang 2004/12/10
++{
++  kDistTableSizeMax = kDicLogSizeMax * 2; 
++  intkMatchMaxLen = kMatchMinLen + kNumSymbolsTotal - 1;
++  kAlignTableSize = 1 << kNumAlignBits;
++  kAlignMask = (kAlignTableSize - 1);
++  kNumPosModels = kEndPosModelIndex - kStartPosModelIndex;
++  kNumFullDistances = 1 << (kEndPosModelIndex / 2);
++}
++
++
++void CBaseCoder_Init(CBaseCoder *);
++
++
++/*************************	Decoder 	******************************/
++
++
++typedef struct {
++   unsigned int _pos;
++   unsigned char *_buffer;
++} RareOutputStream;
++
++
++void RareOutputStream_OutStreamInit(RareOutputStream *routStream, unsigned char *ptr);
++void RareOutputStream_PutOneByte(RareOutputStream *routStream, BYTE b);
++unsigned char RareOutputStream_GetOneByte(RareOutputStream *routStream, unsigned int index);
++void RareOutputStream_CopyBackBlock(RareOutputStream *routStream, unsigned int distance, unsigned int len);
++
++
++typedef struct {
++  RareOutputStream 	_outWindowStream;
++  CMyRangeDecoder  	_rangeDecoder;
++  
++  CMyBitDecoder 	_mainChoiceDecoders[12][1 << 4];
++  CMyBitDecoder 	_matchChoiceDecoders[12];
++  CMyBitDecoder 	_matchRepChoiceDecoders[12];
++  CMyBitDecoder 	_matchRep1ChoiceDecoders[12];
++  CMyBitDecoder 	_matchRep2ChoiceDecoders[12];
++  CMyBitDecoder 	_matchRepShortChoiceDecoders[12][1 << 4];
++  CBitTreeDecoder	_posSlotDecoder[4];
++  CReverseBitTreeDecoder2	_posDecoders[10];
++
++  CReverseBitTreeDecoder	_posAlignDecoder;
++  
++  CDecoderLength 	_lenDecoder;
++  CDecoderLength 	_repMatchLenDecoder;
++
++  CDecoderLiteral 	_literalDecoder;
++
++  UINT32 		_dictionarySize;
++  UINT32 		_dictionarySizeCheck;
++  UINT32 		_posStateMask;
++} CDecoder;
++
++
++void CDecoder_CDecoder(CDecoder *decoder);
++int Create(CDecoder *decoder);
++int Init(CDecoder *decoder, unsigned char *InPtr, unsigned char *OutPtr);
++int CodeReal(CDecoder *decoder, unsigned char *InPtr,unsigned char *OutPtr, const UINT32 *inSize, const UINT32 *outSize,unsigned int *progress);
++int SetDictionarySize(CDecoder *decoder, UINT32 dictionarySize);
++int SetLiteralProperties(CDecoder *decoder, UINT32 numLiteralPosStateBits, UINT32 numLiteralContextBits);
++int SetPosBitsProperties(CDecoder *decoder, UINT32 numPosStateBits);
++
++
++#endif
++
+diff -urN linux-2.4.27_orig/arch/mips/inflater/gzip.h linux-2.4.27/arch/mips/inflater/gzip.h
+--- linux-2.4.27_orig/arch/mips/inflater/gzip.h	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/gzip.h	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,33 @@
++#define OF(args)  args
++#define STATIC static
++
++#define WSIZE 0x8000		/* Slideing window size (defined as var
++				 * "window" below) must be at least 32k, 
++				 * and a power of two.  This is the
++				 * data work window used for input buffer
++				 * by the input routine */
++
++static char *output_data;
++static unsigned long output_ptr;
++
++#ifndef NULL
++#define NULL 0
++#endif
++
++#define NOMEMCPY                /* Does routine memcpy exist? */
++
++static unsigned char *window;
++static unsigned inptr;		/* index of next byte to process in inbuf */
++static unsigned outcnt;		/* bytes in output buffer */
++
++/* gzip flag byte */
++#define ASCII_FLAG   0x01 /* bit 0 set: file probably ascii text */
++#define CONTINUATION 0x02 /* bit 1 set: continuation of multi-part gzip file */
++#define EXTRA_FIELD  0x04 /* bit 2 set: extra field present */
++#define ORIG_NAME    0x08 /* bit 3 set: original file name present */
++#define COMMENT      0x10 /* bit 4 set: file comment present */
++#define ENCRYPTED    0x20 /* bit 5 set: file is encrypted */
++#define RESERVED     0xC0 /* bit 6,7:   reserved */
++
++
++static char *input_data;
+diff -urN linux-2.4.27_orig/arch/mips/inflater/inflate.c linux-2.4.27/arch/mips/inflater/inflate.c
+--- linux-2.4.27_orig/arch/mips/inflater/inflate.c	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/inflate.c	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,87 @@
++/* inflate.c -- Not copyrighted 1992 by Mark Adler
++   version c10p1, 10 January 1993 */
++
++
++#include "lzma_decoder.h"
++#include <linux/config.h>
++
++static void *freememstart;
++typedef unsigned char  uch;
++typedef unsigned short ush;
++typedef unsigned long  ulg;
++
++void kernelunzip(int argc, char *argv[], char *arge[]);
++static int zip7decompress(uch *, uch *);
++
++void (*kernel_entry)(void);
++
++void (*prnt)(unsigned char c);        	/* Gen reference to Yamon print function */
++void myprintf(char *ptr);          		/* Generate our own printf */
++void (*ke)(int, char *[], char *[]); 		/* Gen reference to kernel function */
++void (*app_start)(void);
++
++#define printf myprintf
++
++void kernelunzip(int argc, char *argv[], char *arge[])
++{
++  extern unsigned int _ftext;
++  extern uch kernelimage[];
++  uch *in, *out;
++  int status;
++  
++  out = (uch *)&_ftext;
++  in = &(kernelimage[0]);  /* temp test file */
++  
++  status = zip7decompress(in, out);
++
++  if (status == 0)
++    {
++      printf("Kernel decompressor was successful ... launching kernel.\n");
++#if 0
++	  app_start = (void (*)(void))(&_ftext);
++	  app_start();
++#else
++	  ke = ( void(*)(int, char *[],char*[]))(&_ftext);
++	  (*ke)(argc,argv,arge);
++#endif
++    }
++  else
++    {//Shiang: Here we halt!! Should I come back to the bootloader??
++      printf("Error in decompression!\n");
++      //return(1);      
++    }
++
++}
++
++
++int zip7decompress(uch *indata, uch *outdata)
++{
++    extern unsigned int inflate_free_memory_start;
++    extern unsigned int inflate_slide_window;
++    extern uch kernelimage[];
++    extern uch kernelimage_end[];
++    int i;
++    unsigned int uncompr_size;
++
++
++    /* Setup memory limits */
++    unsigned int compr_length = kernelimage_end - kernelimage;
++    freememstart = (void *)&inflate_free_memory_start;
++
++    uncompr_size = *((unsigned int *)(indata+20));  //Shiang: Here we can get the file size of  decompressed file!
++   
++    i = cm_hwDecodeLZMA(outdata,uncompr_size,indata,compr_length,freememstart);
++	
++    return (i);
++}
++
++
++void myprintf(char *ptr)
++{ 
++#if 0
++  unsigned int *tempptr = (unsigned int  *)0x90000534; 
++  prnt = ( void (*)(unsigned int, char *)) *tempptr;
++  (*prnt)(0,ptr);
++#endif
++}
++
+diff -urN linux-2.4.27_orig/arch/mips/inflater/ld.script.in linux-2.4.27/arch/mips/inflater/ld.script.in
+--- linux-2.4.27_orig/arch/mips/inflater/ld.script.in	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/ld.script.in	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,43 @@
++OUTPUT_FORMAT("@@OUTPUT_FORMAT@@")
++OUTPUT_ARCH(mips)
++ENTRY(kernelunzip)
++SECTIONS
++{
++
++      /* Allocate memory space on top of kernel bss space */
++        . = _fbss;
++/*        . = 0x80480000; */
++        .text :
++        {
++                *(.text)
++                *(.rodata)
++                *(.rodata1)
++                *(.gnu.warning)
++                *(.text.init)
++                *(.data.init)
++        }                    
++        
++        .data :
++        {
++                *(*)
++        }
++
++        bss :
++        {
++               inflate_bss_start = .;
++                *(.dynbss)
++                *(.bss)
++                *(COMMON)
++                *(.sbss)
++                *(.scommon)
++               inflate_bss_end = .;
++                . = ALIGN (0x8000);
++               inflate_slide_window = .;
++                . += 0x8000;  /* slide window is 8000h */
++               inflate_free_memory_start = .;
++        }
++
++
++
++}
++
+diff -urN linux-2.4.27_orig/arch/mips/inflater/lzma_decoder.h linux-2.4.27/arch/mips/inflater/lzma_decoder.h
+--- linux-2.4.27_orig/arch/mips/inflater/lzma_decoder.h	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/lzma_decoder.h	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,41 @@
++/***************************************************************************
++**+----------------------------------------------------------------------+**
++**|                                ****                                  |**
++**|                                ****                                  |**
++**|                                ******o***                            |**
++**|                          ********_///_****                           |**
++**|                           ***** /_//_/ ****                          |**
++**|                            ** ** (__/ ****                           |**
++**|                                *********                             |**
++**|                                 ****                                 |**
++**|                                  ***                                 |**
++**|                                                                      |**
++**|     Copyright (c) 1998 - 2003 Texas Instruments Incorporated         |**
++**|                        ALL RIGHTS RESERVED                           |**
++**|                                                                      |**
++**| Permission is hereby granted to licensees of Texas Instruments       |**
++**| Incorporated (TI) products to use this computer program for the sole |**
++**| purpose of implementing a licensee product based on TI products.     |**
++**| No other rights to reproduce, use, or disseminate this computer      |**
++**| program, whether in part or in whole, are granted.                   |**
++**|                                                                      |**
++**| TI makes no representation or warranties with respect to the         |**
++**| performance of this computer program, and specifically disclaims     |**
++**| any responsibility for any damages, special or consequential,        |**
++**| connected with the use of this program.                              |**
++**|                                                                      |**
++**+----------------------------------------------------------------------+**
++***************************************************************************/
++/**************************************************************************/
++/*                                                                        */
++/*   MODULE:                                                              */
++/*   PURPOSE:                                                             */
++/*                                                                        */
++/**************************************************************************/
++#ifndef _LZMA_DECODER_H_
++#define _LZMA_DECODER_H_
++
++int cm_hwDecodeLZMA(unsigned char *pbDest,unsigned int uiDecompressedLength, unsigned char *pbSource, unsigned int uiCompressedLength, void *);
++
++#endif
++
+diff -urN linux-2.4.27_orig/arch/mips/inflater/Makefile linux-2.4.27/arch/mips/inflater/Makefile
+--- linux-2.4.27_orig/arch/mips/inflater/Makefile	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/Makefile	2008-06-19 19:48:22.000000000 +0300
+@@ -0,0 +1,53 @@
++#
++# File intended to be called from top level Makefile during kernel build if compressed
++# image for atlas is requested.
++#
++tool-prefix	= mips-linux-
++output-format	= elf32-tradbigmips
++
++ifndef CONFIG_UCLINUX
++	LINUX=vmlinux
++else
++	LINUX=linux
++endif
++
++#LOCALLINKFLAGS = -static -G 0 -no-warn-mismatch -EB -Map inflate.map -R $(TOPDIR)/$(LINUX)
++LOCALLINKFLAGS = -G 0 -static -R $(TOPDIR)/$(LINUX)
++
++OBJ_FILES	= inflate.o Decoder.o
++COMPRESSED_ZIMAGE	= zimage.7z
++
++# Files =============
++inflate.o:	inflate.c lzma_decoder.h Decoder.o Makefile
++	$(CC) $(CFLAGS) $(CFLAGS_KERNEL) $(PROFILING) -DKBUILD_BASENAME=$(subst $(comma),_,$(subst -,_,$(*F))) -c -o $@ $<
++
++Decoder.o:	Decoder.c lzma_decoder.h Decoder.h Makefile
++	$(CC) $(CFLAGS) $(CFLAGS_KERNEL) $(PROFILING) -DKBUILD_BASENAME=$(subst $(comma),_,$(subst -,_,$(*F))) -c -o $@ $<
++
++
++$(COMPRESSED_ZIMAGE): Makefile $(TOPDIR)/$(LINUX)
++	$(OBJCOPY) -S -O binary $(TOPDIR)/$(LINUX) zimage
++	$(STAGING_DIR)/bin/7zip zimage zimage.7z -k big
++
++ld.script:	ld.script.in Makefile
++	sed -e 's/@@OUTPUT_FORMAT@@/$(output-format)/' \
++	    -e 's/@@LOADADDR@@/$(LOADADDR)/' <$< >$@
++
++zimage.script:	zimage.script.in Makefile
++	sed -e 's/@@OUTPUT_FORMAT@@/$(output-format)/' \
++	    -e 's/@@LOADADDR@@/$(LOADADDR)/' <$< >$@
++
++zimage.o:       $(COMPRESSED_ZIMAGE) zimage.script Makefile
++	$(LD) -EB -T zimage.script -r -b binary zimage.7z -o zimage.o
++
++# Image =============
++7_zimage: $(OBJ_FILES) zimage.o Makefile ld.script
++#	$(STRIP) --strip-unneeded $(OBJ_FILES)
++	$(LD) $(LOCALLINKFLAGS) -T ld.script $(OBJ_FILES) zimage.o -o inflate
++	$(NM) inflate | grep -v '\(compiled\)\|\(\.o$$\)\|\( [aU] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | sort > $(TOPDIR)/7System.map
++	$(OBJCOPY) -S -O binary inflate $(TOPDIR)/7linux
++#	$(OBJDUMP) -hD inflate > $(ROOTDIR)/inflate_dump.log
++
++clean:	
++	rm -f $(OBJ_FILES) $(COMPRESSED_ZIMAGE) zimage inflate 7System.map zimage.o ld.script zimage.script
++#	rm -f $(TOPDIR)/srec2bin
+diff -urN linux-2.4.27_orig/arch/mips/inflater/zimage.script.in linux-2.4.27/arch/mips/inflater/zimage.script.in
+--- linux-2.4.27_orig/arch/mips/inflater/zimage.script.in	1970-01-01 03:00:00.000000000 +0300
++++ linux-2.4.27/arch/mips/inflater/zimage.script.in	2008-06-18 11:52:48.000000000 +0300
+@@ -0,0 +1,14 @@
++OUTPUT_FORMAT("@@OUTPUT_FORMAT@@")
++OUTPUT_ARCH(mips)
++SECTIONS
++{
++   .data :
++   {
++         kernelimage = .;
++         *(.data)
++         kernelimage_end = .;
++   }
++}
++
++
++

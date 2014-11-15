@@ -1,0 +1,98 @@
+--- linux-2.4.26-rp614v4v106/drivers/mtd/maps/rtl865x_flash.c	2009-02-10 18:57:26.000000000 +0200
++++ linux-2.4.26-rp614v4v106_patched/drivers/mtd/maps/rtl865x_flash.c	2009-02-10 00:08:44.000000000 +0200
+@@ -7,6 +7,8 @@
+ #include <linux/mtd/partitions.h>
+ #include <linux/config.h>
+ #include <linux/autoconf.h>
++#include <linux/squashfs_fs.h>
++
+ 
+ #define WINDOW_ADDR 0xbe000000
+ #ifdef  CONFIG_RTL865X_FLASH_2MB
+@@ -111,11 +113,61 @@
+ #define cleanup_rtl865x_map cleanup_module
+ #endif
+ 
++
++#define ROOTFS_ALIGN 16
++#define ROUNDUP(x, y) ((((x)+((y)-1))/(y))*(y))
++
++int find_root(struct mtd_info *mtd, size_t size, struct squashfs_super_block* sb)
++{
++    int off;
++    size_t len;
++	struct u4b {
++		unsigned char b1;	
++		unsigned char b2;	
++		unsigned char b3;	
++		unsigned char b4;	
++	};
++	struct u4b u;
++
++    printk(KERN_NOTICE "%s(%d): Searching root filesystem...", mtd->name, size);
++    off = rtl865x_parts[3].offset + (1024*1); // we guess what kernel size connot be less than 1k
++    for ( ; off < size; off += ROOTFS_ALIGN) {
++
++        /*
++         * Read into buffer
++         */
++        if (mtd->read(mtd, off, sizeof(struct squashfs_super_block), &len, (char *) sb) || len != sizeof(struct squashfs_super_block))
++            continue;
++
++        if ( (off % 0x10000) == 0 )
++#if 1
++            printk(" 0x%x: %x\n", off, sb->s_magic);
++#else
++            printk(".");
++#endif
++
++
++		
++        /* found a SquashFS header */
++        if ((be32_to_cpu(sb->s_magic) == SQUASHFS_MAGIC ) || (be32_to_cpu(sb->s_magic) == SQUASHFS_MAGIC_SWAP) || sb->s_magic == SQUASHFS_MAGIC || sb->s_magic == SQUASHFS_MAGIC_SWAP) {
++            printk(" found at %x\n", off );
++            return off;
++        }
++
++    }
++
++    printk(KERN_NOTICE "Couldn't find root filesystem\n");
++    return -1;
++}
++
+ mod_init_t init_rtl865x_map(void)
+ {
+-       	printk(KERN_NOTICE "flash device: %x at %x\n", WINDOW_SIZE, WINDOW_ADDR);
++	struct squashfs_super_block sb;
++	int rootfs_offset;
++
++	printk(KERN_NOTICE "flash device: %x at %x\n", WINDOW_SIZE, WINDOW_ADDR);
+ 	rtl865x_map.map_priv_1 =WINDOW_ADDR;
+-
++
+ 	if (!rtl865x_map.map_priv_1) {
+ 		printk("Failed to ioremap\n");
+ 		return -EIO;
+@@ -123,15 +175,22 @@
+ 
+ 	/* read bdinfo for large flash */
+ 	flashdrv_init();
++
+ 
+ #if 0 /* for DEBUG */
+ 	unsigned int buf[2]; /* buf[] should be the same as bdinfo.BackupInst[]. */
+ 	flashdrv_read( buf, 0xbe400000, sizeof(buf) );
+ 	printk( "\n*** read 0xbe400000:\n0x%08x\n0x%08x\n\n", buf[0], buf[1] );
+ #endif
++
+ 
+ 	rtl865x_mtd = do_map_probe("cfi_probe", &rtl865x_map);
++
+ 	if (rtl865x_mtd) {
++		/* find and size rootfs */
++		rootfs_offset = find_root(rtl865x_mtd, rtl865x_mtd->size, &sb);
++		rtl865x_parts[4].offset = rootfs_offset;
++
+ 		rtl865x_mtd->module = THIS_MODULE;
+ 		add_mtd_partitions(rtl865x_mtd, rtl865x_parts, sizeof(rtl865x_parts)/sizeof(rtl865x_parts[0]));
+ 		return 0;
