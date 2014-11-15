@@ -2,7 +2,7 @@
 FlyRouter
 =========
 
-.
+FlyRouter is a new Linux firmware for ADM5120, BCM6345, RTL865xB SoC's
 
 
 License
