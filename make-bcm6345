@@ -1,0 +1,132 @@
+#!/bin/sh
+
+INSTALL_DIR=/home/`whoami`/FlyRouterBIN
+
+mkdir -p ${INSTALL_DIR}/download
+rm -rf ./dl
+ln -s ${INSTALL_DIR}/download dl
+
+
+hack_toolchain_wive(){
+
+    STAGDIR="staging_dir_mips"
+    #rm -rf $STAGDIR; mkdir -p $STAGDIR
+    rm -rf $STAGDIR
+    tar xvfz dl/0-toolchain_bcm6345.tgz
+    mv 0-toolchain_bcm6345 $STAGDIR
+    #
+    #cp -r /home/builder/0-zero/build_sinus1054/release-20100108/toolchain/* $STAGDIR
+    ln -f $STAGDIR/mips-linux-uclibc/lib/* $STAGDIR/lib/
+    #mkdir -p /opt/gcc-3.3.3/toolchain_build_mips/ccache-2.3/cache
+    #ln -fs `pwd`/${STAGDIR} /home/builder/0-zero/build_sinus1054/release-20100108/toolchain
+    mkdir $STAGDIR/stampfiles
+    touch \
+	$STAGDIR/stampfiles/.toolchain_binutils-compile \
+	$STAGDIR/stampfiles/.toolchain_binutils-install \
+	$STAGDIR/stampfiles/.toolchain_binutils-prepare \
+	$STAGDIR/stampfiles/.toolchain_gcc-compile \
+	$STAGDIR/stampfiles/.toolchain_gcc-install \
+	$STAGDIR/stampfiles/.toolchain_gcc-prepare \
+	$STAGDIR/stampfiles/.toolchain_gdb-compile \
+	$STAGDIR/stampfiles/.toolchain_gdb-install \
+	$STAGDIR/stampfiles/.toolchain_gdb-prepare \
+	$STAGDIR/stampfiles/.toolchain_kernel-headers-prepare \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-compile \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-install \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-prepare \
+	$STAGDIR/stampfiles/.toolchain_uClibc-compile \
+	$STAGDIR/stampfiles/.toolchain_uClibc-install \
+	$STAGDIR/stampfiles/.toolchain_uClibc-prepare
+    #
+    echo "3.3.3" > $STAGDIR/gcc_version
+    echo "0.9.26" > $STAGDIR/uclibc_version
+}
+
+
+
+clean_root(){
+	make root_clean
+}
+
+clean_linux(){
+	rm -rf build_mips/linux*
+}
+
+clean_build(){
+	rm -rf build_mips
+}
+
+install(){
+	rev=`cat Revision | head -n 1 | awk '/^Revision:/ { print $2 }'`
+	#
+	mkdir -p $INSTALL_DIR/firmware-mips-sinus1054/ $INSTALL_DIR/packages-mips-sinus1054/
+	cp -af target/linux/image/brcm6345/firmware.bin $INSTALL_DIR/firmware-mips-sinus1054/$1-r${rev}-`date +%Y%m%d%H%M`.bin
+	rm -f target/linux/image/brcm6345/root_fs trunk/target/linux/image/brcm6345/kernel trunk/target/linux/image/brcm6345/firmware.bin
+	cp -f bin/packages/* $INSTALL_DIR/packages-mips-sinus1054/
+	rm -rf bin
+}
+
+build(){
+	local ver=$1
+	local config=$2
+	export SINUS_CONFIG=$2
+	clean_build
+	clean_root
+	temp=`tempfile -p linux -s -config`
+	if [ -r target/linux/brcm6345-$ver/config-$config ]; then
+		cp target/linux/brcm6345-$ver/config $temp
+		cp target/linux/brcm6345-$ver/config-$config target/linux/brcm6345-$ver/config
+	fi
+	cp target/linux/brcm6345-$ver/system-$config .config
+	make oldconfig DEVELOPER=1
+	make --jobs=3
+	#make --jobs=1 V=99
+	ret=$?
+	if [ "$ret" = 0 ]; then
+		rename "s/.bin/-$config.bin/" bin/*
+		install $config
+	fi
+
+	if [ -s $temp ]; then
+		cp $temp target/linux/brcm6345-$ver/config
+	fi
+	rm $temp
+	[ "$ret" != 0 ] && exit 1
+}
+
+upload_firmware() {
+	DESTINATION="/var/www/www.flyrouter.net/downloads/software"
+	mkdir -p $DESTINATION/sinus1054/upgrade/2011-testing/
+	cp ${INSTALL_DIR}/firmware-mips-sinus1054/sinus1054* $DESTINATION/sinus1054/upgrade/2011-testing/
+}
+
+upload_packages() {
+	DESTINATION="/var/www/www.flyrouter.net/downloads/software"
+	cp ${INSTALL_DIR}/packages-mips-sinus1054/* $DESTINATION/sinus1054/packages/
+}
+
+
+#
+#download_component
+rm -rf bin build_mips
+#
+# rebuild toolchain
+rm -rf staging_dir_mips toolchain_build_mips
+# or
+#hack_toolchain_wive
+#
+#
+### Config section ###
+#build 2.4 sinus1054-kernel
+#build 2.4 sinus1054-telemetry_beta
+build 2.4 sinus1054-telemetry_micro
+#build 2.4 sinus1054-arlix_noppx_nonat_noweb
+#build 2.4 sinus1054-lottery_ppx_nat_web
+#build 2.4 sinus1054-remserial_noppx_nat_noweb
+#build 2.4 sinus1054-satm3_ppx_nat_web
+#build 2.4 sinus1054-chilli_ppx_nat_web
+#build 2.4 sinus1054-admin_packages
+#build 2.4 sinus1054-admin_packages_oldver
+#
+#upload_packages
+#upload_firmware

@@ -1,0 +1,129 @@
+#!/bin/sh
+
+INSTALL_DIR=/home/`whoami`/FlyRouterBIN
+
+mkdir -p ${INSTALL_DIR}/download
+rm -rf ./dl
+ln -s ${INSTALL_DIR}/download dl
+
+
+clean_root(){
+	make root_clean
+}
+
+clean_linux(){
+	rm -rf build_mipsel/linux*
+}
+
+clean_build(){
+	rm -rf build_mipsel
+}
+
+install(){
+	rev=`cat Revision | head -n 1 | awk '/^Revision:/ { print $2 }'`
+	#
+	mkdir -p $INSTALL_DIR/firmware-mipsel-flyrouter	
+	cp -a bin/*.csys $INSTALL_DIR/firmware-mipsel-flyrouter/$1-r${rev}-`date +%Y%m%d%H%M`.csys
+	#
+	mkdir -p $INSTALL_DIR/packages-mipsel-flyrouter/
+	cp -f bin/packages/* $INSTALL_DIR/packages-mipsel-flyrouter/
+	#
+	mkdir -p $INSTALL_DIR/rootfs-mipsel-flyrouter/
+	cp -a build_mipsel/linux-2.4-adm5120/root.squashfs $INSTALL_DIR/rootfs-mipsel-flyrouter/$1-r${rev}-`date +%Y%m%d%H%M`.bin
+	chmod 644 $INSTALL_DIR/rootfs-mipsel-flyrouter/fly*
+	rm -rf bin
+}
+
+build(){
+	local ver=$1
+	local config=$2
+	export FLY_CONFIG=$2
+	clean_build
+	clean_root
+	temp=`tempfile -p linux -s -config`
+	if [ -r target/linux/adm5120-$ver/config-$config ]; then
+		cp target/linux/adm5120-$ver/config $temp
+		cp target/linux/adm5120-$ver/config-$config target/linux/adm5120-$ver/config
+	fi
+	cp target/linux/adm5120-$ver/system-$config .config
+	make oldconfig DEVELOPER=1
+	make --jobs=3
+	#make --jobs=1 V=99
+	ret=$?
+	if [ "$ret" = 0 ]; then
+		rename "s/.bin/-$config.bin/" bin/*
+		install $config
+	fi
+
+	if [ -s $temp ]; then
+		cp $temp target/linux/adm5120-$ver/config
+	fi
+	rm $temp
+	[ "$ret" != 0 ] && exit 1
+}
+
+make_snapshot() {
+	dir=$(basename `pwd`)
+	cd ..
+	mkdir -p $INSTALL_DIR/snapshot/
+	tar cvfj $INSTALL_DIR/snapshot/flyrouter-snapshot-`date +%Y%m%d%H%M`.tar.bz2 \
+				--exclude $dir/dl \
+				--exclude $dir/download \
+				--exclude $dir/bin \
+				--exclude $dir/build_mips \
+				--exclude $dir/build_mips_nofpu \
+				--exclude $dir/build_mipsel \
+				--exclude $dir/staging_dir_mips \
+				--exclude $dir/staging_dir_mips_nofpu \
+				--exclude $dir/staging_dir_mipsel \
+				--exclude $dir/toolchain_build_mips \
+				--exclude $dir/toolchain_build_mips_nofpu \
+				--exclude $dir/toolchain_build_mipsel \
+		$dir
+}
+
+upload_firmware() {
+       DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+       scp ${INSTALL_DIR}/rootfs-mipsel-flyrouter/*.bin $DESTINATION/flyrouter/upgrade/testing
+}
+
+upload_packages() {
+       DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+       scp ${INSTALL_DIR}/packages-mipsel-flyrouter/* $DESTINATION/flyrouter/packages/
+}
+ 
+
+
+#build 2.4 flyrouter-arlix_usb
+#build 2.4 flyrouter-bluepoint_usb
+#build 2.4 flyrouter-mpcs_ovpn-nssl_nusb
+#build 2.4 flyrouter-navigation_usb
+#build 2.4 flyrouter-ovpn_nssl_usb
+#build 2.4 flyrouter-ovpn_nssl_ppptpoed_nusb
+#build 2.4 flyrouter-router_usb
+#build 2.4 flyrouter-webcam_usb
+#build 2.4 flyrouter-admin_kernel
+#build 2.4 flyrouter-pinger
+#
+#build 2.4 flyrouter2-ospf_nusb
+#
+#
+rm -rf bin build_mipsel
+#
+build 2.4 flyrouter3-cln_nusb
+#build 2.4 flyrouter3-ipsec-beta3_nweb_nusb
+#build 2.4 flyrouter3-mpcs_ppptpoe_nusb
+#build 2.4 flyrouter3-mpcs-cs_ppptpoe_nusb
+#build 2.4 flyrouter3-mpcs_stargazer_nusb
+#build 2.4 flyrouter3-office_usb
+#build 2.4 flyrouter3-ovpn_nssl_ppptpoed_nusb
+#build 2.4 flyrouter3-ovpn_nssl_sip_nusb
+#build 2.4 flyrouter3-ovpn_nssl_snmp_nusb
+#build 2.4 flyrouter3-ovpn_ssl_nweb_nusb
+#build 2.4 flyrouter3-user_unidata
+#build 2.4 flyrouter3-vbox_usb
+#build 2.4 flyrouter3-admin_packages
+#
+#upload_firmware
+#upload_packages
+

@@ -1,0 +1,106 @@
+#!/bin/sh
+
+INSTALL_DIR=~/FlyRouterBIN
+
+cd ~/ZFT_Lab/trunk
+
+mkdir -p -v ~/FlyRouterBIN/download
+rm -rf ./dl
+ln -s ~/FlyRouterBIN/download dl
+
+hack_toolchain(){
+    STAGDIR="./staging_dir_mips_nofpu"
+
+    mkdir -p /opt/gcc-3.3.5/toolchain_build_mips/ccache-2.3
+
+    rm -rf $STAGDIR
+    mkdir -p $STAGDIR
+    cp -R /opt/toolchain_mips/* $STAGDIR/
+    ln -f -s /opt/toolchain_mips /opt/toolchain_mips_nofpu
+
+    # NOT WORK CROSS COMPILER
+    #ln -s /opt/cross-mips/mips-patfree-uclibc /opt/toolchain_mips
+    #ln -s /opt/cross-mips/mips-patfree-uclibc /opt/toolchain_mips_nofpu
+
+    echo "3.3.5" > $STAGDIR/gcc_version
+    echo "0.9.27" > $STAGDIR/uclibc_version
+    #ln -f -s $STAGDIR/mips-linux-uclibc/lib/* $STAGDIR/lib/
+    ln -f $STAGDIR/mips-linux-uclibc/lib/* $STAGDIR/lib/
+
+    mkdir $STAGDIR/stampfiles
+    touch \
+    $STAGDIR/stampfiles/.toolchain_binutils-compile \
+    $STAGDIR/stampfiles/.toolchain_binutils-install \
+    $STAGDIR/stampfiles/.toolchain_binutils-prepare \
+    $STAGDIR/stampfiles/.toolchain_gcc-compile \
+    $STAGDIR/stampfiles/.toolchain_gcc-install \
+    $STAGDIR/stampfiles/.toolchain_gcc-prepare \
+    $STAGDIR/stampfiles/.toolchain_gdb-compile \
+    $STAGDIR/stampfiles/.toolchain_gdb-install \
+    $STAGDIR/stampfiles/.toolchain_gdb-prepare \
+    $STAGDIR/stampfiles/.toolchain_kernel-headers-prepare \
+    $STAGDIR/stampfiles/.toolchain_libnotimpl-compile \
+    $STAGDIR/stampfiles/.toolchain_libnotimpl-install \
+    $STAGDIR/stampfiles/.toolchain_libnotimpl-prepare \
+    $STAGDIR/stampfiles/.toolchain_uClibc-compile \
+    $STAGDIR/stampfiles/.toolchain_uClibc-install \
+    $STAGDIR/stampfiles/.toolchain_uClibc-prepare
+}
+
+clean_root(){
+	make root_clean
+}
+
+clean_linux(){
+	rm -rf build_mips_nofpu/linux*
+}
+
+clean_build(){
+	rm -rf build_mips_nofpu
+}
+
+install(){
+        #mkdir -p $INSTALL_DIR/firmware/$1/`date +%Y%m%d%H%M`
+	#cp -a bin/*.bin $INSTALL_DIR/firmware/$1/`date +%Y%m%d%H%M`/
+	#cp -a bin/*.csys $INSTALL_DIR/firmware/$1/`date +%Y%m%d%H%M`/
+	#
+	mkdir -p $INSTALL_DIR/packages-mips/
+	cp -f bin/packages/* $INSTALL_DIR/packages-mips/
+	#
+	#mkdir -p $INSTALL_DIR/rootfs/
+	#cp -a build_mipsel/linux-2.4-adm5120/root.squashfs $INSTALL_DIR/rootfs/$1-`date +%Y%m%d%H%M`.bin
+	#chmod 644 $INSTALL_DIR/rootfs/*
+	#rm -rf bin
+}
+
+build(){
+	local ver=$1
+	local config=$2
+	clean_linux
+	temp=`tempfile -p linux -s -config`
+	if [ -r target/linux/rtl8186-$ver/config-$config ]; then
+		cp target/linux/rtl8186-$ver/config $temp
+		cp target/linux/rtl8186-$ver/config-$config target/linux/rtl8186-$ver/config
+	fi
+	cp target/linux/rtl8186-$ver/antrouter-$config .config
+	make oldconfig DEVELOPER=1
+	#make --jobs=4
+	make --jobs=1 V=99
+	ret=$?
+	if [ "$ret" = 0 ]; then
+		rename "s/.bin/-$config.bin/" bin/*
+		install 
+	fi
+
+	if [ -s $temp ]; then
+		cp $temp target/linux/rtl8186-$ver/config
+	fi
+	rm $temp
+	[ "$ret" != 0 ] && exit 1
+}
+
+hack_toolchain
+
+clean_build
+clean_root
+build 2.4 base00

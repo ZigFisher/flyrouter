@@ -1,0 +1,146 @@
+#!/bin/sh
+
+INSTALL_DIR=/home/`whoami`/FlyRouterBIN
+
+mkdir -p ${INSTALL_DIR}/download
+rm -rf ./dl
+ln -s ${INSTALL_DIR}/download dl
+
+download_component(){
+
+    # Download stripped Netgear kernel, sorry
+    wget -c -O dl/linux-2.4.26-rp614v4v106.tar.bz2 \
+	http://midge.vlad.org.ua/zig/source/rtl865xb/linux-2.4.26-rp614v4v106.tar.bz2
+
+    # Download RTL865xB source for Flash
+    wget -c -O dl/rtl865x-flash.tgz \
+	http://midge.vlad.org.ua/zig/source/rtl865xb/rtl865x-flash.tgz
+
+}
+
+hack_toolchain_wive(){
+
+    STAGDIR="staging_dir_mips"
+    rm -rf $STAGDIR; mkdir -p $STAGDIR
+    #cp -r /home/builder/0-zero/build_testing/toolchain/* $STAGDIR
+    cp -r /home/builder/0-zero/wive-20091207/release-20091207/toolchain/* $STAGDIR
+    ln -f $STAGDIR/mips-linux-uclibc/lib/* $STAGDIR/lib/
+    mkdir -p /opt/gcc-3.3.3/toolchain_build_mips/ccache-2.3/cache
+    #ln -fs `pwd`/${STAGDIR} /home/builder/0-zero/build_testing/toolchain
+    ln -fs `pwd`/${STAGDIR} /home/builder/0-zero/wive-20091207/release-20091207/toolchain     
+    mkdir $STAGDIR/stampfiles
+    touch \
+	$STAGDIR/stampfiles/.toolchain_binutils-compile \
+	$STAGDIR/stampfiles/.toolchain_binutils-install \
+	$STAGDIR/stampfiles/.toolchain_binutils-prepare \
+	$STAGDIR/stampfiles/.toolchain_gcc-compile \
+	$STAGDIR/stampfiles/.toolchain_gcc-install \
+	$STAGDIR/stampfiles/.toolchain_gcc-prepare \
+	$STAGDIR/stampfiles/.toolchain_gdb-compile \
+	$STAGDIR/stampfiles/.toolchain_gdb-install \
+	$STAGDIR/stampfiles/.toolchain_gdb-prepare \
+	$STAGDIR/stampfiles/.toolchain_kernel-headers-prepare \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-compile \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-install \
+	$STAGDIR/stampfiles/.toolchain_libnotimpl-prepare \
+	$STAGDIR/stampfiles/.toolchain_uClibc-compile \
+	$STAGDIR/stampfiles/.toolchain_uClibc-install \
+	$STAGDIR/stampfiles/.toolchain_uClibc-prepare
+    #
+    echo "3.3.3" > $STAGDIR/gcc_version
+    echo "0.9.26" > $STAGDIR/uclibc_version
+}
+
+clean_root(){
+	make root_clean
+}
+
+clean_linux(){
+	rm -rf build_mips/linux*
+}
+
+clean_build(){
+	rm -rf build_mips
+}
+
+install(){
+	#
+	mkdir -p $INSTALL_DIR/firmware-mips-beerouter/ $INSTALL_DIR/packages-mips-beerouter/
+	rev=`LANG=C svn up -N Makefile >/dev/null 2>/dev/null; LANG=C svn info Makefile | awk '/^Revision:/ { print $2 }'`
+	cp -af build_mips/linux-2.4-rtl865xb/br6214k.bix $INSTALL_DIR/firmware-mips-beerouter/$1-r${rev}-`date +%Y%m%d%H%M`.bix
+	cp -af build_mips/linux-2.4-rtl865xb/br6214k_crypted.bix $INSTALL_DIR/firmware-mips-beerouter/$1_up-r${rev}-`date +%Y%m%d%H%M`.bin
+	cp -af build_mips/linux-2.4-rtl865xb/dir120.bix $INSTALL_DIR/firmware-mips-beerouter/$1-r${rev}-`date +%Y%m%d%H%M`.bix
+	cp -af build_mips/linux-2.4-rtl865xb/dir120_crypted.bix $INSTALL_DIR/firmware-mips-beerouter/$1_up-r${rev}-`date +%Y%m%d%H%M`.bin
+	cp -f bin/packages/* $INSTALL_DIR/packages-mips-beerouter/
+	chmod 644 /var/www/download/br6214k/*
+	rm -rf bin
+}
+
+build(){
+	local ver=$1
+	local config=$2
+	export BEE_CONFIG=$2
+	clean_build
+	clean_root
+	temp=`tempfile -p linux -s -config`
+	if [ -r target/linux/rtl865xb-$ver/config-$config ]; then
+		cp target/linux/rtl865xb-$ver/config $temp
+		cp target/linux/rtl865xb-$ver/config-$config target/linux/rtl865xb-$ver/config
+	fi
+	cp target/linux/rtl865xb-$ver/system-$config .config
+	make oldconfig DEVELOPER=1
+	#make --jobs=4
+	#make --jobs=4 V=99
+	make --jobs=4
+	ret=$?
+	if [ "$ret" = 0 ]; then
+		rename "s/.bin/-$config.bin/" bin/*
+		install $config
+	fi
+
+	if [ -s $temp ]; then
+		cp $temp target/linux/rtl865xb-$ver/config
+	fi
+	rm $temp
+	[ "$ret" != 0 ] && exit 1
+}
+
+upload_firmware() {
+	DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+	scp ${INSTALL_DIR}/firmware-mips-beerouter/*_up* $DESTINATION/beerouter/upgrade/2009-testing/
+}
+
+upload_packages() {
+	DESTINATION="vu2049@194.54.152.39:~/htdocs/downloads/software"
+	scp ${INSTALL_DIR}/packages-mips-beerouter/* $DESTINATION/beerouter/packages/
+}
+
+
+#
+#download_component
+rm -rf bin build_mips
+#
+# rebuild toolchain
+rm -rf staging_dir_mips toolchain_build_mips
+hack_toolchain_wive
+#
+### Edimax section ###
+#build 2.4 beerouter-3g_admin_nweb
+#build 2.4 beerouter-3g_arlix_nweb
+#build 2.4 beerouter-3g_flash_nweb
+#build 2.4 beerouter-3g_mpcs_nweb
+#build 2.4 beerouter-3g_mpcs-cs_nweb
+#build 2.4 beerouter-3g_navigator_nweb
+#build 2.4 beerouter-3g_ovpn_nssl_nweb
+#build 2.4 beerouter-3g_serial_nweb
+build 2.4 beerouter-3g_multimedia_nweb
+#
+### D-Link section ###
+#build 2.4 beerouter-3g_4m_bluepoint
+#build 2.4 beerouter-3g_4m_ovpn_ssl
+#build 2.4 beerouter-3g_4m_mpcs_web
+#
+#aplay /home/builder/trunk/complete.wav /home/builder/trunk/complete.wav /home/builder/trunk/complete.wav
+#
+upload_firmware
+upload_packages

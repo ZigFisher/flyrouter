@@ -1,0 +1,949 @@
+/*
+ * Automatically generated header file: don't edit
+ */
+
+#define AUTOCONF_INCLUDED
+
+/* Version Number */
+#define BB_VER "(null)"
+#define BB_BT "(null)"
+
+#define CONFIG_DEVEL 1
+#define MODULES 1
+#define BR2_HAVE_DOT_CONFIG 1
+#define BR2_mipsel 1
+#define BR2_ARCH "mipsel"
+#undef BR2_LINUX_2_6_AU1000
+#undef BR2_LINUX_2_6_ARUBA
+#undef BR2_LINUX_2_4_AR531X
+#undef BR2_LINUX_2_4_BRCM
+#undef BR2_LINUX_2_6_BRCM
+#undef BR2_LINUX_2_6_XSCALE
+#undef BR2_LINUX_2_4_AR7
+#undef BR2_LINUX_2_4_X86
+#undef BR2_LINUX_2_6_X86
+#undef BR2_LINUX_2_6_SIBYTE
+#undef BR2_LINUX_2_4_ADM5120
+#undef BR2_LINUX_2_4_RTL8186
+#undef BR2_LINUX_2_4_RTL865xB
+#undef BR2_LINUX_2_4_BRCM6345
+#define BR2_LINUX_2_4_BRCM5354 1
+#undef BR2_LINUX_2_6_ADM5120
+#undef BR2_LINUX_2_6_SIGRAND5120
+#undef BR2_LINUX_2_6_MIPS64
+#undef BR2_LINUX_2_6_ARM
+#undef BR2_LINUX_2_6_CRIS
+#undef BR2_LINUX_2_6_M68K
+#undef BR2_LINUX_2_6_PPC
+#undef BR2_LINUX_2_6_SH3
+#undef BR2_LINUX_2_6_SH3EB
+#undef BR2_LINUX_2_6_SH4
+#undef BR2_LINUX_2_6_SH4EB
+#undef BR2_LINUX_2_6_SPARC
+#define BR2_LINUX_PCMCIA_SUPPORT 1
+#undef BR2_EXTERNAL_KERN_PATH_ON
+
+/*
+ * Build options
+ */
+#define BR2_WGET "wget --passive-ftp -nd"
+#undef BR2_TAR_VERBOSITY
+#define BR2_JLEVEL 1
+
+/*
+ * Toolchain Options
+ */
+
+/*
+ * uClibc Options
+ */
+#undef BR2_UCLIBC_VERSION_SNAPSHOT
+
+/*
+ * Binutils Options
+ */
+#undef BR2_BINUTILS_VERSION_2_14_90_0_7
+#undef BR2_BINUTILS_VERSION_2_15_94_0_2
+#define BR2_BINUTILS_VERSION_2_16_1 1
+#undef BR2_BINUTILS_VERSION_2_16_90_0_3
+#undef BR2_BINUTILS_VERSION_2_16_91_0_1
+#undef BR2_BINUTILS_VERSION_2_16_91_0_2
+#undef BR2_BINUTILS_VERSION_2_16_91_0_6
+#define BR2_BINUTILS_VERSION "2.16.1"
+
+/*
+ * Gcc Options
+ */
+#define BR2_GCC_VERSION_3_4_5 1
+#undef BR2_GCC_VERSION_3_3_3
+#undef BR2_GCC_VERSION_3_4_2
+#undef BR2_GCC_VERSION_4_0_3
+#undef BR2_GCC_VERSION_4_1_0
+#undef BR2_GCC_VERSION_3_4_4
+#undef BR2_GCC_VERSION_3_4_6
+#undef BR2_GCC_VERSION_4_0_2
+#undef BR2_PACKAGE_LIBGCC
+#define BR2_GCC_VERSION "3.4.5"
+#define BR2_GCC_USE_SJLJ_EXCEPTIONS ""
+#define BR2_EXTRA_GCC_CONFIG_OPTIONS ""
+#define BR2_INSTALL_LIBSTDCPP 1
+
+/*
+ * Common Toolchain Options
+ */
+#undef BR2_ENABLE_MULTILIB
+#define BR2_LARGEFILE 1
+#define BR2_TARGET_OPTIMIZATION "-Os -pipe -mips32 -mtune=mips32 -fno-caller-saves"
+
+/*
+ * OpenWrt Package Selection
+ */
+
+/*
+ * Package categories
+ */
+
+/*
+ * Base system
+ */
+
+/*
+ * busybox........................... The Swiss Army Knife of embedded Linux
+ */
+#define BR2_PACKAGE_BUSYBOX 1
+#undef BR2_PACKAGE_BUSYBOX_SNAPSHOT
+
+/*
+ * Busybox Configuration
+ */
+#define BR2_PACKAGE_BRIDGE 1
+#undef BR2_PACKAGE_DNSMASQ
+#define BR2_PACKAGE_IPKG 1
+
+/*
+ * iptables.......................... IPv4 / IPv6 firewall administration
+ */
+#define BR2_COMPILE_IPTABLES 1
+#define BR2_PACKAGE_IPTABLES 1
+#define BR2_PACKAGE_IPTABLES_MOD_CONNTRACK 1
+#define BR2_PACKAGE_IPTABLES_MOD_FILTER 1
+#define BR2_PACKAGE_IPTABLES_MOD_IMQ 1
+#define BR2_PACKAGE_IPTABLES_MOD_IPOPT 1
+#define BR2_PACKAGE_IPTABLES_MOD_NAT 1
+#define BR2_PACKAGE_IPTABLES_MOD_EXTRA 1
+#undef BR2_PACKAGE_IP6TABLES
+#define BR2_PACKAGE_MTD 1
+#undef BR2_PACKAGE_MTD_STATIC
+#define BR2_PACKAGE_NVRAM 1
+
+/*
+ * Applications
+ */
+#undef BR2_PACKAGE_AUTOSSH
+#undef BR2_PACKAGE_BITCHX
+
+/*
+ * collectd.......................... Lightweight system statistics collection daemon
+ */
+#undef BR2_PACKAGE_COLLECTD
+#undef BR2_PACKAGE_CBTT
+#undef BR2_PACKAGE_CBTT_MYSQL
+#undef BR2_PACKAGE_CTORRENT
+#undef BR2_PACKAGE_DASH
+#undef BR2_PACKAGE_DECO
+#undef BR2_PACKAGE_ELINKS
+#define BR2_PACKAGE_EMPTY 1
+#undef BR2_PACKAGE_FETCHMAIL
+#undef BR2_PACKAGE_GPSD
+#undef BR2_PACKAGE_GPG
+#define BR2_PACKAGE_HASERL 1
+#undef BR2_PACKAGE_IRSSI
+#undef BR2_PACKAGE_JAMVM
+#undef BR2_PACKAGE_LCD4LINUX
+#undef BR2_PACKAGE_LESS
+
+/*
+ * lua............................... LUA programming language
+ */
+#undef BR2_PACKAGE_LIBLUA
+#undef BR2_PACKAGE_LUA
+#undef BR2_PACKAGE_LUAC
+#undef BR2_PACKAGE_LUA_EXAMPLES
+#undef BR2_PACKAGE_MICROPERL
+#undef BR2_PACKAGE_MONIT
+#undef BR2_PACKAGE_MONIT_NOSSL
+#undef BR2_PACKAGE_MOTION
+#undef BR2_PACKAGE_MGETTY
+#undef BR2_PACKAGE_MUTT
+#undef BR2_PACKAGE_NAIL
+#undef BR2_PACKAGE_NANO
+#undef BR2_PACKAGE_OSIRISD
+
+/*
+ * php4.............................. PHP4 Hypertext preprocessor
+ */
+
+/*
+ * Server API ---
+ */
+#undef BR2_PACKAGE_PHP4_CLI
+#undef BR2_PACKAGE_PHP4_CGI
+#undef BR2_PACKAGE_PHP4_FASTCGI
+
+/*
+ * Extensions ---
+ */
+
+/*
+ * php5.............................. PHP5 Hypertext preprocessor
+ */
+
+/*
+ * Server API ---
+ */
+#undef BR2_PACKAGE_PHP5_CLI
+#undef BR2_PACKAGE_PHP5_CGI
+#undef BR2_PACKAGE_PHP5_FASTCGI
+
+/*
+ * Extensions ---
+ */
+#undef BR2_PACKAGE_PROCMAIL
+#undef BR2_PACKAGE_PSYBNC
+
+/*
+ * sablevm........................... A Java Virtual Machine (JVM) implementation
+ */
+#undef BR2_PACKAGE_SABLEVM
+#undef BR2_PACKAGE_LIBSABLEVM_CLASSPATH
+#undef BR2_PACKAGE_LIBFFI_SABLE
+#undef BR2_PACKAGE_SANE_BACKENDS
+#undef BR2_PACKAGE_SER2NET
+#undef BR2_PACKAGE_SYSLOG_NG
+
+/*
+ * rrdtool........................... Round-Robin Database (RRD) libraries and tools
+ */
+#undef BR2_COMPILE_RRDTOOL
+#undef BR2_COMPILE_RRDTOOL1
+#undef BR2_PACKAGE_VIM
+
+/*
+ * Networking
+ */
+#undef BR2_PACKAGE_AIRCRACK
+#undef BR2_PACKAGE_AMWALL
+#undef BR2_PACKAGE_ARPD
+#undef BR2_PACKAGE_ARPTABLES
+#undef BR2_PACKAGE_ARPWATCH
+
+/*
+ * asterisk.......................... Complete open source PBX
+ */
+#undef BR2_PACKAGE_ASTERISK_CHAN_BLUETOOTH
+#undef BR2_PACKAGE_ASTERISK_CHAN_H323
+#undef BR2_PACKAGE_ASTERISK_CHAN_MGCP
+#undef BR2_PACKAGE_ASTERISK_CHAN_SKINNY
+#undef BR2_PACKAGE_ASTERISK_CODEC_ILBC
+#undef BR2_PACKAGE_ASTERISK_CODEC_LPC10
+#undef BR2_PACKAGE_ASTERISK_CODEC_SPEEX
+#undef BR2_PACKAGE_ASTERISK_PBX_DUNDI
+#undef BR2_PACKAGE_ASTERISK_RES_AGI
+#undef BR2_PACKAGE_ASTERISK_MYSQL
+#undef BR2_PACKAGE_ASTERISK_PGSQL
+#undef BR2_PACKAGE_ASTERISK_SQLITE
+#undef BR2_PACKAGE_ASTERISK_SOUNDS
+#undef BR2_PACKAGE_ASTERISK_VOICEMAIL
+#undef BR2_PACKAGE_ATFTP
+#undef BR2_PACKAGE_ATFTPD
+
+/*
+ * avahi............................. An mDNS/DNS-SD (aka RendezVous/Bonjour/ZeroConf) implementation
+ */
+#undef BR2_PACKAGE_AVAHI_DAEMON
+#undef BR2_PACKAGE_LIBAVAHI
+
+/*
+ * bind.............................. A DNS server implementation
+ */
+#undef BR2_PACKAGE_BIND_TOOLS
+#undef BR2_PACKAGE_BIND_RNDC
+#undef BR2_PACKAGE_BIND_CHECK
+#undef BR2_PACKAGE_BIND_DNSSEC
+#undef BR2_PACKAGE_BIND_HOST
+#undef BR2_PACKAGE_BIND_DIG
+#undef BR2_PACKAGE_BIND_CLIENT
+#undef BR2_PACKAGE_BIND_SERVER
+#undef BR2_PACKAGE_BITLBEE
+#define BR2_PACKAGE_BWM 1
+#undef BR2_PACKAGE_CHILLISPOT
+#undef BR2_PACKAGE_CIFSMOUNT
+#undef BR2_PACKAGE_CLICK
+#undef BR2_PACKAGE_CLN
+#undef BR2_PACKAGE_CUPS
+#undef BR2_PACKAGE_CUTTER
+#undef BR2_PACKAGE_DHCP_RELAY
+#undef BR2_PACKAGE_DHCP_SERVER
+#undef BR2_PACKAGE_DHCP_FORWARDER
+#define BR2_PACKAGE_DNRD 1
+#define BR2_PACKAGE_DROPBEAR 1
+#undef BR2_PACKAGE_DBCONVERT
+#undef BR2_PACKAGE_DSNIFF
+#undef BR2_PACKAGE_EBTABLES
+#define BR2_PACKAGE_ELHTTP 1
+#undef BR2_PACKAGE_ETHER_WAKE
+#define BR2_PACKAGE_ETHERDUMP 1
+#undef BR2_PACKAGE_ETHTOOL
+#undef BR2_PACKAGE_EZIPUPDATE
+#undef BR2_PACKAGE_FAKEIDENTD
+#undef BR2_PACKAGE_FPING
+#undef BR2_PACKAGE_FPROBE
+#undef BR2_PACKAGE_FPROBE_ULOG
+
+/*
+ * freeradius........................ A Flexible RADIUS server implementation
+ */
+#undef BR2_PACKAGE_FREERADIUS
+#undef BR2_PACKAGE_FRICKIN
+#undef BR2_PACKAGE_GMOV-SNMP
+
+/*
+ * howl.............................. A Zeroconf networking implementation
+ */
+#undef BR2_PACKAGE_LIBHOWL
+
+/*
+ * Daemons ---
+ */
+#undef BR2_PACKAGE_AUTOIPD
+#undef BR2_PACKAGE_MDNSRESPONDER
+#undef BR2_PACKAGE_NIFD
+#undef BR2_PACKAGE_HOSTAP_UTILS
+#undef BR2_PACKAGE_HOSTAPD
+#undef BR2_PACKAGE_HOSTAPD_MINI
+#undef BR2_PACKAGE_HOSTAPD_UTILS
+#undef BR2_PACKAGE_HTPDATE
+
+/*
+ * httping........................... Httping is like 'ping' but for http-requests.
+ */
+#undef BR2_PACKAGE_HTTPING
+#undef BR2_PACKAGE_IFENSLAVE
+#undef BR2_PACKAGE_IFTOP
+#undef BR2_PACKAGE_IGMPPROXY
+#undef BR2_PACKAGE_IPCAD
+
+/*
+ * iproute2.......................... A collection of utilites for controlling TCP/IP networking and Traffic Control
+ */
+#define BR2_COMPILE_IPROUTE2 1
+#undef BR2_PACKAGE_IP
+#define BR2_PACKAGE_TC 1
+#undef BR2_PACKAGE_IPERF
+#undef BR2_PACKAGE_IPSET
+#undef BR2_PACKAGE_IPTABLES_SNMP
+#undef BR2_PACKAGE_IPTRAF
+
+/*
+ * iputils........................... A collection of utilites for controlling TCP/IP networking
+ */
+#undef BR2_PACKAGE_PING
+#undef BR2_PACKAGE_ARPING
+#undef BR2_PACKAGE_KISMET_CLIENT
+#undef BR2_PACKAGE_KISMET_DRONE
+#undef BR2_PACKAGE_KISMET_SERVER
+#undef BR2_PACKAGE_KNOCK
+#undef BR2_PACKAGE_KNOCKD
+#undef BR2_PACKAGE_L2TPD
+#undef BR2_PACKAGE_L2TPNS
+
+/*
+ * lighttpd.......................... Flexible and lightweight web server
+ */
+#undef BR2_PACKAGE_LIGHTTPD
+#undef BR2_PACKAGE_LINCARDEMU
+#undef BR2_PACKAGE_LINUX_ATM
+#undef BR2_PACKAGE_MACCHANGER
+#undef BR2_PACKAGE_MARADNS
+#undef BR2_PACKAGE_MIAU
+#undef BR2_PACKAGE_MICRODC2
+
+/*
+ * mini-httpd........................ A small web server
+ */
+#undef BR2_PACKAGE_MINI_HTTPD
+#undef BR2_PACKAGE_MINI_HTTPD_HTPASSWD
+#undef BR2_PACKAGE_MINI_HTTPD_MATRIXSSL
+#undef BR2_PACKAGE_MINI_HTTPD_OPENSSL
+#define BR2_PACKAGE_MINI_SNMPD 1
+#undef BR2_PACKAGE_MINI_SENDMAIL
+#undef BR2_PACKAGE_MPCS-CS
+#undef BR2_PACKAGE_MPCS-TINY
+#undef BR2_PACKAGE_MTR
+
+/*
+ * net-snmp.......................... Open source SNMP (Simple Network Management Protocol) implementation
+ */
+#undef BR2_PACKAGE_LIBNETSNMP
+#undef BR2_PACKAGE_SNMPD
+#undef BR2_PACKAGE_SNMPD_STATIC
+#undef BR2_PACKAGE_NETPERF
+#undef BR2_PACKAGE_NETSTAT_NAT
+#undef BR2_PACKAGE_NFS_SERVER
+#undef BR2_PACKAGE_NMAP
+#undef BR2_PACKAGE_NOCATSPLASH
+#undef BR2_PACKAGE_NSCA
+#undef BR2_PACKAGE_SEND-NSCA
+#undef BR2_PACKAGE_NTPCLIENT
+
+/*
+ * nut............................... Network UPS Tools provide monitoring of UPS hardware
+ */
+#undef BR2_PACKAGE_NUT-DRIVERS
+#undef BR2_PACKAGE_NUT-SERVER
+#undef BR2_PACKAGE_NUT-CLIENTS
+
+/*
+ * olsrd............................. OLSR (Optimized Link State Routing) daemon
+ */
+#undef BR2_PACKAGE_OLSRD
+#undef BR2_PACKAGE_OPENDCHUB
+#undef BR2_PACKAGE_OPENNTPD
+
+/*
+ * openser........................... Configurable, free SIP server
+ */
+#undef BR2_PACKAGE_OPENSER
+
+/*
+ * openssh........................... A free implementation of the Secure Shell protocol
+ */
+#undef BR2_PACKAGE_OPENSSH_CLIENT
+#undef BR2_PACKAGE_OPENSSH_SERVER
+#undef BR2_PACKAGE_OPENSSH_SFTP_CLIENT
+#undef BR2_PACKAGE_OPENSSH_SFTP_SERVER
+#define BR2_PACKAGE_OPENSWAN 1
+
+/*
+ * openvpn........................... Open source VPN solution using SSL
+ */
+#define BR2_PACKAGE_OPENVPN 1
+#undef BR2_COMPILE_OPENVPN_WITH_SERVER
+#undef BR2_COMPILE_OPENVPN_WITH_HTTP
+#define BR2_COMPILE_OPENVPN_WITH_OPENSSL 1
+#define BR2_COMPILE_OPENVPN_WITH_LZO 1
+#undef BR2_COMPILE_OPENVPN_WITH_PASSWORD_SAVE
+#define BR2_COMPILE_OPENVPN_WITH_SMALL 1
+#undef BR2_PACKAGE_P910ND
+#undef BR2_PACKAGE_PARPROUTED
+#undef BR2_PACKAGE_PIPACS
+
+/*
+ * pmacct............................ IPv4/IPv6 accounting and aggregation tools
+ */
+#undef BR2_PACKAGE_NFACCTD_BASIC
+#undef BR2_PACKAGE_NFACCTD_MYSQL
+#undef BR2_PACKAGE_NFACCTD_PGSQL
+#undef BR2_PACKAGE_NFACCTD_SQLITE
+#undef BR2_PACKAGE_NFACCTD_CUSTOM
+#undef BR2_PACKAGE_PMACCTD_BASIC
+#undef BR2_PACKAGE_PMACCTD_MYSQL
+#undef BR2_PACKAGE_PMACCTD_PGSQL
+#undef BR2_PACKAGE_PMACCTD_SQLITE
+#undef BR2_PACKAGE_PMACCTD_CUSTOM
+#undef BR2_PACKAGE_PMACCT_CLIENT
+#undef BR2_PACKAGE_PORTMAP
+#undef BR2_PACKAGE_PORTSENTRY
+
+/*
+ * ppp............................... PPP (Point-to-Point Protocol) daemon
+ */
+#define BR2_PACKAGE_PPP 1
+#undef BR2_PACKAGE_PPP_WITH_FILTER
+#undef BR2_PACKAGE_PPP_MOD_PPPOA
+#define BR2_PACKAGE_PPP_MOD_PPPOE 1
+#define BR2_PACKAGE_CHAT 1
+#undef BR2_PACKAGE_PPPDUMP
+#undef BR2_PACKAGE_PPPSTATS
+#define BR2_PACKAGE_PPTP 1
+#undef BR2_PACKAGE_PRIVOXY
+#undef BR2_PACKAGE_PTUNNEL
+
+/*
+ * quagga............................ The Quagga Software Routing Suite
+ */
+#undef BR2_PACKAGE_QUAGGA
+#undef BR2_PACKAGE_RADDUMP
+#undef BR2_PACKAGE_RARPD
+#undef BR2_PACKAGE_REAIM
+#define BR2_PACKAGE_REMSERIAL 1
+#define BR2_PACKAGE_ROBOCFG 1
+#define BR2_COMPILE_RP_PPPOE 1
+#define BR2_PACKAGE_PPPOE_CLIENT 1
+#undef BR2_PACKAGE_PPPOE_SNIFF
+#undef BR2_PACKAGE_RRS
+#undef BR2_PACKAGE_RRS_NOSSL
+#undef BR2_PACKAGE_RSYNC
+#undef BR2_PACKAGE_SAMBA
+#undef BR2_PACKAGE_SAMBA_CLIENT
+#undef BR2_PACKAGE_SCANLOGD
+#undef BR2_PACKAGE_SCDP
+#undef BR2_PACKAGE_SGAUTH
+#undef BR2_PACKAGE_SHAT
+#undef BR2_PACKAGE_SIPP
+#undef BR2_PACKAGE_SIPROXD
+#undef BR2_PACKAGE_SIPSAK
+#undef BR2_PACKAGE_SLURM
+
+/*
+ * snort............................. Ligthweight Network Intrusion Detection System (NIDS)
+ */
+#undef BR2_PACKAGE_SNORT_BASIC
+#undef BR2_PACKAGE_SNORT_MYSQL
+#undef BR2_PACKAGE_SNORT_PGSQL
+#undef BR2_PACKAGE_SNORT_CUSTOM
+
+/*
+ * snort-wireless.................... Ligthweight Wireless Network Intrusion Detection System (NIDS)
+ */
+#undef BR2_PACKAGE_SNORT_WIRELESS_BASIC
+#undef BR2_PACKAGE_SNORT_WIRELESS_MYSQL
+#undef BR2_PACKAGE_SNORT_WIRELESS_PGSQL
+#undef BR2_PACKAGE_SNORT_WIRELESS_CUSTOM
+#undef BR2_PACKAGE_SOCAT
+
+/*
+ * squid............................. proxy and web cache
+ */
+#undef BR2_PACKAGE_SQUID
+#undef BR2_PACKAGE_SSLTUNNEL
+#undef BR2_PACKAGE_SSMTP
+#undef BR2_PACKAGE_SRELAY
+#undef BR2_PACKAGE_THTTPD
+#undef BR2_PACKAGE_TMSNC
+#undef BR2_PACKAGE_TCPDUMP
+#undef BR2_PACKAGE_TINC
+
+/*
+ * tinyproxy......................... Tinyproxy is a lightweight HTTP and HTTPS proxy.
+ */
+#undef BR2_PACKAGE_TINYPROXY
+
+/*
+ * tinysnmp.......................... A lightweight SNMPv1 implementation (agent, tools, modules)
+ */
+#undef BR2_PACKAGE_TINYSNMP-TOOLS
+#undef BR2_PACKAGE_TINYSNMP-AGENT
+#undef BR2_PACKAGE_TINYSNMP-MODULE-INTERFACES
+#undef BR2_PACKAGE_TINYSNMP-MODULE-RESOURCES
+#undef BR2_PACKAGE_TOR
+#undef BR2_PACKAGE_TTCP
+#undef BR2_PACKAGE_UDP_BROADCAST_RELAY
+
+/*
+ * ulogd............................. Netfilter userspace logging daemon
+ */
+#undef BR2_PACKAGE_ULOGD
+
+/*
+ * updatedd.......................... A tool to update dynamic dns services
+ */
+#undef BR2_PACKAGE_UPDATEDD
+#undef BR2_PACKAGE_VGP
+#undef BR2_PACKAGE_VNCREPEATER
+#undef BR2_PACKAGE_VNC_REFLECTOR
+#undef BR2_PACKAGE_VNSTAT
+#undef BR2_PACKAGE_VNSTATI
+#undef BR2_PACKAGE_VPNC
+#undef BR2_PACKAGE_VRRPD
+#undef BR2_PACKAGE_VSFTPD
+#define BR2_PACKAGE_VTUN 1
+#undef BR2_PACKAGE_WCCPD
+#define BR2_PACKAGE_WEBADMIN 1
+
+/*
+ * weechat........................... Lightweight IRC client
+ */
+#undef BR2_PACKAGE_WEECHAT
+#undef BR2_PACKAGE_WIFICONF
+#undef BR2_PACKAGE_WIFIDOG
+#undef BR2_PACKAGE_WIVIZ
+#undef BR2_PACKAGE_WKNOCK
+#undef BR2_PACKAGE_WOL
+#undef BR2_PACKAGE_WONDERSHAPER
+#undef BR2_PACKAGE_WPA_SUPPLICANT
+#undef BR2_PACKAGE_WPUT
+#undef BR2_PACKAGE_WRT_RADAUTH
+#undef BR2_PACKAGE_WX200D
+#undef BR2_PACKAGE_XINETD
+#undef BR2_PACKAGE_XMAIL
+#undef BR2_PACKAGE_XSUPPLICANT
+#undef BR2_PACKAGE_ZABBIX-AGENTD
+#undef BR2_PACKAGE_ZABBIX-SENDER
+
+/*
+ * IPv6
+ */
+#undef BR2_PACKAGE_6TUNNEL
+#undef BR2_PACKAGE_AICCU
+#undef BR2_PACKAGE_DHCP6
+#undef BR2_PACKAGE_MIREDO
+#undef BR2_PACKAGE_MIREDO_SERVER
+#undef BR2_PACKAGE_MRD6
+
+/*
+ * ndisc6............................ IPv6 discovery tools
+ */
+#undef BR2_PACKAGE_NDISC6
+#undef BR2_PACKAGE_RDISC6
+#undef BR2_PACKAGE_TCPTRACEROUTE6
+#undef BR2_PACKAGE_RADVD
+
+/*
+ * Libraries
+ */
+#undef BR2_PACKAGE_DBUS
+#undef BR2_PACKAGE_CGILIB
+#define BR2_COMPILE_GLIB 1
+#define BR2_PACKAGE_GLIB1 1
+#undef BR2_PACKAGE_ID3LIB
+#undef BR2_PACKAGE_LIBAMSEL
+#undef BR2_PACKAGE_LIBABZ
+#undef BR2_PACKAGE_LIBAO
+#undef BR2_PACKAGE_LIBART
+#undef BR2_PACKAGE_LIBBER
+#undef BR2_PACKAGE_LIBCLI
+#undef BR2_PACKAGE_CLINKC
+#undef BR2_PACKAGE_LIBCURL
+#undef BR2_PACKAGE_LIBDAEMON
+#undef BR2_PACKAGE_LIBDB
+#undef BR2_PACKAGE_LIBDEBUG
+#undef BR2_PACKAGE_LIBDNET
+#undef BR2_PACKAGE_LIBELF
+#undef BR2_PACKAGE_LIBEVENT
+#undef BR2_PACKAGE_LIBEXPAT
+#undef BR2_PACKAGE_LIBFLAC
+#undef BR2_PACKAGE_LIBFREETYPE
+#undef BR2_PACKAGE_LIBGCRYPT
+#undef BR2_PACKAGE_LIBGD
+#undef BR2_PACKAGE_LIBGDBM
+#define BR2_COMPILE_GMP 1
+#define BR2_PACKAGE_LIBGMP 1
+#undef BR2_PACKAGE_LIBGNUTLS
+#undef BR2_PACKAGE_LIBGPG_ERROR
+#undef BR2_PACKAGE_LIBGSM
+#undef BR2_PACKAGE_LIBICONV
+#undef BR2_PACKAGE_LIBJPEG
+#undef BR2_PACKAGE_LIBLTDL
+#define BR2_PACKAGE_LIBLZO 1
+#undef BR2_PACKAGE_LIBMATRIXSSL
+#undef BR2_PACKAGE_LIBMYSQLCLIENT
+#undef BR2_PACKAGE_LIBNET
+#undef BR2_PACKAGE_LIBNIDS
+#undef BR2_PACKAGE_LIBOGG
+#undef BR2_PACKAGE_LIBOL
+#undef BR2_PACKAGE_LIBOPENCDK
+#undef BR2_COMPILE_OPENH323
+#undef BR2_PACKAGE_LIBOPENLDAP
+#define BR2_COMPILE_OPENSSL 1
+#define BR2_PACKAGE_LIBOPENSSL 1
+#undef BR2_PACKAGE_LIBOSIP2
+#undef BR2_PACKAGE_LIBMCRYPT
+#define BR2_PACKAGE_LIBPCAP 1
+#undef BR2_PACKAGE_LIBPCRE
+#undef BR2_COMPILE_PWLIB
+#undef BR2_PACKAGE_LIBPNG
+#undef BR2_PACKAGE_LIBPOPT
+#undef BR2_PACKAGE_LIBPQ
+#define BR2_PACKAGE_LIBPTHREAD 1
+#undef BR2_PACKAGE_LIBSTDCXX
+#undef BR2_PACKAGE_RADIUSCLIENT_NG
+#undef BR2_PACKAGE_LIBRADIUSCLIENT_NG
+#undef BR2_PACKAGE_LIBSASL2
+#undef BR2_PACKAGE_LIBSPEEX
+#undef BR2_PACKAGE_LIBSQLITE
+#undef BR2_PACKAGE_LIBSQLITE2
+#undef BR2_PACKAGE_LIBTASN1
+#undef BR2_PACKAGE_LIBUPNP
+#define BR2_PACKAGE_LIBUSB 1
+#undef BR2_PACKAGE_LIBVORBIS
+#undef BR2_PACKAGE_LIBVORBISIDEC
+#undef BR2_PACKAGE_LIBXML2
+#undef BR2_PACKAGE_LIBXSLT
+#undef BR2_PACKAGE_UCLIBCXX
+#undef BR2_PACKAGE_USTL
+#define BR2_PACKAGE_ZLIB 1
+
+/*
+ * Multimedia
+ */
+#undef BR2_PACKAGE_GMEDIASERVER
+#undef BR2_PACKAGE_ICECAST
+
+/*
+ * mpd............................... Music Player Daemon
+ */
+#undef BR2_PACKAGE_MPD
+#undef BR2_PACKAGE_MT_DAAPD
+#undef BR2_PACKAGE_PALANTIR
+#undef BR2_PACKAGE_PJPROJECT
+#undef BR2_PACKAGE_PEERCAST
+#undef BR2_PACKAGE_SETPWC
+
+/*
+ * Serial communications & terminal emulation
+ */
+#undef BR2_PACKAGE_AVRDUDE
+#undef BR2_PACKAGE_HEYU
+#undef BR2_PACKAGE_MICROCOM
+#undef BR2_PACKAGE_PICOCOM
+#undef BR2_PACKAGE_SERDISPLIB
+#undef BR2_PACKAGE_SETBAUD
+#undef BR2_PACKAGE_SETSERIAL
+#undef BR2_PACKAGE_SREDIRD
+#undef BR2_PACKAGE_SCMXX
+
+/*
+ * Utilities
+ */
+#undef BR2_PACKAGE_BC
+#undef BR2_PACKAGE_DC
+#define BR2_PACKAGE_CPU 1
+#undef BR2_PACKAGE_GDBSERVER
+#undef BR2_PACKAGE_HDPARM
+#undef BR2_PACKAGE_MODULEINITTOOLS
+#undef BR2_PACKAGE_PCMCIA_UTILS
+#define BR2_COMPILE_USBUTILS 1
+#define BR2_PACKAGE_LSUSB 1
+#define BR2_PACKAGE_USB-MODESWITCH 1
+#undef BR2_PACKAGE_STRACE
+#undef BR2_PACKAGE_UDEV
+#undef BR2_PACKAGE_WATCHDOG
+
+/*
+ * owfs.............................. 1-Wire file system
+ */
+#define BR2_PACKAGE_OWFS 1
+#undef BR2_COMPILE_OWFS_WITH_USB
+#undef BR2_COMPILE_OWFS_WITH_PARPORT
+#undef BR2_COMPILE_OWFS_WITH_I2C
+#undef BR2_COMPILE_OWFS_WITH_SWIG
+#undef BR2_COMPILE_OWFS_WITH_OWPHP
+#undef BR2_COMPILE_OWFS_WITH_OWPERL
+#undef BR2_COMPILE_OWFS_WITH_OWTCL
+#undef BR2_COMPILE_OWFS_WITH_OWPYTHON
+
+/*
+ * FileSystems related
+ */
+#undef BR2_PACKAGE_DOSFSTOOLS
+#undef BR2_PACKAGE_E2FSPROGS
+#undef BR2_PACKAGE_LIBFUSE
+#undef BR2_PACKAGE_KMOD_FUSE
+#undef BR2_PACKAGE_SHFS_UTILS
+
+/*
+ * util-linux
+ */
+#undef BR2_PACKAGE_FDISK
+#undef BR2_PACKAGE_LOSETUP
+#undef BR2_PACKAGE_SWAP_UTILS
+
+/*
+ * Bluetooth
+ */
+#undef BR2_PACKAGE_BLUEJACKER
+#undef BR2_PACKAGE_BLUESPAM
+#undef BR2_PACKAGE_BLUEZ_LIBS
+
+/*
+ * bluez-utils....................... Bluetooth utilities
+ */
+#undef BR2_PACKAGE_HCICONFIG
+#undef BR2_PACKAGE_HCID
+#undef BR2_PACKAGE_HCITOOL
+#undef BR2_PACKAGE_L2PING
+#undef BR2_PACKAGE_RFCOMM
+#undef BR2_PACKAGE_PAND
+#undef BR2_PACKAGE_SDPD
+#undef BR2_PACKAGE_SDPTOOL
+#undef BR2_PACKAGE_MIAX
+
+/*
+ * obexftp........................... the file transfer feature for clients and servers
+ */
+#undef BR2_PACKAGE_OBEXFTP-LIB
+#undef BR2_PACKAGE_OBEXFTP-CLIENT
+#undef BR2_PACKAGE_OBEXFTP-SERVER
+#undef BR2_PACKAGE_OPENOBEX
+#undef BR2_PACKAGE_SOBEXSRV
+#undef BR2_PACKAGE_USSP-PUSH
+
+/*
+ * HamRadio
+ */
+
+/*
+ * ax25-tools........................ AX25-TOOLS (ax25-call, beacon, rxecho, kissattach, kissparms)
+ */
+#undef BR2_PACKAGE_AX25-CALL
+#undef BR2_PACKAGE_BEACON
+#undef BR2_PACKAGE_RXECHO
+#undef BR2_PACKAGE_KISSATTACH
+#undef BR2_PACKAGE_KISSPARMS
+
+/*
+ * ax25-apps......................... AX25-APPS (call, listen)
+ */
+#undef BR2_PACKAGE_CALL
+#undef BR2_PACKAGE_LISTEN
+
+/*
+ * aprsdigi.......................... APRSDIGI (aprsdigi, aprsmon)
+ */
+#undef BR2_PACKAGE_APRSDIGI
+#undef BR2_PACKAGE_APRSMON
+#undef BR2_PACKAGE_LIBAX25
+#undef BR2_PACKAGE_AXIP
+#undef BR2_PACKAGE_LINSV
+#undef BR2_PACKAGE_URONODE
+#undef BR2_PACKAGE_AXGETPUT
+#undef BR2_PACKAGE_CONVERSD
+
+/*
+ * FlyRouter
+ */
+#undef BR2_PACKAGE_FLYPINGER
+#define BR2_PACKAGE_FLYSCRIPT 1
+#define BR2_PACKAGE_FLYFLASH 1
+#undef BR2_PACKAGE_RTLFLASH
+#undef BR2_PACKAGE_BCMFLASH
+
+/*
+ * Extra stuff
+ */
+
+/*
+ * Sigrand
+ */
+#undef BR2_PACKAGE_WEBFACE
+#undef BR2_PACKAGE_HOTPLUG
+#undef BR2_PACKAGE_SIGRAND_DOC
+
+/*
+ * Sigrand drivers
+ */
+#undef BR2_PACKAGE_SIGRAND_SETHDLC
+#undef BR2_PACKAGE_SDK
+#undef BR2_PACKAGE_IMAGEBUILDER
+
+/*
+ * Target Root Filesystem
+ */
+#undef BR2_TARGET_ROOTFS_JFFS2
+#define BR2_TARGET_ROOTFS_SQUASHFS_LZMA 1
+#undef BR2_TARGET_ROOTFS_TGZ
+
+/*
+ * Kernel Configuration / Device Support
+ */
+
+/*
+ * Device specific configuration
+ */
+#define BR2_KERNEL_CMDLINE ""
+#undef SKYROUTER_TARGET_DIR320
+#define SKYROUTER_TARGET_WL520GU 1
+#undef SKYROUTER_TARGET_WL520GC
+#undef SKYROUTER_PROTECT_FLYAVR
+#define SKYROUTER_PROTECT_FLYMAC 1
+#define BEEROUTER_FLASH_SIZE 0x200000
+
+/*
+ * Kernel modules
+ */
+
+/*
+ * Networking modules
+ */
+#define BR2_PACKAGE_KMOD_GRE 1
+#define BR2_PACKAGE_KMOD_IPIP 1
+#define BR2_PACKAGE_KMOD_IMQ 1
+#undef BR2_PACKAGE_KMOD_BONDING
+#define BR2_PACKAGE_KMOD_PPP 1
+#undef BR2_PACKAGE_KMOD_PPPOATM
+#define BR2_PACKAGE_KMOD_PPPOE 1
+#define BR2_PACKAGE_KMOD_SCHED 1
+#define BR2_PACKAGE_KMOD_TUN 1
+
+/*
+ * Filtering/Firewalling
+ */
+#define BR2_PACKAGE_KMOD_IPTABLES_EXTRA 1
+#define BR2_PACKAGE_KMOD_IPT_CONNTRACK 1
+#define BR2_PACKAGE_KMOD_IPT_FILTER 1
+#define BR2_PACKAGE_KMOD_IPT_IPOPT 1
+#define BR2_PACKAGE_KMOD_IPT_IPSEC 1
+#define BR2_PACKAGE_KMOD_IPT_NAT 1
+#define BR2_PACKAGE_KMOD_IPT_NAT_EXTRA 1
+#define BR2_PACKAGE_KMOD_IPT_QUEUE 1
+#define BR2_PACKAGE_KMOD_IPT_ULOG 1
+#define BR2_PACKAGE_KMOD_IPT_EXTRA 1
+#undef BR2_PACKAGE_KMOD_IP6TABLES
+
+/*
+ * Block devices support
+ */
+#define BR2_PACKAGE_KMOD_CRYPTO 1
+
+/*
+ * Filesystems support
+ */
+#define BR2_PACKAGE_KMOD_FS_EXT2 1
+
+/*
+ * Multimedia devices support
+ */
+#undef BR2_PACKAGE_KMOD_PWC
+
+/*
+ * Native Language support
+ */
+
+/*
+ * USB support
+ */
+#define BR2_PACKAGE_KMOD_USB 1
+#define BR2_PACKAGE_KMOD_USB_HID 1
+#undef BR2_PACKAGE_KMOD_USB_UHCI
+#undef BR2_PACKAGE_KMOD_USB_OHCI
+#define BR2_PACKAGE_KMOD_USB2 1
+#define BR2_PACKAGE_KMOD_USB_CONTROLLER 1
+#define BR2_PACKAGE_KMOD_USB_ACM 1
+#define BR2_PACKAGE_KMOD_USB_SERIAL 1
+#define BR2_PACKAGE_KMOD_USB_STORAGE 1
+
+/*
+ * Misc. devices support
+ */
+#undef BR2_PACKAGE_KMOD_BLUETOOTH
+#undef BR2_PACKAGE_KMOD_LP
+#define BR2_PACKAGE_KMOD_SOFTDOG 1
+
+/*
+ * Additional kernel modules
+ */
+#undef BR2_PACKAGE_KMOD_ALSA
+#define BR2_PACKAGE_KMOD_BCMWL 1
+#define BR2_PACKAGE_KMOD_DIAG 1
+#undef BR2_PACKAGE_KMOD_HOSTAP
+#undef BR2_PACKAGE_KMOD_MADWIFI_OLD
+#undef BR2_PACKAGE_KMOD_MADWIFI
+#undef BR2_PACKAGE_KMOD_MINI_FO
+#undef BR2_PACKAGE_KMOD_MMC-ADM
+#undef BR2_PACKAGE_KMOD_MMC-NG
+#undef BR2_PACKAGE_KMOD_MMC
+#define BR2_PACKAGE_KMOD_OPENSWAN 1
+#undef BR2_PACKAGE_KMOD_SHFS
+#undef BR2_PACKAGE_KMOD_USB_SPCA5XX_LE
+#define BR2_PACKAGE_KMOD_SWITCH 1
