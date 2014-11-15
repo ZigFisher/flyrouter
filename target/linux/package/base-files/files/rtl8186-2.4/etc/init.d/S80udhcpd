@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Starts udhcpd.
+#
+
+umask 077
+
+mkdir -p /var/lib/misc
+touch /var/lib/misc/udhcpd.leases
+
+start() {
+	for conf in /etc/udhcpd*.conf; do
+        if [ -r "$conf" ]; then
+            echo -n "Starting udhcpd: with $conf :	"
+            /usr/sbin/udhcpd $conf
+        fi
+	done
+}
+stop() {
+	echo -n "Stopping all udhcpd "
+	killall udhcpd
+	echo "OK"
+}
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+start)
+		start
+	;;
+  stop)
+		stop
+	;;
+  restart|reload)
+		restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

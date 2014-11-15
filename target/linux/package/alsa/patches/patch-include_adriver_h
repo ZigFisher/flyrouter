@@ -1,0 +1,25 @@
+$FreeWRT$
+--- alsa-driver-1.0.11.orig/include/adriver.h	Wed Apr 19 06:24:07 2006
++++ alsa-driver-1.0.11/include/adriver.h	Sun Jul 30 10:19:18 2006
+@@ -451,8 +451,7 @@ static inline void devfs_remove(const ch
+ #endif /* < 2.6.0 */
+ 
+ /* workarounds for USB API */
+-#if defined(SND_NEED_USB_WRAPPER) && (defined(CONFIG_USB) || defined(CONFIG_USB_MODULE))
+-
++#if 1
+ #include <linux/usb.h>
+ 
+ #if LINUX_VERSION_CODE < KERNEL_VERSION(2, 4, 20)
+@@ -1173,5 +1172,11 @@ static inline int snd_pnp_register_card_
+  * old defines
+  */
+ #define OPL3_HW_OPL3_PC98	0x0305	/* PC9800 */
++
++/* defined by usb.h */
++#undef dbg
++#undef err
++#undef info
++#undef warn
+ 
+ #endif /* __SOUND_LOCAL_DRIVER_H */

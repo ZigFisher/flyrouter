@@ -1,0 +1,113 @@
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+    address 192.168.1.1
+    netmask 255.255.255.0
+    gateway 192.168.1.100
+
+#auto br0
+iface br0 inet static
+    address 172.28.200.155
+    netmask 255.255.255.240
+    bridge_ports nas0
+    pre-up ifconfig nas0 hw ether 00:03:C9:01:01:01
+
+auto br1
+iface br1 inet static
+    address 192.168.2.1
+    netmask 255.255.255.0
+    bridge_ports wl0
+    pre-up wlctl ap 1
+    pre-up wlctl wep 1
+    pre-up wlctl wet 1
+    pre-up wlctl eap 0
+    pre-up wlctl channel 7
+    pre-up wlctl txpwr 237
+    pre-up ifconfig wl0 up
+    pre-up wlctl addwep wl0 "BEFDDBD2B1DBF5122C8C97FD50"
+    pre-up wlctl ssid `cat /etc/hostname | tr "a-z" "A-Z"`
+    up brctl stp br1 off
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Warning ! Use this only with flyscript package !
+
+# Example: auto with DHCPc
+#auto eth0
+#iface eth0 inet dhcp
+
+# Example: static address with gateway
+#auto eth1
+#iface eth1 inet static
+#    address 192.168.1.1
+#    netmask 255.255.255.0
+#    gateway 192.168.1.100
+
+# Example: create interface without IP
+#auto eth5
+#iface eth5 inet manual
+
+# Example: shape interface
+#auto eth5
+#iface eth5 inet static
+#    address 192.168.5.1
+#    netmask 255.255.255.0
+#    traffic-shape rate 300kbit
+
+# Example: create vLAN interface
+#auto eth5.100
+#iface eth5.100 inet static
+#    address 192.168.50.1
+#    netmask 255.255.255.0
+
+# Example: create bridge interface
+#auto br1
+#iface br1 inet static
+#    address 192.168.100.1
+#    netmask 255.255.255.0
+#    bridge_ports eth0 eth5.100 eth5.101
+
+# Example: full ethernet bridge
+#auto lan0
+#iface lan0 inet static
+#    address 192.168.1.1
+#    netmask 255.255.255.0
+#    bridge_ports eth0 eth1 eth2 eth3 eth4
+
+# Example: create ppp interface
+#auto cdma0
+#iface cdma0 inet ppp
+#    provider cdma-intertelecom
+
+# Example:
+#auto brtun0
+#iface brtun0 inet static
+#    address 192.168.10.1
+#    netmask 255.255.255.0
+#    brtun  172.28.200.91:1000-172.28.200.92:1000 iface=eth2.1000,eth2.1001 --proto udp --ping 15 --verb 4 --shaper 64000
+#    brtun1 auto:1001-172.28.200.92
+#    brtun2 172.28.200.91:1002-auto

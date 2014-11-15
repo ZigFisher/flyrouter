@@ -1,0 +1,97 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Flash command script
+# Version 0.2 20070503
+
+test -f /bin/midge_functions && . /bin/midge_functions 
+test -f /etc/midge.conf && . /etc/midge.conf
+
+get_size(){
+	ls -sk $1 |  sed -e "s/ \+/ /g" | cut -d" " -f2
+}
+
+usage(){
+	echo "Usage: $0 clear | save | load [dst] " >&2
+	exit 1
+}
+
+load(){
+	local dst=/
+	[ "$1" ] && dst="$1"
+	info 2 "Extracting data from $DATAFS_PARTITION to $dst"
+	$DATAFS_DECOMPRESSOR $DATAFS_PARTITION | tar xvf - -C $dst
+}
+
+save(){
+	tmp="/tmp/flash.tar.$DATAFS_COMMPRESSOR"
+	info 2 "Saving to $tmp"
+	tar cf - $(cat $SAVE_LIST) | $DATAFS_COMMPRESSOR >$tmp
+	if [ "$(get_size $tmp)" -lt $(($DATAFS_PARTITION_SIZE/1024)) ]; then
+		dd if=$tmp of=$DATAFS_PARTITION bs=64k
+	else
+		echo "Error: File $tmp too big: $(get_size $tmp)k"
+	fi
+	rm $tmp
+}
+
+clear(){
+	dd if=/dev/zero of=$DATAFS_PARTITION bs=1k count=1 && \
+	echo "DataFS cleared"
+}
+
+make_symlinks_if_eq(){
+	local src=$1
+	local dst=$2
+	[ -x `which md5sum` ] || { warn "md5sum not found"; return; }
+	echo "Replacing equal files from $src to symlinks ${dst}${src}..."
+	find $src -type d | while read d; do
+		[ ! -d "$dst/$d" ] && continue;
+		find $d -type f | while read f; do
+			[ ! -f $f ] && continue
+			[ ! -r $dst/$f ] && continue
+			[ $f = /etc/passwd -o $f = /etc/shadow ] && continue
+			s1="`md5sum $f | cut -f1 -d' '`"
+			s2="`md5sum $dst/$f | cut -f1 -d' '`"
+			if [ "$s1" = "$s2" ]; then
+				#echo "   ${dst}${f} --> $f"
+				rm $f;
+				ln -s ${dst}${f} ${f}
+			fi
+		done
+	done
+
+}
+
+main(){
+	[ "$MIDGE_TYPE" != "tmpfs" ] && die "flash can be used on tmpfs version only"
+	local cmd="$1"
+	[ -z "$cmd" ] && usage
+	shift
+	case "$cmd" in 
+		load) 
+			load $@ 
+			;;
+		save) 
+			if ! ifup -n -a >/tmp/$$.ifup 2>&1; then
+				echo -n "Error: "
+				cat /tmp/$$.ifup
+				rm /tmp/$$.ifup
+				exit 1
+			fi
+			rm /tmp/$$.ifup
+			# replace unchanged files to symlinks
+			make_symlinks_if_eq /etc /rom
+			make_symlinks_if_eq /www /rom
+			# create savelist 
+			[ ! -e "$SAVE_LIST" ] && echo "/etc /usr/local /root /lib/modules" >"$SAVE_LIST"
+			save $@ 
+			;;
+		*) 
+			usage $@ 
+			;;
+	esac
+}
+
+main $@
+

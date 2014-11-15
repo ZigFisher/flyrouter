@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. /etc/network/interfaces
+
+#Enable/Disable WDS
+iwpriv wlan0 set_mib wds_enable=0
+
+#Set WDS only mode to deprecate infrastructure clients to connect
+# 0 - disabled; 1 - enabled
+iwpriv wlan0 set_mib wds_pure=0
+
+#Start add wds-peers at this number
+iwpriv wlan0 set_mib wds_num=0
+
+#WARNING!!! If need Repeater set it here:
+#ifconfig wlan0-vxd down
+#ifconfig wlan0-vxd hw ether $WLAN_MACADDR
+#iwpriv wlan0-vxd set_mib ssid="Wive"
+#Set encmode for repeater:
+#  0 - disabled, 1 - WEP64, 5 - WEP128, 2 - WPA
+#iwpriv wlan0-vxd set_mib encmode=0
+
+#Set BSSID of WDS stations for driver and wds-interfaces
+#it's example
+#ifconfig wlan0-wds0 hw ether $WLAN_MACADDR up
+#iwpriv wlan0 set_mib wds_add=00006c000001
+#brctl addif br0 wlan0-wds0
+
+#ifconfig wlan0-wds1 hw ether $WLAN_MACADDR up
+#iwpriv wlan0 set_mib wds_add=00006c000002
+#brctl addif br0 wlan0-wds1
+
+#WDS-Encrypt
+iwpriv wlan0 set_mib wds_encrypt=0
+#Don't know what is it... In official FW it sets 1 when WDS enabled
+iwpriv wlan0 set_mib wds_priority=0
+

@@ -1,0 +1,37 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+test -r /etc/midge.conf && . /etc/midge.conf
+
+[ "$MMC_MOUNT" = yes ] || exit 0
+
+[ "$MMC_FSTYPE" ] && insmod $MMC_FSTYPE
+
+if [ "$MMC_DIR" -a "$MMC_DEV" ]; then
+	mkdir -p $MMC_DIR
+	sleep 2
+	msg "Mounting MMC-Storage $MMC_DEV to $MMC_DIR..."
+	mount -o ${MMC_OPTIONS:-"ro,sync,check,errors=remount-ro"} -t $MMC_FSTYPE $MMC_DEV $MMC_DIR
+	if [ -d $MMC_DIR/etc/init.d ]; then
+		for i in $MMC_DIR/etc/init.d/S??*; do
+			$i start
+		done
+	fi
+	
+	export MMC_DIR
+	[ "$MMC_SYMLINK" = yes ] && \
+		cd $MMC_DIR && \
+		for d in bin lib sbin usr; do  
+		    [ -d $d ] && find $d | \
+			( while read f; do
+				if [ -d $f ]; then
+				    mkdir -p /${f}
+				elif [ -f $f -o -L $f ]; then
+				    ln -s $MMC_DIR/$f /$f
+				    msg "Create MMC symlinks..."
+				fi;
+			done; );
+		done
+		
+fi
+

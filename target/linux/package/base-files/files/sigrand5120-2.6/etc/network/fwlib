@@ -1,0 +1,376 @@
+#!/bin/sh
+
+##############################
+#
+#       F W   L I B 
+#       
+#   Vlad  vlad@vlad.org.ua  2002110301
+#   
+
+# 2002111301: changes in DROPFAKE target 
+# 2004100101: MARKING moved to POSTROUTING
+# 2005071401: Addapting for midge
+# 2005072201: Shaper functions
+
+VERBOSE=${VERBOSE:-1}
+
+die () {
+	echo $@ >&2
+	exit 1;
+}
+
+warn () {
+	echo "Warning: "$@ >&2
+}
+
+infoc(){
+	level=$1
+	shift
+	[ $level -le $VERBOSE ] && echo -n "$@" >&2
+}
+
+infon(){
+	level=$1
+	shift
+	[ $level -le $VERBOSE ] && echo -n Info: "$@" >&2
+}
+info(){
+	level=$1
+	shift
+	[ $level -le $VERBOSE ] && echo Info: "$@" >&2
+}
+
+required(){
+    prg=`which $1`
+    test -x "$prg" || die "$0: Error $1 is required"
+}
+
+required iptables
+required tc
+required ip
+required cut
+required egrep
+
+FW=`which iptables`
+test -x $FW || die "Cannot find iptables"
+
+if [ "$DEBUG" ]; then
+    FW="echo $FW"
+fi
+
+
+###### NETWORKS ######
+ALL="0/0"
+FAKE_NETS="127.0.0.1/8 10.0.0.0/8 192.168.0.0/16 172.16.0.0/16 255.255.255.255/32 0.0.0.0/32"
+test -r /etc/network/nets && . /etc/network/nets
+
+
+#   PROTO
+TCP="           -p TCP"
+UDP="           -p UDP"
+ICMP="          -p ICMP"
+
+
+#   TARGETS
+ACCEPT="	        -j ACCEPT"
+DROP="	            -j DROP"
+DROPLOG="		    -j DROPLOG"
+REJECT="	        -j REJECT"
+REJECTLOG="	        -j REJECTLOG"
+RETURN="		    -j RETURN"
+MARK="		        -j MARK"
+REDIRECT="          -j REDIRECT"
+LOG="		        -j LOG"
+ULOG="		        -j ULOG"
+SNAT="		        -j SNAT"
+DNAT="		        -j DNAT"
+MASQUERADE="	    -j MASQUERADE"
+COMMONFW="          -j COMMONFW"
+DROPFAKE="          -j DROPFAKE"
+
+#   LIMITS
+LIMIT="	            -m limit --limit "
+LIMIT1s="	        -m limit --limit 1/s"
+LIMIT2s="	        -m limit --limit 2/s"
+LIMIT5s="	        -m limit --limit 5/s"
+LIMIT10s="	        -m limit --limit 10/s"
+LIMIT20s="	        -m limit --limit 20/s"
+LIMIT1m="	        -m limit --limit 1/m"
+LIMIT5m="	        -m limit --limit 5/m"
+LIMIT10m="	        -m limit --limit 10/m"
+
+
+#   CONN STATES
+SYN="		    --syn"
+NOTSYN="	    ! $SYN"
+STATE_NER="	    -m state --state NEW,ESTABLISHED,RELATED"
+STATE_NE="	    -m state --state NEW,ESTABLISHED"
+STATE_N="	    -m state --state NEW"
+STATE_ER="	    -m state --state ESTABLISHED,RELATED"
+STATE_E="	    -m state --state ESTABLISHED"
+STATE_I="       -m state --state INVALID"
+
+
+LO_IFACE="	    lo"
+
+
+ADD="$FW -A"
+INS="$FW -I"
+DEL="$FW -D"
+LIST="$FW -L"
+REPLACE="$FW -R"
+FLUSH="$FW -F"
+ZERO_COUNTERS="$FW -Z"
+NEW_CHAIN="$FW -N"
+DEL_CHAIN="$FW -X"
+SET_POLICY="$FW -P"
+ADD_ACCT="fw_add_acct"
+ADD_ACCT_LIST="fw_add_acct_list"
+ACCT_I_PREFIX="acct-i"
+ACCT_O_PREFIX="acct-o"
+
+fw_add_acct(){
+    BASE_CHAIN="$1";
+    shift;
+    ACCT_CHAIN="$1";
+    shift;
+    $LIST $ACCT_CHAIN >/dev/null 2>&1
+    if [ $? != 0 ]; then
+        $NEW_CHAIN $ACCT_CHAIN 
+        $ADD $ACCT_CHAIN $RETURN
+    fi
+    $ADD $BASE_CHAIN -j $ACCT_CHAIN $@
+}
+
+# usage: fw_add_acct_list netname net net net ...
+fw_add_acct_list(){
+
+    if [ "$1" = "-ulog"  -o "$1" = "--ulog" ]; then
+        local need_ulog;
+        need_ulog=1;
+        shift;
+    fi
+
+    if [ "$1" = "-mark" -o  "$1" = "--mark" ]; then
+        local need_mark;
+        need_mark=1;
+        shift;
+        local mark_value;
+        mark_value="$1";
+        shift;
+    fi
+
+    net_name="$1";
+    if [ -z "$net_name" ]; then
+        warn "Usage: fw_add_acct_list target_name"
+    fi
+    shift;
+    infon 2 "Adding accounting info $net_name:  "
+    if [ "$1" ]; then
+        while [ "$1" ]; do
+            net="$1";
+            infoc 2 "$net "
+            # OUTPUT
+            $ADD_ACCT ACCOUNT-DST ${ACCT_O_PREFIX}-${net_name}  -d $net
+
+            # INPUT
+            $ADD_ACCT ACCOUNT-SRC ${ACCT_I_PREFIX}-${net_name}  -s $net
+            shift;
+
+            # MARK
+            if [ "x${need_mark}x" = "x1x" ]; then
+                $ADD MARKING     -t mangle  $MARK --set-mark $mark_value -s $net
+                $ADD MARKING     -t mangle  $MARK --set-mark $mark_value -d $net
+            fi
+        done
+        if [ "x${need_ulog}x" = "x1x" ]; then
+            $INS $ACCT_O_PREFIX-${net_name} $ULOG --ulog-nlgroup 1 --ulog-cprange 48 --ulog-qthreshold 50 --ulog-prefix "$ACCT_O_PREFIX-${net_name}"
+            $INS $ACCT_I_PREFIX-${net_name} $ULOG --ulog-nlgroup 1 --ulog-cprange 48 --ulog-qthreshold 50 --ulog-prefix "$ACCT_I_PREFIX-${net_name}"
+        fi
+    else
+        echo "Warning: empty list $net_name"
+    fi
+    infoc 2 ".\n"
+
+}
+
+
+
+fw_init(){
+
+    echo -n "fw_init... ";
+
+    # Flush rules
+    $FLUSH
+    $DEL_CHAIN
+    $FLUSH -t nat 2>/dev/null
+    $DEL_CHAIN -t nat 2>/dev/null
+    $FLUSH -t mangle 2>/dev/null
+    $DEL_CHAIN -t mangle 2>/dev/null
+
+    # DEFAULTS
+    $SET_POLICY INPUT      DROP
+    $SET_POLICY OUTPUT     ACCEPT
+    $SET_POLICY FORWARD    DROP
+
+
+    $NEW_CHAIN ACCOUNT-SRC
+    $NEW_CHAIN ACCOUNT-DST
+    $INS FORWARD -j ACCOUNT-SRC
+    $INS FORWARD -j ACCOUNT-SRC
+    $INS INPUT -j ACCOUNT-SRC
+    $INS INPUT -j ACCOUNT-DST
+    $INS OUTPUT -j ACCOUNT-DST
+    $INS OUTPUT -j ACCOUNT-DST
+
+
+    $NEW_CHAIN MARKING -t mangle
+    $ADD POSTROUTING -t mangle -j MARKING
+
+    $NEW_CHAIN DROPLOG
+    $ADD DROPLOG    $LOG    $LIMIT1s    --log-prefix "DROP: " 
+    $ADD DROPLOG    $DROP
+
+    $NEW_CHAIN REJECTLOG
+    $ADD REJECTLOG  $LOG    $LIMIT1s    --log-prefix "REJECT: " 
+    $ADD REJECTLOG  $REJECT
+    
+    $ADD INPUT $ACCEPT -i lo 
+
+
+    # Make DROPFAKE chain
+    $NEW_CHAIN DROPFAKE
+    for addr in $FAKE_NETS; do 
+        $ADD DROPFAKE    $LOG    $LIMIT1s    -s $addr --log-prefix "DROPFAKE: " 
+        $ADD DROPFAKE    $DROP   -s $addr
+        $ADD DROPFAKE    $LOG    $LIMIT1s    -d $addr --log-prefix "DROPFAKE: " 
+        $ADD DROPFAKE    $DROP   -d $addr
+    done;
+    $ADD DROPFAKE $RETURN
+
+    $NEW_CHAIN CLIENT_FORWARD_INPUT
+    $NEW_CHAIN CLIENT_FORWARD_OUTPUT
+    # TODO  init mac
+ 
+  
+    for file in /proc/sys/net/ipv4/ip_always_defrag \
+                /proc/sys/net/ipv4/tcp_syncookies \
+                /proc/sys/net/ipv4/ip_forward ; do
+        if [ -w "$file" ]; then
+            echo "1" > $file
+        fi
+    done;
+
+    echo "done."; 
+
+
+}
+
+fw_acct_add_all_devices(){
+    #devices=`ls /proc/sys/net/ipv4/conf|egrep -v 'all|default'`
+    devices=`cat /proc/net/dev|egrep -v '(Inter|bytes)' | cut -d":" -f1| sed 's/ //g'`
+    infon 2 "Adding accounting rules for device: "
+    for dev in $devices; do
+        infoc 2 "$dev "
+        $ADD_ACCT ACCOUNT-DST $ACCT_O_PREFIX-$dev -o $dev
+        $ADD_ACCT ACCOUNT-SRC $ACCT_I_PREFIX-$dev -i $dev
+    done
+    infoc 2 ".\n"
+}
+
+add_target(){
+    target="$1"
+    test "$target"  || warn "Usage: add_target target_name"
+    mark=$(eval echo $`echo ${target}_mark`) 
+    nets=$(eval echo $`echo ${target}_nets`) 
+    dev=$(eval echo $`echo ${target}_dev`) 
+    test "$mark"    || warn "${target}_mark for target $target is not set"
+    test "$nets"    || warn "${target}_nets for target $target is not set"
+    test "$dev"     || warn "${target}_dev for target $target is not set"
+    # Add accounting rule
+    $ADD_ACCT_LIST -mark $mark  $target    $nets
+    # Add forwarding rules
+    for net in $nets; do
+        $ADD CLIENT_FORWARD_INPUT  $ACCEPT -s $net -i $dev 
+        $ADD CLIENT_FORWARD_OUTPUT $ACCEPT -d $net -o $dev 
+    done
+}
+
+
+############# SHAPER ##############
+TC=`which tc`
+if [ "$DEBUG" ]; then
+    TC="echo $TC"
+fi
+
+CLASS="$TC class"
+QDISC="$TC qdisc"
+FILTER="$TC filter"
+UNIT="Kbit"
+
+
+setup_htb_dev(){
+    dev=$1
+    rate=$2
+    ceil=$3
+    [ "$dev" -a "$rate" -a "$ceil" ] || die "Usage: setup_htb_dev device rate ceil"
+
+    info 1 "Setting up discipline HTB for device $dev with rate $rate and ceil $ceil" >&2
+    $QDISC del dev $dev root 2>/dev/null
+    $QDISC add dev $dev root handle 1: htb
+    $CLASS add dev $dev parent 1:   classid 1:1  htb rate $rate ceil $ceil
+}
+
+create_htb_ceil(){
+    dev=$1
+    parent=$2
+    rate=$3
+    ceil=$4
+    prio=${5:-100}
+    [ "$dev" -a "$parent" -a "$rate" -a "$ceil" ] || die "Usage: create_htb_ceil device parent_id rate ceil [prio]"
+
+    info 1 "Creating ceil for device:${dev} parent:${parent} rate:$rate ceil:$ceil prio:$prio"
+    $CLASS add dev $dev parent 1:1  classid 1:$parent  htb           rate $rate  ceil $ceil prio $prio
+    $QDISC add dev $dev parent 1:$parent handle $parent:   sfq perturb 10 quantum 10514b
+    $FILTER add dev $dev parent 1:  protocol ip   prio 10       handle $parent fw flowid 1:$parent
+}
+
+shape_target(){
+    target="$1"
+    mark=$(eval echo $`echo ${target}_mark`) 
+    id="$mark"
+    dev=$(eval echo $`echo ${target}_dev`) 
+    odev=$(eval echo $`echo ${target}_odev`) 
+    idev="$dev"
+    [ "$odev" ] || odev="$BACKBONE_DEV"
+    [ "$2" ] && odev="$2"
+    [ "$target" ] || die "Usage: shape_target target_name [out_dev]"
+    [ "$odev" ] || die "Unknown output device! Please setup ${target}_odev or BACKBONE_DEV or use shape_target target_name out_dev"
+
+    prio=$(eval echo $`echo ${target}_prio`) 
+
+    rateceil=$(eval echo $`echo ${target}_rate`) 
+    irateceil=$rateceil;
+    orateceil=$rateceil;
+
+    tirateceil=$(eval echo $`echo ${target}_irate`) 
+    torateceil=$(eval echo $`echo ${target}_orate`) 
+    if [ "$tirateceil" ]; then
+        irateceil=$tirateceil;
+    fi
+    if [ "$torateceil" ]; then
+        orateceil=$torateceil;
+    fi
+
+    irate="`echo $irateceil| cut -d/ -f 1`${UNIT}"
+    iceil="`echo $irateceil| cut -d/ -f 2`${UNIT}"
+
+    orate="`echo $orateceil| cut -d/ -f 1`${UNIT}"
+    oceil="`echo $orateceil| cut -d/ -f 2`${UNIT}"
+
+    create_htb_ceil $odev $id $irate $iceil $prio
+    create_htb_ceil $idev $id $orate $oceil $prio
+}
+
+
+

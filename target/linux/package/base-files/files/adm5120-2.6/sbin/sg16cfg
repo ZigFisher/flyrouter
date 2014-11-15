@@ -1,0 +1,369 @@
+#!/bin/sh
+# Sigrand SG-16PCI and SG16-ISA configuration tool 
+# for Linux kernel v 2.6
+#
+#	Written 2006 by Artem U. Polyakov
+#
+#---------------------------------------------------------
+
+dload_fw()
+{
+    if [ $# = 0 ]; then
+	exit
+    fi    
+
+    echo 1 > download
+    tmp=`cat download`
+    if [ ! $tmp = "1" ]
+	then
+	echo $1": error, firmware was not downloaded"
+	exit
+    fi
+
+}
+
+print_stat()
+{
+    if [ $# -lt 2 ]; then
+	exit
+    fi
+    prog_name=$0
+    IFACE=$1
+    CARD=$2
+
+    master=`cat master`
+    code=`cat mod`
+    rate1=`cat crate`    
+    rate2=`cat rate`
+    auto=`cat autobaud`
+    state=`cat state`     
+    mode=`cat remcfg`
+    annex=`cat annex`    
+    rb=`cat rburst`
+    wb=`cat wburst`
+    fill=`cat fill_7e`
+    inv=`cat inv`
+    crc=`cat crc16`
+
+    echo "SIGRAND SG-16${CARD} SHDSL modem statistics"
+    echo "$1:    "$state
+    echo "shdsl:   "$master" "$code" cfg="$mode" "$annex
+    echo "         rate="$rate1" of "$rate2"("$auto")"
+    echo "hdlc:    fill="$fill" inversion="$inv" "$crc
+    if [ "$CARD" = "PCI" ]; then
+    echo "PCI bus: rb"$rb" wb"$wb
+    fi
+
+    set `cat statistic`
+    
+    if [ ! $# -eq  10 ];then
+	echo $prog_name": error, getting statistic"
+	exit
+    fi
+#    echo "Traffic statistics"
+#    echo "     Frames send      : "$1
+    shift 3
+#    echo "     Frames received  : "$1
+#    shift
+#    echo "     CRC errors       : "$1
+#    shift
+    echo "________________________________________"
+    echo "shdsl statistics"
+    echo -n "      Retrain          : "$1
+    shift
+    echo " of "$1
+    shift
+    echo "      Loss of sync word: "$1
+    shift
+    echo "      CRC6 errors      : "$1
+    shift
+    a=`expr $1 / 2`
+    tmp=`expr $1 % 2`
+    if [ $tmp = 1 ]; then
+	b=".5"
+    else 
+	b=".0"
+    fi
+    echo "      Line attenuation : "$a$b" dB"
+    shift
+    a=`expr $1 / 2`
+    tmp=`expr $1 % 2`
+    if [ $tmp = 1 ];then
+	b=".5"
+    else 
+	b=".0"
+    fi
+    echo "      Noise margin     : "$a$b" dB" 
+    shift
+
+    if [ -f /usr/bin/perl ] || [ -f /bin/perl ]; then
+            tmp=`perl -e 'print localtime('$1')."\n"'`
+            echo "      Last connect     : "$tmp
+    fi
+    shift
+    
+}
+
+#---------------------------------------------------------
+
+# Check that interface name specifyed
+if [ $# = 0 ]; then
+    echo "Sigrand SG-16PCI configuration tool"
+    echo "Usage:"
+    echo "  sg16cfg <if> stat [reset]  - get/reset statistics"
+    echo "  sg16cfg <if> reload        - reload current firmware"
+    echo "  sg16cfg fwinst [path]      - install firmware from"
+    echo "                               [path] locaton"
+    echo "  sg16cfg <if> [args]        - set DSL parameters"
+    echo "  <if> - SG-16PCI network interface name"
+    echo "Possible arguments:"
+    echo "  master | slave             - set modem mode: master(STU-C) or slave(STU-R)"
+    echo "  tcpam32 | tcpam16 | "
+    echo "  tcpam8  | tcpam4           - line coding"
+    echo "  cfg [local|preact]         - local:  each modem configured locally"
+    echo "                               preact: slave(STU-R) configured by master(STU-C)"    
+    echo "  annex [A|B|F]              - G.SHDSL.bis Annex type"    
+    echo "  rate <value>               - line rate"
+    echo "  rate auto [<value>]        - auto line rate (up to 2304 in auto mode)"    
+    echo "                               2304 by default"
+    echo "  crc32 | crc16              - CRC length"
+    echo "  mac-addr <value>           - less significant part of MAC-address"
+    echo "  rboff | rbon               - PCI read burst mode off"
+    echo "  wboff | wbon               - PCI write burst mode off"
+    echo "  fill_ff | fill_7e          - fill byte value"
+    echo "  normal | invert            - data inversion"
+    exit
+fi
+cdir=`pwd`
+
+# Firmware installation
+if [ $1 = "fwinst" -o $1 = "FWINST" ]; then
+    
+    if [ ! $# -ge 2 ]; then
+	echo $0": error, fwinst: too fiew arguments"
+	exit
+    fi
+    # Check that firmware file is aviable
+    if [ -f ./$2 ]; then
+	cp_path=$cdir/$2
+    elif [ -f $2 ]; then
+	cp_path=$2
+    else
+	echo $0": error, firmware wasn't found"
+	exit
+    fi
+    
+    cp $cp_path /lib/firmware/sg16.bin
+    echo "Firmware installed"
+    exit
+fi
+
+PCI_PATH="/sys/bus/pci/drivers/sg16lan"
+ISA_PATH="/sys/bus/pnp/drivers/sg16lan"
+
+if [ ! -d "$PCI_PATH" ] && [ ! -d "$ISA_PATH" ]; then
+    echo "sg16lan Driver don't loaded!"
+    exit
+fi
+
+if [ -d "$PCI_PATH/$1" ]; then
+	cd "$PCI_PATH/$1"
+	CARD="PCI"
+elif [ -d "$ISA_PATH/$1" ]; then
+	cd "$ISA_PATH/$1"
+	CARD="ISA"
+else
+	echo "$0: No such device $1"
+	exit
+fi
+
+interf=$1
+
+# Usage statistic
+if [ $# = 1 ]; then
+    print_stat $interf $CARD
+    exit
+fi
+if [ $2 = "stat" -o $2 = "STAT" ]; then
+    if [ $# = 2 ]; then
+	print_stat $interf $CARD
+	exit
+    elif [ $# = 3 -a $3 = "reset" ] || [ $# = 3 -a $3 = "RESET" ]; then
+	echo "Reset stat"
+	echo 1 > statistic
+	exit
+    fi
+fi
+
+#ifisup=`ifconfig $interf | grep UP`
+#if [ -n $ifisup ]; then
+#    echo $0:" error, bring "$interf" down first"
+#    exit;
+#fi
+
+# Download firmware 
+if [ $2 = "reload" -o $2 = "RELOAD" ]; then
+    dload_fw $0
+    exit
+fi
+
+
+# initial config
+
+shift
+while [ ! -z $1 ]; do
+
+    case $1 in
+    
+    "master")
+	echo 1 > master ;;
+    "slave")
+	echo 0 > master ;;
+    "rate")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"rate\" "
+	    break
+	fi
+	if [ $2 = "auto" ]; then
+	    echo 1 > autobaud
+	    chk=`cat autobaud`
+	    if [ $chk != "auto" ]; then
+		echo $0": warning: this firmware not support auto line rate"
+	    fi
+
+	    if [ -z $3 ]; then
+		shift
+		break
+	    fi
+	    chk=`echo $3 | grep '[^0-9]'`
+	    if [ -z $chk ]; then
+		echo $3 > rate
+		shift
+	    fi
+	    shift
+	    break
+	else
+	    if [ -z $2 ]; then
+		shift
+		echo $0": rate value is missing"		
+		break
+	    fi
+
+	    chk=`echo $2 | grep '[^0-9]'`
+	    if [ ! -z $chk ]; then
+		echo $0": rate value is missing"
+	        break
+	    fi
+	    echo 0 > autobaud
+	    echo $2 > rate
+	    shift
+	fi
+	;;
+    "cfg")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"cfg\" "
+	    break
+	fi
+
+	if [ $2 = "preact" ]; then
+	    echo 1 > remcfg
+	    chk=`cat remcfg`
+	    if [ ! $chk = "preact" ]; then
+		echo $0": error: interface is up "
+	    fi
+	    shift
+	elif [ $2 = "local" ]; then
+	    echo 0 > remcfg
+	    chk=`cat remcfg`
+	    if [ ! $chk = "local" ]; then
+		echo $0": error: interface is up "
+	    fi
+	    shift
+	fi
+	;;    
+
+    "annex")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"annex\" "
+	    break
+	fi
+
+	if [ $2 = "A" ]; then
+	    echo 0 > annex
+	    chk=`cat annex`
+	    if [ ! $chk = "Annex=A" ]; then
+		echo $0": error: interface is up "
+	    fi
+	    shift
+	elif [ $2 = "B" ]; then
+	    echo 1 > annex
+	    chk=`cat annex`
+	    if [ ! $chk = "Annex=B" ]; then
+		echo $0": error: interface is up "
+	    fi
+	    shift
+	elif [ $2 = "F" ]; then
+	    echo 2 > annex
+	    chk=`cat annex`
+	    if [ ! $chk = "Annex=F" ]; then
+		echo $0": error: interface is up "
+	    fi
+	    shift
+	fi
+	;;
+
+    "mac-addr")
+	if [ -z $2 ]; then
+	    echo $0": syntax error, after \"mac-addr\" "
+	    break
+	fi
+	echo "$2" > maddr 
+	shift
+	;;
+	    
+    "tcpam32")
+	echo 0 > mod 
+	;;
+    "tcpam16")
+	echo 1 > mod 
+	;;
+    "tcpam8")
+	echo 2 > mod 
+	;; 
+    "crc32")
+	echo 0 > crc16
+	;;
+    "crc16")
+	echo 1 > crc16
+	;;
+    "rboff")
+	echo 0 > rburst
+	;;
+    "wboff")
+	echo 0 > wburst
+	;;
+    "rbon")
+	echo 1 > rburst
+	;;
+    "wbon")
+	echo 1 > wburst
+	;;
+
+    "normal")
+	echo 0 > inv
+	;;
+    "invert")
+	echo 1 > inv
+	;;
+    "fill_ff")
+	echo 0 > fill_7e
+	;;
+    "fill_7e")
+	echo 1 > fill_7e
+	;;
+    *)
+	echo $0": error parameter - "$1
+	;;
+    esac
+    shift
+done

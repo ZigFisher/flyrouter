@@ -1,0 +1,14 @@
+#!/bin/sh
+
+#Encryption mode:
+#  0 - disabled; 1 - WEP64; 5 - WEP128; 2 - WPA-PSK/WPA2-PSK
+iwpriv wlan0 set_mib encmode=0
+
+#Number of key for encrypt. Range 0-3
+iwpriv wlan0 set_mib wepdkeyid=0
+
+#64bit/128bit WEP Encryption
+iwpriv wlan0 set_mib wepkey1=11223344556677889900112233
+iwpriv wlan0 set_mib wepkey2=
+iwpriv wlan0 set_mib wepkey3=
+iwpriv wlan0 set_mib wepkey4=

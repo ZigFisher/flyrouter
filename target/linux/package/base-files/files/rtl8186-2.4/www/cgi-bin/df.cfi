@@ -1,0 +1,15 @@
+#!/usr/bin/haserl
+
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=koi8-r">
+<meta http-equiv="refresh" content="60">
+</head>
+
+<? title="Command: df"
+ echo '<b>Command:</b> <font color="red"><b>df</b></font>'
+ echo '<pre>'
+ df
+ echo '</pre>'
+?>
+</html>

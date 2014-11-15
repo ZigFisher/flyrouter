@@ -1,0 +1,4 @@
+#!/bin/sh
+
+test -x /sbin/syslogd && /sbin/syslogd -m 0 -C
+test -x /sbin/klogd && /sbin/klogd

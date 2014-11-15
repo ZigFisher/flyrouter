@@ -1,0 +1,33 @@
+#!/bin/sh
+
+mknod /dev/ttyS0 c 4 64
+mknod /dev/ttyS1 c 4 65
+
+# led/gpio now only on device 167
+i=0
+while [ $i != 23 ]
+ do
+   mknod /dev/gpio$i c 167 $((i++))
+done
+# for compatibility
+ln -s /dev/gpio0 /dev/led0
+ln -s /dev/gpio2 /dev/switch
+test -c /dev/gpio0 && echo "led blink 40" > /dev/gpio0
+
+mknod /dev/watchdog c 10 130
+
+#For PPP usage only
+mknod /dev/ppp c 108 0
+
+# For ARLiX system only
+for i in 1 2 3 4 5
+ do
+  mknod -m 666 /dev/ttyp$i c 3 $i;
+  mknod -m 666 /dev/ptyp$i c 2 $i
+done
+
+# For BlueTooth only
+for i in 0 1 2 3 4 5
+ do
+   mknod -m 666 /dev/rfcomm$i c 216 $i;
+done

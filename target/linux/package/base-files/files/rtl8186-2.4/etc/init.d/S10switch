@@ -1,0 +1,16 @@
+#!/bin/sh
+
+test -r /etc/midge.conf && . /etc/midge.conf
+
+insmod adm5120sw.o $VLAN_MX
+PROC=/proc/sys/net/adm5120sw
+
+for i in `ifconfig -a|grep 'eth[0-9] '|cut  -c4`; do
+	ifconfig eth${i} hw ether ${MAC_ADDRESS_BASE:="A0:43:23:12:33:0"}${i}
+done
+
+[ -n "$ETH0_PORTS" ] && echo $ETH0_PORTS >$PROC/eth0
+[ -n "$ETH1_PORTS" ] && echo $ETH1_PORTS >$PROC/eth1
+[ -n "$ETH2_PORTS" ] && echo $ETH2_PORTS >$PROC/eth2
+[ -n "$ETH3_PORTS" ] && echo $ETH3_PORTS >$PROC/eth3
+[ -n "$ETH4_PORTS" ] && echo $ETH4_PORTS >$PROC/eth4

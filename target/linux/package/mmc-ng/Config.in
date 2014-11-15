@@ -1,0 +1,9 @@
+config BR2_PACKAGE_KMOD_MMC-NG
+        prompt "kmod-mmc-ng....................... SD/MMC support driver, 850/450 KB/s for W/R"
+        tristate
+	default m if CONFIG_DEVEL
+	default n
+        help
+          Kernel support for SD/MMC card, now 850KB/s for WRITE and 450KB/s for READ
+	  
+	  http://programmingstuff.free.fr/files/openwrt/whiterussian/mmc/src/

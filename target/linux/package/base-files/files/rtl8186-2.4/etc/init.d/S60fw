@@ -1,0 +1,4 @@
+#!/bin/sh
+
+test -x /etc/network/fw && /etc/network/fw
+

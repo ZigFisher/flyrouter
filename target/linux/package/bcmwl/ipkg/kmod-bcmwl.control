@@ -1,0 +1,5 @@
+Package: kmod-bcmwl
+Priority: optional
+Section: net
+Depends: nvram
+Description: Proprietary wireless driver for the BCM43xx chipset

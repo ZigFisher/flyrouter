@@ -1,0 +1,2 @@
+#!/bin/sh
+#[ -x `which iwpriv` ] && iwpriv ath0 mode 3

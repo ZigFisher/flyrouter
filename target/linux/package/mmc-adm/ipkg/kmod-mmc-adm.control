@@ -1,0 +1,4 @@
+Package: kmod-mmc-adm
+Priority: optional
+Section: sys
+Description: Kernel SD/MMC card support for ADM5120 CPU

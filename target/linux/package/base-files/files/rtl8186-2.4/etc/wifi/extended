@@ -1,0 +1,15 @@
+#!/bin/sh
+
+#ACK timeout. Range 0-255. 255 is auto (self) configuration
+iwpriv wlan0 set_mib ack_timeout=255
+
+iwpriv wlan0 set_mib disable_olbc=1
+
+iwpriv wlan0 set_mib tx_priority=0x0
+
+iwpriv wlan0 set_mib turbo_mode=0x01000000
+
+#Program is available and started so you can enable and disable for own choise
+iwpriv wlan0 set_mib iapp_enable=1
+/bin/iapp wlan0
+

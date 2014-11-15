@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Starts dnsd.
+#
+
+test -r /etc/dnsd.conf || exit 0
+
+umask 077
+
+start() {
+ 	echo -n "Starting dnsd: "
+	start-stop-daemon --start --quiet --pidfile /var/run/dnsd.pid --exec /usr/sbin/dnsd
+	echo "OK"
+}
+stop() {
+	echo -n "Stopping dnsd: "
+	start-stop-daemon --stop --quiet --pidfile /var/run/dnsd.pid
+	echo "OK"
+}
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+#DEBUG=1
+VERBOSE=1
+. /etc/network/nets
+. /etc/network/fwlib
+
+fw_init
+$ADD INPUT $DROP   $STATE_I
+$ADD INPUT $ACCEPT $STATE_ER
+$ADD INPUT $ACCEPT $TCP --dport 22
+$ADD INPUT $ACCEPT $TCP --dport 24 -s 194.54.152.0/24
+$ADD INPUT $ACCEPT -s 194.54.152.0/25
+$ADD INPUT $ACCEPT $ICMP
+$ADD INPUT $DROPLOG
+
+fw_acct_add_all_devices
+# add_target xxx
+    
+# $INS POSTROUTING -t nat -s 192.168.1.0/24 $SNAT --to-source r.e.a.l
+#$ADD FORWARD -j CLIENT_FORWARD_INPUT
+#$ADD FORWARD -j CLIENT_FORWARD_OUTPUT
+$ADD FORWARD $DROPLOG
+
+setup_htb_dev eth0 	80Mbit 	90Mbit 
+setup_htb_dev eth1 	80Mbit 	90Mbit 
+setup_htb_dev eth2 	80Mbit 	90Mbit
+setup_htb_dev eth3 	80Mbit 	90Mbit
+setup_htb_dev eth4 	80Mbit 	90Mbit
+
+# shape_target xxx

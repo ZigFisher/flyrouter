@@ -1,0 +1,16 @@
+#!/bin/sh
+
+case "$1" in
+  start)
+	if [ -x /usr/sbin/rdate ]; then
+		echo "Syncing time..."; 
+		/usr/sbin/rdate -s clock-1.cs.cmu.edu &
+	fi
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

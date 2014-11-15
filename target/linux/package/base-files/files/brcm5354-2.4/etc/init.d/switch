@@ -1,0 +1,29 @@
+#!/bin/sh
+
+test -x /sbin/robocfg || exit 0
+
+test -f /bin/router_functions && . /bin/router_functions
+
+start() {
+ 	msgn "Configure switch: "
+	/sbin/robocfg switch disable
+	/sbin/robocfg vlans enable reset
+	/sbin/robocfg vlan 0 ports "0 5t"
+	/sbin/robocfg vlan 1 ports "1 5t"
+	/sbin/robocfg vlan 2 ports "2 5t"
+	/sbin/robocfg vlan 3 ports "3 5t"
+	/sbin/robocfg vlan 4 ports "4 5t"
+	/sbin/robocfg switch enable && ok || fail
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

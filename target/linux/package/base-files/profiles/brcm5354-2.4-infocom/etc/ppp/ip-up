@@ -1,0 +1,46 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Up PPP/PPTP/PPPOE link script
+# Version 0.8 20091220
+
+export USER='root'
+
+NEWNAME="$PEERNAME"
+[ -z "$PEERNAME" ] && NEWNAME="$LINKNAME"
+
+if [ -x /bin/ip ]; then
+    /bin/ip link set $1 down
+    /bin/ip link set $1 name $NEWNAME
+    /bin/ip link set $NEWNAME up
+    if [ $NEWNAME = $LINKNAME ]; then
+	#/bin/ip ro add via $IPREMOTE
+	/bin/ip ro replace default dev $NEWNAME
+	sleep 1
+	/bin/ip ro del $IPREMOTE dev $NEWNAME 2>/dev/null || true
+
+	#[ -x /etc/init.d/ipsec ] && /etc/init.d/ipsec restart
+	#[ -x /etc/init.d/S90remserial ] && (killall -9 remserial ; /etc/init.d/S90remserial start)
+	
+	#sleep 1
+	#if [ -x /usr/sbin/dnrd ]; then
+	#    if [ -n "$DNS1" ]; then
+	#	/usr/sbin/dnrd -l -u dnrd -c off -s $DNS1 -s $DNS2
+	#    else
+	#	/usr/sbin/dnrd -l -u dnrd -c off -s 208.67.222.222 -s 208.67.220.220
+	#    fi
+	#fi	
+
+	#sleep 1
+	#/usr/sbin/rdate -s clock-1.cs.cmu.edu
+	#sleep 1
+	#/usr/sbin/updatedd dyndns -- mylogin:mypass mydomain.dyndns.org
+	#sleep 1
+	#csq=`tail -1 /var/log/chat | sed -e 's/.*: \(.*\),.*/\1/'`
+	#uptime=`uptime | sed -e 's/, load.*//'`
+	#logger -p news.info $uptime, CSQ: $csq
+    fi
+fi
+
+#[ -x /usr/bin/vnstat ] && [ -w /var/lib/vnstat/$NEWNAME ] && /usr/bin/vnstat -u -r --enable -i $NEWNAME
+

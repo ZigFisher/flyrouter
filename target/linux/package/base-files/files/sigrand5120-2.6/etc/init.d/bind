@@ -1,0 +1,46 @@
+#!/bin/sh
+
+start()
+{
+	enabled="`kdb get svc_dns_enabled`"
+	if [ "x${enabled}" = "x1" ]; then
+		echo "Starting DNS server: bind"
+		chown -R named:named /var/root-dns/*
+#		named -u named -t /var/root-dns/ -c /etc/bind/named.conf
+		chmod a+w /var/run
+		/usr/sbin/named -u named -c /etc/bind/named.conf
+	else
+		echo "Do not starting DNS server"
+	fi	
+}
+
+stop()
+{
+	if [ -f /var/run/named.pid ]; then
+		kill -KILL `cat /var/run/named.pid`
+		return 0
+	fi
+
+	if [ -f /var/root-dns/var/run/named.pid ]; then
+		kill -KILL `cat /var/root-dns/var/run/named.pid`
+		return 0
+	fi
+
+	echo "FAIL to stop named: no named.pid file found"	
+}		
+	
+
+case $1 in
+	start)
+		/etc/templates/Update bind
+		start
+		;;
+	stop) 
+		stop
+		;;
+	restart)
+		stop
+		start	
+		;;
+esac
+

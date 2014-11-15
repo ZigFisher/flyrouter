@@ -1,0 +1,36 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+
+msg "Creating some useful devices..."
+
+mknod -m 666 /dev/ttyS0 c 4 64
+mknod -m 666 /dev/ttyS1 c 4 65
+
+mknod /dev/watchdog c 10 130
+
+#For PPP usage only
+mknod /dev/ppp c 108 0
+
+# For ARLiX system only
+for i in 1 2 3 4 5 6 7 8 9 10
+ do
+  mknod -m 666 /dev/ttyp$i c 3 $i;
+  mknod -m 666 /dev/ptyp$i c 2 $i
+done
+
+# For BlueTooth only
+for i in 0 1 2 3 4 5 6 7 8 9 10
+ do
+   mknod -m 666 /dev/rfcomm$i c 216 $i;
+done
+
+# Create Broadcom specific devices 
+#mknod /dev/brcmboard c 206 0 # - create in preinit script
+mknod /dev/bcmatm0 c 205 0
+mknod /dev/bcmvdsl0 c 207 0
+mknod /dev/bcmadsl0 c 208 0
+mknod /dev/bcmendpoint0 c 209 0
+mknod /dev/bcmaal20 c 210 0
+mknod /dev/bcmles0 c 211 0
+mknod /dev/bcm c 212 0

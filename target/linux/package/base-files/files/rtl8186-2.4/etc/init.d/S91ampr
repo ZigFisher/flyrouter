@@ -1,0 +1,44 @@
+#!/bin/sh
+#
+# Starts ax25net.
+#
+
+test -r /etc/ax25/axports || exit 0
+test -x /usr/sbin/kissattach || exit 0
+test -x /usr/sbin/axip || exit 0
+test -x /usr/sbin/aprsdigi || exit 0
+test -x /usr/sbin/linsv || exit 0
+test -x /usr/sbin/beacon || exit 0
+
+start() {
+ 	echo "Starting AX.25 services: "
+	/usr/sbin/kissattach -l /dev/ptyp1 local 44.0.0.1
+	sleep 1
+	/usr/sbin/kissattach -l /dev/ptyp2 ipusr 44.0.0.1
+	sleep 1
+	/usr/sbin/kissattach -l /dev/ttyS1 uhf01 44.0.0.1
+	sleep 1
+	/usr/sbin/axip >/dev/null &
+	sleep 1
+	/usr/sbin/aprsdigi -DLMC -t " *MY_ID->" -i 30 -p ax25:local:WIDE,TRACE,RELAY >/dev/null &
+	sleep 1
+	mkdir -p /var/ax25/linsv/log
+	sleep 1
+	/usr/sbin/linsv -v 1000 tstnod mycall >/dev/null &
+	sleep 1
+	/usr/sbin/beacon -t 1 -c SERVER -d "CLIENT RELAY" local "*CADTS* Crimean Amateur Digital Telemetry System"
+	/usr/sbin/beacon -t 1 -c SERVER -d "CLIENT RELAY" ipusr "*CADTS* Crimean Amateur Digital Telemetry System"
+	/usr/sbin/beacon -t 1 -c SERVER -d "CLIENT RELAY" uhf01 "*CADTS* Crimean Amateur Digital Telemetry System"
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

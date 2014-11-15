@@ -1,0 +1,5 @@
+pty "pptp 192.168.1.5 --nolaunchpppd"
+name User
+remotename PPTP
+file /etc/ppp/options.pptp
+defaultroute

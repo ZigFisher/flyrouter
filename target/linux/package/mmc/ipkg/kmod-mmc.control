@@ -1,0 +1,4 @@
+Package: kmod-mmc
+Priority: optional
+Section: sys
+Description: Kernel SD/MMC card support

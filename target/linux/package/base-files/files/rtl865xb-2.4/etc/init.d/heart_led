@@ -1,0 +1,4 @@
+#!/bin/sh
+
+test -f /etc/beerouter.conf && . /etc/beerouter.conf
+gpio blink $STATUS_LED 1000 >/dev/null

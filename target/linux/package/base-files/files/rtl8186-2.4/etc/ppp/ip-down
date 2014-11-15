@@ -1,0 +1,6 @@
+#!/bin/sh
+
+NEWNAME="$PEERNAME"
+[ -z "$PEERNAME" ] && NEWNAME="isp"
+
+[ -x /usr/bin/vnstat ] && [ -w /var/lib/vnstat/$NEWNAME ] && /usr/bin/vnstat -u -r --disable -i $NEWNAME

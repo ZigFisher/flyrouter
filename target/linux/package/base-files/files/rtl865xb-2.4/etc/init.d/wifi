@@ -1,0 +1,113 @@
+#/bin/sh
+
+#Set ESSID of wirelless Infrastructure Network
+iwpriv wlan0 set_mib ssid="BeeRouter"
+
+#Set Mode: 8 - Client;16 - AP; 32 - AdHoc
+iwpriv wlan0 set_mib opmode=16
+
+#Set cannel: 0 - auto
+iwpriv wlan0 set_mib channel=4
+
+iwpriv  wlan0 set_mib authtype=0
+#iwpriv wlan0 set_mib authtype=2
+
+iwpriv wlan0 set_mib encmode=0
+#iwpriv wlan0 set_mib encmode=1
+#iwpriv wlan0 set_mib wepkey1=2367516444
+#iwpriv wlan0 set_mib wepkey2=
+#iwpriv wlan0 set_mib wepkey3=
+#iwpriv wlan0 set_mib wepkey4=
+#iwpriv wlan0 set_mib wepdkeyid=0
+
+iwpriv wlan0 set_mib chipVersion=11
+iwpriv wlan0 set_mib regdomain=3
+iwpriv wlan0 set_mib rxChargePump=3
+iwpriv wlan0 set_mib txChargePump=6
+
+iwpriv wlan0 set_mib RFChipID=7
+iwpriv wlan0 set_mib Diversity=1
+iwpriv wlan0 set_mib DIG_enable=1
+iwpriv wlan0 set_mib HighPowerChk=1
+iwpriv wlan0 set_mib AntDvrsty=1
+iwpriv wlan0 set_mib DefaultAnt=0
+iwpriv wlan0 set_mib dtimperiod=1
+iwpriv wlan0 set_mib expired_time=30000
+iwpriv wlan0 set_mib longretry=6
+iwpriv wlan0 set_mib shortretry=6
+iwpriv wlan0 set_mib fragthres=2346
+iwpriv wlan0 set_mib rtsthres=2346
+iwpriv wlan0 set_mib band=3
+iwpriv wlan0 set_mib disable_protection=0
+iwpriv wlan0 set_mib deny_legacy=0
+iwpriv wlan0 set_mib basicrates=15
+iwpriv wlan0 set_mib TxPowerOFDM=0,18
+iwpriv wlan0 set_mib TxPowerCCK=0,12
+iwpriv wlan0 set_mib TxPowerOFDM=1,18
+iwpriv wlan0 set_mib TxPowerCCK=1,12
+iwpriv wlan0 set_mib TxPowerOFDM=2,18
+iwpriv wlan0 set_mib TxPowerCCK=2,12
+iwpriv wlan0 set_mib TxPowerOFDM=3,18
+iwpriv wlan0 set_mib TxPowerCCK=3,12
+iwpriv wlan0 set_mib TxPowerOFDM=4,18
+iwpriv wlan0 set_mib TxPowerCCK=4,12
+iwpriv wlan0 set_mib TxPowerOFDM=5,18
+iwpriv wlan0 set_mib TxPowerCCK=5,12
+iwpriv wlan0 set_mib TxPowerOFDM=6,18
+iwpriv wlan0 set_mib TxPowerCCK=6,12
+iwpriv wlan0 set_mib TxPowerOFDM=7,18
+iwpriv wlan0 set_mib TxPowerCCK=7,12
+iwpriv wlan0 set_mib TxPowerOFDM=8,18
+iwpriv wlan0 set_mib TxPowerCCK=8,12
+iwpriv wlan0 set_mib TxPowerOFDM=9,18
+iwpriv wlan0 set_mib TxPowerCCK=9,12
+iwpriv wlan0 set_mib TxPowerOFDM=10,18
+iwpriv wlan0 set_mib TxPowerCCK=10,12
+iwpriv wlan0 set_mib TxPowerOFDM=11,18
+iwpriv wlan0 set_mib TxPowerCCK=11,12
+iwpriv wlan0 set_mib TxPowerOFDM=12,18
+iwpriv wlan0 set_mib TxPowerCCK=12,12
+iwpriv wlan0 set_mib TxPowerOFDM=13,18
+iwpriv wlan0 set_mib TxPowerCCK=13,12
+iwpriv wlan0 set_mib bcnint=100
+iwpriv wlan0 set_mib preamble=0
+iwpriv wlan0 set_mib cts2self=1
+iwpriv wlan0 set_mib autorate=1
+iwpriv wlan0 set_mib oprates=4095
+iwpriv wlan0 set_mib hiddenAP=0
+iwpriv wlan0 set_mib encmode=1
+iwpriv wlan0 set_mib wepkey1=2367516444
+iwpriv wlan0 set_mib wepkey2=
+iwpriv wlan0 set_mib wepkey3=
+iwpriv wlan0 set_mib wepkey4=
+iwpriv wlan0 set_mib wepdkeyid=0
+iwpriv wlan0 set_mib 802_1x=0
+iwpriv wlan0 set_mib authtype=2
+iwpriv wlan0 set_mib aclmode=0
+#
+#
+#iwpriv wlan0 set_mib encryption=2
+#iwpriv wlan0 set_mib ssid="8185_AP"
+#iwpriv wlan0 set_mib enable1x=0
+#iwpriv wlan0 set_mib enableMacAuth=0
+#iwpriv wlan0 set_mib supportNonWpaClient=0
+#iwpriv wlan0 set_mib wepKey=1
+#iwpriv wlan0 set_mib wepGroupKey=""
+#iwpriv wlan0 set_mib authentication=2
+#iwpriv wlan0 set_mib unicastCipher=1
+#iwpriv wlan0 set_mib usePassphrase=1
+#iwpriv wlan0 set_mib psk="1234567890"
+#iwpriv wlan0 set_mib groupRekeyTime=86400
+#iwpriv wlan0 set_mib rsPort=1812
+#iwpriv wlan0 set_mib rsIP=192.168.1.51
+#iwpriv wlan0 set_mib rsPassword=""
+#iwpriv wlan0 set_mib rsMaxReq=3
+#iwpriv wlan0 set_mib rsAWhile=5
+#iwpriv wlan0 set_mib accountRsEnabled=0
+#iwpriv wlan0 set_mib accountRsPort=1813
+#iwpriv wlan0 set_mib accountRsIP=0.0.0.0
+#iwpriv wlan0 set_mib accountRsPassword=""
+#iwpriv wlan0 set_mib accountRsUpdateEnabled=0
+#iwpriv wlan0 set_mib accountRsUpdateTime=60
+#iwpriv wlan0 set_mib accountRsMaxReq=3
+#iwpriv wlan0 set_mib accountRsAWhile=5

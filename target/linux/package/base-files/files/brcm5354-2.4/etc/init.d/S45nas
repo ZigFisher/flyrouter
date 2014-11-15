@@ -1,0 +1,29 @@
+#!/bin/sh
+
+SSID="Infocom"
+KEY="mypass2012"
+#
+IFACE="wl0"
+BRIDGE="br1"
+
+exit 0
+
+test -x /usr/sbin/nas || exit 0
+test -f /bin/router_functions && . /bin/router_functions
+
+start() {
+	msg "Configure WiFi interface..."
+	/usr/sbin/nas -P /tmp/nas.wl0.pid -H 34954 -l $BRIDGE -i $IFACE -A -m 4 -k $KEY -s $SSID -w 2 -g 0 &
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+

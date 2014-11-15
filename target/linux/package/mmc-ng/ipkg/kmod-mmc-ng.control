@@ -1,0 +1,4 @@
+Package: kmod-mmc-ng
+Priority: optional
+Section: sys
+Description: Kernel SD/MMC card support, now 850KB/s for WRITE and 450KB/s for READ

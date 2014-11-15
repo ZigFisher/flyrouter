@@ -1,0 +1,5 @@
+# syncs time
+15	*/2	* * *	/usr/sbin/rdate -s clock-1.cs.cmu.edu
+
+# fetch statistic
+0-55/5	*	* * *   [ -x /usr/bin/vnstat ] && [ `ls /var/lib/vnstat/ | wc -l` -ge 1 ] && /usr/bin/vnstat -u

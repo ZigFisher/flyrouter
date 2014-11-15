@@ -1,0 +1,10 @@
+config BR2_PACKAGE_KMOD_USB_SPCA5XX_LE
+	prompt "kmod-spca5xx-le................... SPCA5XX based USB webcam support (Light Edition)"
+	tristate
+	default m
+	select BR2_PACKAGE_KMOD_VIDEODEV
+	select BR2_PACKAGE_KMOD_USB
+	help
+	  Kernel driver for SPCA5XX based USB webcam support (Light Edition).
+	  
+	  http://mxhaard.free.fr/

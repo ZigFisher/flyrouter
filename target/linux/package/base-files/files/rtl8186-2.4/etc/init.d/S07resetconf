@@ -1,0 +1,8 @@
+#!/bin/sh
+#set gpio2 to input
+echo "led switch 0" > /dev/switch
+
+if [ q`cat /dev/switch `q = q0q ]; then
+	dd if=/dev/zero of=/dev/mtdblock/3 bs=1k count=1
+	reboot
+fi

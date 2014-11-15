@@ -1,0 +1,50 @@
+# /etc/inittab
+#
+# Copyright (C) 2001 Erik Andersen <andersen@codepoet.org>
+#
+# Format for each entry: <id>:<runlevels>:<action>:<process>
+#
+# id        == tty to run on, or empty for /dev/console
+# runlevels == ignored
+# action    == one of sysinit, respawn, askfirst, wait, and once
+# process   == program to run
+
+#
+# COUTION! DO NOT MODIFY THIS FILE AT THE MIDGE RUN TIME
+#
+
+# Startup the system
+ttyS0::sysinit:/bin/mount -a
+ttyS0::sysinit:/bin/hostname -F /etc/hostname
+
+# Now run any rc scripts
+::sysinit:/etc/init.d/rcS
+#null::sysinit:/sbin/ifconfig lo 127.0.0.1 up
+#null::sysinit:/sbin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+
+# Set up a couple of getty's
+ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100
+ttyS1::respawn:/sbin/getty -L ttyS1 115200 vt100
+#tts/0::respawn:/sbin/getty -L tts/0 115200 vt100
+
+# Logging junk
+null::sysinit:/bin/touch /var/log/messages
+#null::respawn:/sbin/syslogd -n -m 0 -C
+#null::respawn:/sbin/klogd -n
+
+# Check switch
+#null::restart:/usr/local/sbin/monitor
+
+# Stuff to do before rebooting
+null::restart:/etc/init.d/Kreboot
+null::restart:/bin/sync
+null::restart:/usr/bin/killall klogd
+null::restart:/usr/bin/killall syslogd
+null::restart:/bin/umount -a -r
+
+# Stuff to do before shutdown
+null::shutdown:/etc/init.d/Kshutdown
+null::shutdown:/bin/sync
+null::shutdown:/usr/bin/killall klogd
+null::shutdown:/usr/bin/killall syslogd
+null::shutdown:/bin/umount -a -r

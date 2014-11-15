@@ -1,0 +1,68 @@
+#!/bin/sh
+echo "Deep Green (Sergey G. Kononov) tri-system started";
+echo "  Updated by N.Leiten (Gamov Vadim)"
+echo "  version 3"
+echo ""
+
+
+echo 10,1,10,1,10,1,10,1,10,1,10,1,10,1,10,1 > /proc/led0
+echo 10,1,10,0,10,1,10,0,10,1,10,0,10,1,10,0 > /proc/led1
+
+# Test - if filesystem is ok (dGreen)
+rm -rf /mnt/rw_fs/*
+/bin/flash load
+if (cat /mnt/rw_fs/filesystem.ok > /dev/null 2>&1) then
+  #If FS is ok we just remake symlinks to our directories. Idea belongs to dGreen. TNX.
+  # I've just make it simple. (N.Leiten)
+  echo "RW File system is ok - preparing ..."
+  rm -rf /etc
+  ln -s /mnt/rw_fs/etc /etc
+  rm -rf /usr
+  ln -s /mnt/rw_fs/usr /usr
+  echo "ok"
+else
+  echo "File system is clear or poor."
+  dd if=/dev/urandom of=/dev/mtd2 bs=1k count=2
+  echo "   Restoring emergency..."
+  mkdir -p /mnt/rw_fs/etc
+  mkdir -p /mnt/rw_fs/usr
+  cp -r /nomnt/etc/* /mnt/rw_fs/etc
+  cp -r /nomnt/usr/* /mnt/rw_fs/usr
+  rm -rf /etc
+  rm -rf /usr
+  ln -s /mnt/rw_fs/etc /etc
+  ln -s /mnt/rw_fs/usr /usr
+  echo "Delete this file and reboot access point for default configuration restoring" > /mnt/rw_fs/filesystem.ok
+  /bin/flash save
+  echo "ok"
+fi
+echo -n "Mounting devpts file system..."
+mount -t devpts devpts /dev/pts
+echo "ok"
+# Check memory size. If more than 8M - create tmpfs in /var
+MEM_SIZE=`cat /proc/sysmem`
+LED0_ON=1
+LEd0_OFF=0
+case "$MEM_SIZE" in
+  4M)
+     ;;
+  8M)
+     ;;
+  *)
+    echo "Creatin tmpfs and mount it into /var"
+    rm -rf /tmp/*
+    cp -r /var/* /tmp
+    rm -rf /var
+    mkdir /var
+    /bin/mount -v ramfs /var -n -t ramfs
+    cp -rf /tmp/* /var
+    rm -rf /tmp/*
+    mkdir /var/tmp
+    rm -rf /tmp
+    ln -s /var/tmp /tmp
+    LED0_ON=0
+    LED0_OFF=1
+esac
+
+#Changed to Linux idea :-) (N.Leiten)
+/etc/rc.d/rcS

@@ -1,0 +1,7 @@
+# clean logs
+0	7,20	* * *	/bin/sh -c "cat /dev/null >/tmp/messages"
+# syncs
+1	*	* * *	/bin/sync
+# syncs time
+15	*/2	* * *	/usr/sbin/rdate -s clock-1.cs.cmu.edu
+

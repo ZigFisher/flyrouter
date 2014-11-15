@@ -1,0 +1,18 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+test -f /etc/sinus.conf && . /etc/sinus.conf
+
+case "$1" in
+  start)
+	# Start WPA-PSK AES support for AP (disable if you use WEP or WDS !)
+	#nas -l br1 -i wl0 -k "$SINUS_WPAPASS" -m 1 -s `cat /etc/hostname | tr "a-z" "A-Z"` -w 2 &
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?
+
+

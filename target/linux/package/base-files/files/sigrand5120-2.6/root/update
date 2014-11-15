@@ -1,0 +1,20 @@
+#/bin/sh
+
+ifdown eth1
+kdb set sys_iface_eth1_auto=1
+kdb set sys_iface_eth1_enabled=1
+kdb set sys_iface_eth1_ipaddr=194.54.152.50
+kdb set sys_iface_eth1_netmask=255.255.255.224
+kdb set sys_iface_eth1_gateway=194.54.152.33
+kdb set sys_dns_nameserver=194.54.152.35
+/etc/templates/Update dns
+ifup eth1
+
+
+ipkg update
+if [ ! -x /usr/sbin/lighttpd ]; then
+	ipkg install lighttpd
+	ipkg install lighttpd-mod-auth
+	ipkg install lighttpd-mod-cgi
+fi
+ipkg -force-reinstall install webface

@@ -1,0 +1,225 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2007 | http://www.flyrouter.net
+# Pre-init script
+# Version 0.3 20071126
+
+test -f /bin/midge_functions && . /bin/midge_functions 
+test -f /etc/midge.conf && . /etc/midge.conf
+
+VERBOSE=3
+JFFS2_PARTITION="$DATAFS_PARTITION"
+JFFS2_PARTITION_SIZE="$DATAFS_PARTITION_SIZE"
+JFFS2_HEADER="1985"
+GZIP_HEADER="8b1f"
+BZIP2_HEADER="UNKNOWN"
+
+[ "$DATAFS_PARTITION" ] || die "DATAFS_PARTITION is not defined"
+[ "$INITFS_PARTITION" ] || die "INITFS_PARTITION is not defined"
+[ "$KERNEL_PARTITION" ] || die "KERNEL_PARTITION is not defined"
+[ "$DATAFS_PARTITION_SIZE" ] || die "DATAFS_PARTITION_SIZE is not defined"
+[ "$INITFS_PARTITION_SIZE" ] || die "INITFS_PARTITION_SIZE is not defined"
+
+required grep
+required tr
+required tar
+required head
+required hexdump
+required cut
+required dd
+required find
+
+mount_tmpfs() {
+	info 2 "Mounting tmpfs to /ram"
+	if mount | grep ram >/dev/null; then
+		warn "/ram already mounted"
+	else
+		mount -t tmpfs tmpfs /ram -o size=50% || warn "mount fail"
+	fi
+	mkdir -p /ram/var/log /ram/var/spool /ram/var/run /ram/var/lib/ipkg /ram/var/lock 
+	mkdir -p /ram/home /ram/usr/local
+	mkdir -p /ram/root
+	mkdir -p /ram/tmp
+}
+
+is_first_boot(){
+	info 3 "Checking for first boot..."
+	if [ "$MIDGE_TYPE" = "jffs2" ]; then
+		local h="`dd if=$JFFS2_PARTITION bs=2 count=1 2>/dev/null |hexdump -n2 | head -1 | cut -d' ' -f2`"
+		[ "$h" = "$JFFS2_HEADER" ] && return 1
+	else 
+		local h="`dd if=$DATAFS_PARTITION bs=2 count=1 2>/dev/null |hexdump -n2 | head -1 | cut -d' ' -f2`"
+		[ "$h" = "$GZIP_HEADER" ] && return 1
+		local h="`dd if=$DATAFS_PARTITION bs=2 count=1 2>/dev/null |hexdump -n2 | head -1 | cut -d' ' -f2`"
+		[ "$h" = "$BZIP2_HEADER" ] && return 1
+	fi
+	info 2 "This is first boot!"
+	return 0
+}
+
+unpack_skeleton(){
+	dst="$1"
+	info 2 "Copying /etc to $dst..."
+	test -d "$dst" || die "Destination $dst not found"
+	cp -a /etc $dst
+}
+
+unpack_datafs(){
+	local dst="$1"
+	local h="`dd if=$DATAFS_PARTITION bs=1 count=2 2>/dev/null |hexdump -n2 | head -1 | cut -d' ' -f2`"
+	if [ "$h" = "$GZIP_HEADER" ]; then
+		info 2 "Unpacking gzipped data from $DATAFS_PARTITION"
+		tar zxvf $DATAFS_PARTITION -C $dst
+
+	elif [ "$h" = "$BZIP2_HEADER" ]; then
+		info 2 "Unpacking bzipped data from $DATAFS_PARTITION"
+		tar jxvf $DATAFS_PARTITION -C $dst
+	fi
+}
+
+make_links2rom(){
+	dst=$1
+	info 2 "Making symlinks... "
+	cd $dst
+	local dirs4link="lib bin sbin usr www"
+	for file in $(cd /; { find $dirs4link -type f; find $dirs4link -type l; };); do 
+		local dir=$(dirname $file)
+		mkdir -p $dir
+		info 4 "Linking $file to /rom/$file"
+		ln -sf /rom/$file $file
+	done
+	cd /
+}
+
+
+clear_partition(){
+	part=$1
+	info 2 "Clearing partition $part"
+	cat /dev/zero | tr \\0 \\377 | dd of=$part bs=$JFFS2_PARTITION_SIZE count=1
+}
+
+make_devdir(){
+	dest=$1
+	if mount | grep devfs >/dev/null; then
+		umount /dev 
+		mkdir -p $dest/dev
+		mount -t devfs devfs $dest/dev
+	else
+		tar cf - /dev | tar xf - -C $dest
+	fi
+}
+
+
+create_jffs2_partition(){
+	clear_partition $JFFS2_PARTITION
+	mount -t jffs2 $JFFS2_PARTITION /jffs
+	unpack_skeleton /jffs
+	make_links2rom /jffs
+	make_devdir /jffs
+	cp /etc/midge.conf /jffs/etc
+	rm -rf /jffs/tmp
+	ln -s /ram/tmp /jffs/tmp
+	info 3 "Syncing..."
+	sync
+	cd /
+	umount /jffs
+}
+
+create_tmpfs_partition(){
+	if is_first_boot; then
+		unpack_skeleton /ram 
+		cp /etc/midge.conf /ram/etc
+	else
+		info 3 "Extracting datafs:"
+		/sbin/flash load /ram
+		if [ -f /ram/etc/midge.conf ]; then 
+		    . /ram/etc/midge.conf
+		else
+		    warn "Broken datafs partition: resetting to defaults"
+		    clear_partition $DATAFS_PARTITION
+		    unpack_skeleton /ram 
+		    cp /etc/midge.conf /ram/etc
+		fi
+	fi
+	make_links2rom /ram
+	make_devdir /ram
+	mkdir -p /ram/proc
+	rm -rf /ram/tmp
+	mkdir /ram/tmp
+	chmod +t /ram/tmp
+}
+
+gen_mac_address(){
+	if [ -z "$MAC_ADDRESS_BASE" ]; then
+		info 2 "Generating random mac address..."
+		mac1="`cat /dev/urandom | hexdump  | head -1 | cut -c9,10`"
+		mac2="`cat /dev/urandom | hexdump  | head -1 | cut -c9,10`"
+		mac3="`cat /dev/urandom | hexdump  | head -1 | cut -c9,10`"
+		echo "MAC_ADDRESS_BASE='A0:43:$mac1:$mac2:$mac3:0'" >>/etc/midge.conf
+	fi
+}
+
+update_midge_conf(){
+	. /etc/midge.conf
+	gen_mac_address
+	if [ -z "$FIRST_BOOT" ]; then
+		DATE="`date +%Y%m%d`"
+		if [ `date +%Y%m%d` -gt 20050701 ]; then
+			info 2 "Updating first boot date..."
+			echo "FIRST_BOOT=$DATE" >>/etc/midge.conf
+		fi
+	fi
+}
+
+ipkg_hack(){
+	# this is a hack
+	rm -rf /usr/lib/ipkg/info/
+	cp -a /rom/usr/lib/ipkg/info /usr/lib/ipkg
+}
+
+main(){
+	info 1 "Starting midge version $MIDGE_VERSION_MAJOR.$MIDGE_VERSION_MINOR MIDGE_TYPE is a $MIDGE_TYPE"
+	if [ "$MIDGE_TYPE" = "jffs2" ]; then
+		if [ -r /proc/jffs2_bbc ]; then
+			info 3 "Setting jffs2_bbc parameters..."
+			echo S >/proc/jffs2_bbc
+			echo 1:lzari >/proc/jffs2_bbc
+			#echo 0:zlib >/proc/jffs2_bbc
+		fi
+
+		is_first_boot && create_jffs2_partition
+		[ -d /jffs/bin ] || mount -t jffs2 $JFFS2_PARTITION /jffs 
+		if [ -d /jffs/bin ]; then
+			umount /proc
+			pivot_root /jffs /jffs/rom
+		else
+			die "/jffs not mounted"
+		fi
+		mount -t proc /proc /proc
+		mount_tmpfs
+        mkdir -p /ram/tmp
+
+	elif [ "$MIDGE_TYPE" = "tmpfs" ]; then
+		mount_tmpfs
+		create_tmpfs_partition
+		umount /proc
+		mkdir -p /ram/rom
+		info 2 "Replacing /"
+		pivot_root /ram /ram/rom
+		info 3 "Remount /proc"
+		mkdir -p /proc
+		mount -t proc /proc /proc
+		mount -t devfs none /dev
+	elif [ "$MIDGE_TYPE" = "usb" ]; then
+        die "MIDGE_TYPE $MIDGE_TYPE is not implemented"
+	else 
+		die "Unknown MIDGE_TYPE: '$MIDGE_TYPE'"
+	fi
+
+	update_midge_conf
+	ipkg_hack
+}
+
+main $@
+exec /sbin/init
+

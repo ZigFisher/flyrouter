@@ -1,0 +1,20 @@
+#!/bin/sh
+
+test -f /etc/beerouter.conf && . /etc/beerouter.conf
+
+gpio init $USB_LED out >/dev/null
+gpio init $STATUS_LED out >/dev/null
+gpio init $RESET_BUTTON in >/dev/null
+
+if [ q`gpio get $RESET_BUTTON`q = q0q ]; then
+	gpio blink $STATUS_LED 300 >/dev/null
+	sleep 5
+	if [ q`gpio get $RESET_BUTTON`q = q0q ]; then
+	    echo "Warning, reset button pressed abnormally..."
+	    gpio blink $STATUS_LED 50 >/dev/null
+	else
+	    echo "Reset to default configuration and reboot..."
+	    flash erase
+	    reboot
+	fi
+fi

@@ -1,0 +1,8 @@
+#!/bin/sh
+#
+#RADIO=http://listen.42fm.ru:8000/stealkill
+#RADIO=http://78.159.104.192:80
+RADIO=http://radio.r-b.ru:8000
+MADSET="--ignore-crc --no-tty-control --mono --very-quiet --attenuate=-35"
+
+#while sleep 30; do /usr/bin/wget -q -O - $RADIO | /usr/bin/madplay $MADSET - ; done &

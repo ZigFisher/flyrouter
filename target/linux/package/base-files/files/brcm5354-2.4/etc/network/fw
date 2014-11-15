@@ -1,0 +1,122 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2010 | http://www.flyrouter.net
+# Central firewall script
+# Version 1.4 20081021
+
+#DEBUG=1
+VERBOSE=1
+. /etc/network/nets
+. /etc/network/fwlib
+
+fw_init
+$ADD INPUT $DROP   $STATE_I
+$ADD INPUT $ACCEPT $STATE_ER
+$ADD INPUT $ACCEPT $ICMP
+$ADD INPUT $ACCEPT $TCP --dport 22
+#$ADD INPUT $ACCEPT -p 47 # GRE
+$ADD INPUT $ACCEPT $UDP --dport 67 # bootp/dhcp
+$ADD INPUT $ACCEPT $UDP --dport 68 # bootp/dhcp
+$ADD INPUT $ACCEPT $TCP --dport 80
+#$ADD INPUT $ACCEPT $TCP --dport 24 -s 1.1.1.0/24
+#$ADD INPUT $ACCEPT $TCP --dport 38 -s 1.1.1.0/24
+$ADD INPUT $ACCEPT
+$ADD INPUT $DROPLOG
+
+fw_acct_add_all_devices
+
+# Write known dynamic interfaces here
+#fw_acct_add_device tun0
+#fw_acct_add_device tun1
+
+# Write known group from /etc/network/nets here
+add_target group1
+#add_target lottery
+#add_target client2
+
+# Lock IP to MAC address
+#add_static_mac_from_udhcpd /etc/udhcpd-eth1.conf
+
+# Simple access to Internet
+$ADD POSTROUTING -t nat -s 192.168.1.0/24 -j MASQUERADE
+
+# Standart SNAT section
+#$ADD POSTROUTING -t nat -s 192.168.1.0/24 $SNAT --to-source r.e.a.l
+#$ADD POSTROUTING -t nat -s 192.168.1.0/24 -o eth0 $SNAT --to-source wan_ip
+#$ADD POSTROUTING -t nat -s 192.168.1.0/24 -o isp $SNAT --to-source vpn_ip
+
+# Allow fragmentation for special packet's (resolve MTU problem)
+#$ADD POSTROUTING -t nat -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+$ADD POSTROUTING -t mangle -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+$ADD FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+
+# Port forwarding to DMZ
+#$ADD PREROUTING $DNAT $TCP -t nat -i eth0 -d !router_wan_ip! --dport 10022 --to-destination !client_ip!:22  # SSH access
+#$ADD PREROUTING $DNAT $TCP -t nat -i eth0 -d !router_wan_ip! --dport 10080 --to-destination !client_ip!:80  # WEB access
+#$ADD PREROUTING $DNAT $TCP -t nat -i eth0 -d !router_wan_ip! --dport 33333 --to-destination !client_ip!:33333  # Torrent, TCP access
+#$ADD PREROUTING $DNAT $UDP -t nat -i eth0 -d !router_wan_ip! --dport 33333 --to-destination !client_ip!:33333  # Torrent, UDP access
+#$ADD POSTROUTING $SNAT $TCP -t nat -o eth4 -d !client_ip! --to-source !router_lan_ip!
+#
+#$ADD PREROUTING $DNAT -t nat -i eth2.160 -d !router_wan_ip! --to-destination !client_ip!
+#$ADD POSTROUTING $SNAT -t nat -o eth3 -d !client_ip! --to-source !router_lan_ip!
+#
+#$ADD FORWARD $DROP $TCP -d !client_ip! --dport 22
+#$ADD FORWARD $DROP $TCP -d !client_ip! --dport 24
+#$ADD FORWARD $DROP $TCP -d !client_ip! --dport 38
+#$ADD FORWARD $DROP $TCP -d !client_ip! --dport 81
+
+# Port forwarding to Inet
+#$ADD PREROUTING $DNAT $TCP -t nat -i eth4 -s !client_ip! -d !router_lan_ip! --dport 10025 --to-destination 212.110.128.65:25
+#$ADD PREROUTING $DNAT $TCP -t nat -i eth4 -s !client_ip! -d !router_lan_ip! --dport 10110 --to-destination 212.110.128.65:110
+#$ADD POSTROUTING $SNAT $TCP -t nat -o eth0 -s !client_ip! -d 212.110.128.65 --to-source !router_wan_ip!
+
+# Danger ! Please not use this by security reason
+#$ADD FORWARD $ACCEPT
+
+# Accept forwarding from local interfaces only (for low level users)
+$ADD FORWARD $DROP   $STATE_I
+$ADD FORWARD $ACCEPT $STATE_ER
+#$ADD FORWARD $ACCEPT -o pptp1
+#$ADD FORWARD $ACCEPT -o eth0
+#$ADD FORWARD $ACCEPT -i eth1
+#$ADD FORWARD $ACCEPT -i eth2
+#$ADD FORWARD $ACCEPT -i eth3
+#$ADD FORWARD $ACCEPT -i eth4
+
+# Drop Netbios spam
+$ADD FORWARD $TCP --dport 135:139 $DROP
+$ADD FORWARD $UDP --dport 135:139 $DROP
+$ADD FORWARD $TCP --dport 445 $DROP
+
+# Accept forwarding for known interfaces only
+#$ADD FORWARD $ACCEPT -i eth0.222 -o tun+
+#$ADD FORWARD $ACCEPT -o eth0.222 -i tun+
+
+# Accept forwarding for WiFi bridge
+$ADD FORWARD $ACCEPT -i br1 -o br1
+
+# Accept forwarding for known group only
+$ADD FORWARD -j CLIENT_FORWARD_INPUT
+$ADD FORWARD -j CLIENT_FORWARD_OUTPUT
+
+# Example: redirect unknown or denied hosts to special IP
+#for net in $redirected_nets; do
+#	$ADD PREROUTING $DNAT -t nat -i $redirected_dev -s $net --to-destination 192.168.1.1 
+#done
+
+# Disable client jacking
+#$INS CLIENT_FORWARD_INPUT -o ! eth0 $DROPLOG
+
+# Write all dropped packets to log
+$ADD FORWARD $DROPLOG
+
+# Set HDB on all Ethernet interfaces
+setup_htb_dev eth0 	80Mbit 	90Mbit
+#setup_htb_dev eth1 	80Mbit 	90Mbit
+#setup_htb_dev eth2 	80Mbit 	90Mbit
+#setup_htb_dev eth3 	80Mbit 	90Mbit
+#setup_htb_dev eth4 	80Mbit 	90Mbit
+
+# Write need shaping group here
+#shape_target group1
+#shape_target client2

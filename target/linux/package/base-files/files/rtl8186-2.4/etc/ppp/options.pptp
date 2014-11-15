@@ -1,0 +1,14 @@
+lock 
+noauth 
+nobsdcomp 
+nodeflate
+idle 0
+defaultroute
+usepeerdns
+#
+#
+#debug
+#name local.net
+#auth
+#require-chap
+#proxyarp

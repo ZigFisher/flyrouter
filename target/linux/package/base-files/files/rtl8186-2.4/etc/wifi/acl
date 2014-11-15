@@ -1,0 +1,11 @@
+#!/bin/sh
+
+#MAC-control enabled/disabled
+iwpriv wlan0 set_mib aclmode=0
+
+#Number of entry on which you start to add
+iwpriv wlan0 set_mib aclnum=0
+
+#iwpriv wlan0 set_mib acladdr=00006c000001
+#iwpriv wlan0 set_mib acladdr=00006c000002
+

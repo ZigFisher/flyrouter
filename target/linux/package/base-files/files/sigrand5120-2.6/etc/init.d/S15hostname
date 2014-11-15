@@ -1,0 +1,9 @@
+#!/bin/sh
+
+eval `kdb -qq ls sys_hostname`
+
+if [ -n "$sys_hostname" ]; then
+	/bin/hostname "$sys_hostname"
+else
+	/bin/hostname -F /etc/hostname
+fi

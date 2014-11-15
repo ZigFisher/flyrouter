@@ -1,0 +1,11 @@
+#!/bin/sh
+
+ip link set wlan0 down
+/etc/wifi/general
+/etc/wifi/extended
+/etc/wifi/acl
+/etc/wifi/wds
+/etc/wifi/wep
+ip link set wlan0 up
+
+

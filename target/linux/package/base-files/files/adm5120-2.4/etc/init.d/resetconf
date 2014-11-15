@@ -1,0 +1,17 @@
+#!/bin/sh
+
+echo "led switch 0" > /dev/switch
+
+if [ q`cat /dev/switch `q = q0q ]; then
+	echo "led blink 500">/dev/led0
+	sleep 3
+	if [ q`cat /dev/switch `q = q1q ]; then
+	    echo "Reset to default configuration and reboot..." > /dev/ttyS0
+	    dd if=/dev/zero of=/dev/mtdblock/3 bs=1k count=1
+	    sleep 3
+	    reboot
+	else
+	    echo "Warning, reset button pressed abnormally..." > /dev/ttyS0
+	    echo "led blink 100">/dev/led0
+	fi
+fi

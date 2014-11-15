@@ -1,0 +1,40 @@
+#!/bin/sh
+
+DHCPD_BIN=/usr/sbin/dhcpd
+DHCPD_CONF=/etc/dhcpd/dhcpd.conf
+DHCPD_PID=/var/run/dhcpd.pid
+
+start()
+{
+	enabled="`kdb get svc_dhcp_enabled`"
+	if [ "x${enabled}" = "x1" ]; then
+		iface="`kdb get sys_iface_lan_real`"
+		if [ -r $DHCPD_CONF -a -x $DHCPD_BIN ]; then
+			$DHCPD_BIN -q -cf $DHCPD_CONF $iface
+		else
+			echo "FAIL to start dhcpd: no file $DHCPD_CONF was found or no $DHCPD_BIN was found"
+		fi
+	fi
+}
+
+stop()
+{
+    if [ -f $DHCPD_PID ]; then
+	    kill -KILL `cat $DHCPD_PID`
+    fi
+}
+
+
+case $1 in
+	start)	
+		/etc/templates/Update dhcp
+		start ;;
+	stop)	
+		stop ;;
+	*)
+		stop
+		start
+		;;
+esac
+		    
+	

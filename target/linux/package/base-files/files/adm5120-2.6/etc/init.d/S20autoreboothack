@@ -1,0 +1,6 @@
+#!/bin/sh
+
+echo test >/test || ( echo "Autoreboot hack: Cannot write to rootfs - rebooting"; sleep 3; reboot -f; sleep 5; halt -f )
+
+[ -f /test ] && rm /test
+

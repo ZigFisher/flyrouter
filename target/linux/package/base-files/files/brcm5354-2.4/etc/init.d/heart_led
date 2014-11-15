@@ -1,0 +1,5 @@
+#!/bin/sh
+
+#echo f >/proc/diag/led/power
+#echo f >/proc/diag/led/diag
+#echo f >/proc/diag/led/usb

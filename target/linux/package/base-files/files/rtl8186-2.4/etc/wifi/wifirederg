@@ -1,0 +1,19 @@
+#!/bin/sh
+
+ACCESSPOINT_IP=192.168.0.50
+
+ PING_RES=`ping -q -c 4  $ACCESSPOINT_IP|grep 'loss'`
+
+ BAD_RES=`echo $PING_RES|grep '100%'`
+
+  ###
+  if [ "$BAD_RES" != "" ]
+   then
+    echo "ok"
+    /etc/wifi/wifireset
+    /etc/wifi/routes
+    echo -n `date` >> /var/log/wi-rederg.log
+    echo "        No link - rederg..." >> /var/log/wi-rederg.log
+   fi
+ ###
+

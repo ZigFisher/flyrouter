@@ -1,0 +1,18 @@
+#!/bin/sh
+
+test -f /etc/sinus.conf && . /etc/sinus.conf
+
+if [ "$SINUS_LEDMODE" = Blink ]; then
+    echo "Monitoring LED enable HeartBlink..." | /usr/bin/logger
+    ledctrl PPP SlowBlinkContinues >/dev/null
+fi
+
+if [ "$SINUS_LEDMODE" = Serial ]; then
+    echo "Monitoring LED enable Serial..." | /usr/bin/logger
+    ledctrl PPP On >/dev/null
+fi
+
+if [ "$SINUS_LEDMODE" = Script ]; then
+    echo "Monitoring LED enable Script..." | /usr/bin/logger
+    ledctrl PPP Off >/dev/null
+fi

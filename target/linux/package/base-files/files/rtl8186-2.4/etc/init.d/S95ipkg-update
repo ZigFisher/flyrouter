@@ -1,0 +1,5 @@
+#!/bin/sh
+
+[ -f /etc/ipkg.conf ] || exit
+
+ipkg update 2>/dev/null &

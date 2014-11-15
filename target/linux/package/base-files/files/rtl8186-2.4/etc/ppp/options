@@ -1,0 +1,15 @@
+#debug
+lock
+defaultroute
+usepeerdns
+noaccomp
+nopcomp
+nocrtscts
+nobsdcomp
+nodeflate
+name "test"
+local
+debug
+-detach
+persist
+maxfail 100

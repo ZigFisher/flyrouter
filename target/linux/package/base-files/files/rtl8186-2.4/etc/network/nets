@@ -1,0 +1,8 @@
+#!/bin/sh
+
+BACKBONE_DEV="eth0"
+
+#xxx_nets="192.168.1.0/24"
+#xxx_mark=105
+#xxx_rate=32/32
+#xxx_dev=eth1

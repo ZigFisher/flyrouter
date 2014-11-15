@@ -1,0 +1,33 @@
+name ""
+remotename NW
+#115200
+/dev/ttyS0
+connect '/sbin/chat -v -f /etc/ppp/nw-gprs.chat'
+#nodetach
+#-detach
+#xonxoff
+noauth
+nodeflate
+usepeerdns
+defaultroute
+noipdefault
+novj
+nobsdcomp
+novjccomp
+nopcomp
+noaccomp
+linkname mts-gprs
+mtu 576
+#mru 1500
+local
+#modem
+#ktune
+#ipcp-accept-local
+#ipcp-accept-remote
+#192.168.3.1:192.168.3.254
+#192.168.254.254:
+nocrtscts
+#ipcp-max-configure 30
+#ipcp-restart 15
+debug
+unit 0

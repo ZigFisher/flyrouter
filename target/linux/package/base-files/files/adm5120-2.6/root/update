@@ -1,0 +1,9 @@
+#/bin/sh
+
+ipkg update
+if [ ! -x /usr/sbin/lighttpd ]; then
+	ipkg install lighttpd
+	ipkg install lighttpd-mod-auth
+	ipkg install lighttpd-mod-cgi
+fi
+ipkg -force-reinstall install webface

@@ -1,0 +1,17 @@
+#!/bin/sh
+
+NEWNAME="$PEERNAME"
+[ -z "$PEERNAME" ] && NEWNAME="isp"
+
+if [ -x /usr/sbin/ip ]; then
+    /usr/sbin/ip link set $1 down
+    /usr/sbin/ip link set $1 name $NEWNAME
+    /usr/sbin/ip link set $NEWNAME up
+    if [ $NEWNAME="isp" ]; then
+	/usr/sbin/ip ro add via vpn_gw_ip
+    fi
+fi
+
+[ -x /usr/bin/vnstat ] && [ -w /var/lib/vnstat/$NEWNAME ] && /usr/bin/vnstat -u -r --enable -i $NEWNAME
+
+/usr/sbin/rdate -s clock-1.cs.cmu.edu

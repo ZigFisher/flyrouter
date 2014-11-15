@@ -1,0 +1,9 @@
+config BR2_PACKAGE_KMOD_MMC-ADM
+        prompt "kmod-mmc-adm...................... Kernel SD/MMC support driver for ADM5120 CPU"
+        tristate
+	default m if CONFIG_DEVEL
+	default n
+        help
+          Kernel SD/MMC support driver for ADM5120 CPU
+	  
+	  http://kiel.kool.dk/

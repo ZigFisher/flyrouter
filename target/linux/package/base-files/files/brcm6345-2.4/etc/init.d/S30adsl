@@ -1,0 +1,41 @@
+#!/bin/sh
+
+test -f /bin/router_functions && . /bin/router_functions
+test -f /etc/sinus.conf && . /etc/sinus.conf
+
+
+case "$1" in
+  start)
+	# Please set SINUS_VPIVCI in /etc/sinus.conf:  0.0.33 - Infocom, 0.0.67 - Krymtel, 0.1.32 - Ukrtelecom
+	# ADSL settings: a – all modulations allowed, d – G.DMT only, l – G.Lite only, t – T1.413 only
+	#
+	if [ -z "$SINUS_VPIVCI" ]; then
+	    echo "ADSL not set, exit..." | logger -t adsl
+	    exit 0
+	else		
+	    # Load kernel modules
+	    insmod atmapi ; insmod blaa ; insmod adsldd
+	    # ADSL init
+	    adslctl start --up
+	    adslctl start --mod dl --bitswap on --lpair i --trellis on
+	    adslctl connection --up
+	    # ATM init
+	    atmctl start --pqs 150 --intf 0 adsl
+	    atmctl operate intf --state 0 enable
+	    atmctl operate vcc --add $SINUS_VPIVCI aal5 1 llcencaps 
+	    atmctl operate vcc --addq $SINUS_VPIVCI 64 1
+	    atmctl operate vcc --show | logger -t adsl
+	    atmctl operate tdte --add cbr 755
+	    # Bridge
+	    br2684ctl -b -c 0 -e 0 -a $SINUS_VPIVCI
+	    #pvc2684d &
+	    #sleep 2
+	    #pvc2684ctl -a -v $SINUS_VPIVCI -i 0 | logger
+	fi
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?

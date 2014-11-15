@@ -1,0 +1,25 @@
+;
+; BIND data file for local loopback interface
+;
+$TTL	604800
+@	IN	SOA	@ mail.sigr-1.ru. (
+			      1		; Serial
+			 604800		; Refresh
+			  86400		; Retry
+			2419200		; Expire
+			 604800 )	; Negative Cache TTL
+;
+@	IN	NS	ns
+ns	IN	A	192.168.3.2
+host	IN	A	192.168.3.1
+router	IN	A	192.168.3.2
+ws1	IN	A	192.168.3.3
+ws2	IN	A	192.168.3.4
+ws3	IN	A	192.168.3.5
+ws4	IN	A	192.168.3.6
+ws5	IN	A	192.168.3.7
+
+@	IN	MX	10 mail
+@	IN	MX	20 mail1
+mail	IN	A	192.168.3.8
+mail1	IN	A	192.168.3.9

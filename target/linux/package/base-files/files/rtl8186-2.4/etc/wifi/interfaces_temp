@@ -1,0 +1,24 @@
+
+BRIDGE_START=no
+#When auto_bridge is "yes" then init.script makes bridge itself
+# when aut_bridge is "no" then init.script start /etc/network/bridge
+AUTO_BRIDGE=no
+BR0_IPADDR=192.168.1.55/24
+
+IPV4_FORWARD_ENABLE=yes
+START_IPTABLES=no
+
+ETH0_ENABLED=yes
+ETH0_IPADDR=172.28.200.12/28
+ETH0_MACADDR=00006c576976
+ETH0_DEVICE=eth0
+
+ETH1_ENABLED=yes
+ETH1_IPADDR=172.28.200.13/28
+ETH1_MACADDR=00006c576977
+ETH1_DEVICE=eth1
+
+WLAN_ENABLED=yes
+WLAN_IPADDR=192.168.1.55/24
+WLAN_MACADDR=00006c576976
+

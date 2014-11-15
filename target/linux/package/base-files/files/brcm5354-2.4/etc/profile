@@ -1,0 +1,66 @@
+#!/bin/sh
+cat /etc/banner
+export PATH=/ram/bin:/ram/sbin:/ram/usr/sbin:/ram/usr/bin:/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
+alias ll="ls -l"
+alias mem="cat /proc/meminfo"
+alias rousb="sync ; mount -o remount,ro /mnt/usb"
+alias rommc="sync ; mount -o remount,ro /mnt/mmc"
+alias rwusb="sync ; mount -o remount,rw /mnt/usb"
+alias rwmmc="sync ; mount -o remount,rw /mnt/mmc"
+
+#alias eth="cat /proc/sys/net/adm5120sw/status"
+alias eth="robocfg show | grep Port"
+#alias boot="dd if=/dev/mtdblock/0 bs=1 count=12 skip=$((0x6aaa)) 2>/dev/null; echo"
+
+[ -z /bin/ldd ] || ldd() { LD_TRACE_LOADED_OBJECTS=1 $*; }
+[ -x /usr/bin/vim ] && alias vi=vim || alias vim=vi
+[ -x /sbin/arp ] || arp() { cat /proc/net/arp; }
+[ -x /sbin/less ] || less() { more; }
+
+export PS1="\e[0;32m[\u@\h \w]\$ \e[m"
+[ "`id -u`" = 0 ] && export PS1="\e[0;32m[\u@\h \w]\# \e[m"
+. /etc/skyrouter.conf
+. /bin/router_functions
+if [ "$MMC_MOUNT" = yes ]; then
+	export PATH=$PATH:$MMC_DIR/bin:$MMC_DIR/sbin:$MMC_DIR/usr/bin:$MMC_DIR/usr/sbin
+fi
+if [ "$USB_MOUNT" = yes ]; then
+	export PATH=$PATH:$USB_DIR/bin:$USB_DIR/sbin:$USB_DIR/usr/bin:$USB_DIR/usr/sbin
+fi
+          
+edit(){
+	pre_edit_file $1
+	/bin/vi $1
+}
+
+alias vi="edit"
+
+ipkg() {
+	if [ -x /usr/bin/ipkg ]; then 
+		/usr/bin/ipkg $@
+	else
+		/bin/uipkg install ipkg
+		/usr/bin/ipkg update
+		/usr/bin/ipkg $@
+	fi
+}
+
+tcpdump() {
+	[ -x /usr/sbin/tcpdump ] || { ipkg update; ipkg install tcpdump; }
+	/usr/sbin/tcpdump $@
+}
+deco() {
+	[ -x /usr/bin/deco ] || { ipkg update; ipkg install deco; }
+	/usr/bin/deco $@
+}
+differ() {
+local src=/etc
+local dst=/rom
+	find $src -type f | while read f; do
+	prev=${dst}${f}
+	[ ! -r $f ] && continue
+	[ ! -r $dst/$f ] && prev="/dev/null"
+	[ $f = /etc/random-seed -o $f = /etc/dropbear/dropbear_rsa_host_key -o $f = /etc/dropbear/dropbear_dss_host_key ] && continue
+	diff -U 0 $prev $f
+	done
+} 

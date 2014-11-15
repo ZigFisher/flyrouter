@@ -1,0 +1,80 @@
+#!/bin/sh
+
+#Set ESSID of wirelless Infrastructure Network
+iwpriv wlan0 set_mib ssid="FlyRouter"
+
+iwpriv wlan0 set_mib hiddenAP=0
+
+#Set Mode: 8 - Client;16 - AP; 32 - AdHoc
+iwpriv wlan0 set_mib opmode=16
+
+#Set Regulatory Domain:
+#  "3" - 13 channels available, "6" - 14 channels available.
+#  FCC=1;IC=2;ETSI=3;SPAIN=4;FRANCE=5;MKK=6
+iwpriv wlan0 set_mib regdomain=6
+
+#Set Channel here
+iwpriv wlan0 set_mib channel=6
+
+#Set Initial Gain: in range 0-7
+#   It seems to be sens but maybe not. Just test
+iwpriv wlan0 set_mib initialGain=4
+
+#Set TransmitPower for CCK(802.11b) modulation
+#  Please Change it in variable
+CCKPOWER=12
+iwpriv wlan0 set_mib TxPowerCCK=`ader $CCKPOWER 14`
+#iwpriv wlan0 set_mib TxPowerCCK=1010101010101010101010101010
+
+#Set TransmitPower for OFDM(802.11g) modulation
+#  Please Change it in variable
+OFDMPOWER=15
+iwpriv wlan0 set_mib TxPowerOFDM=`ader $OFDMPOWER 162`
+#iwpriv wlan0 set_mib TxPowerOFDM=101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010101010
+
+iwpriv wlan0 set_mib basicrates=4095
+iwpriv wlan0 set_mib oprates=4095
+iwpriv wlan0 set_mib fixrate=0
+iwpriv wlan0 set_mib autorate=1
+
+iwpriv wlan0 set_mib band=3
+
+iwpriv wlan0 set_mib bcnint=100
+
+#RTS/CTS Threshold
+iwpriv wlan0 set_mib rtsthres=2346
+
+iwpriv wlan0 set_mib fragthres=2346
+iwpriv wlan0 set_mib expired_time=50000
+iwpriv wlan0 set_mib dtimperiod=1
+
+iwpriv wlan0 set_mib show_hidden_bss=1
+iwpriv wlan0 set_mib preamble=0
+
+iwpriv wlan0 set_mib shortretry=6
+iwpriv wlan0 set_mib longretry=6
+
+iwpriv wlan0 set_mib Diversity=0
+iwpriv wlan0 set_mib DefaultAnt=0
+iwpriv wlan0 set_mib RFChipID=7
+iwpriv wlan0 set_mib led_type=7
+
+#G protection
+iwpriv wlan0 set_mib disable_protection=0
+
+#For bridged mode set this parameters
+# Nat2.5 is technology to change the source MAC to MAC of Wlan-interface
+#  be carefull it says disabled, so make inverse in your decision
+iwpriv wlan0 set_mib nat25_disable=1
+# Macclone says all about itself. It just takes MAC of ETHERNET device on other end of line
+#  and take it for Wlan-interface. be carefull if this enabled it must be one device on a line.
+iwpriv wlan0 set_mib macclone_enable=0
+
+iwpriv wlan0 set_mib dhcp_bcst_disable=1
+
+#Block packets between clients connected
+# 0 - disable; 1 - block relay;2 - block relay but passup 
+iwpriv wlan0 set_mib block_relay=0
+
+iwpriv wlan0 set_mib wifi_specific=0
+

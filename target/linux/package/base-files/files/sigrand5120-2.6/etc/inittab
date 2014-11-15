@@ -1,0 +1,37 @@
+# /etc/inittab
+#
+# Copyright (C) 2001 Erik Andersen <andersen@codepoet.org>
+#
+# Format for each entry: <id>:<runlevels>:<action>:<process>
+#
+# id        == tty to run on, or empty for /dev/console
+# runlevels == ignored
+# action    == one of sysinit, respawn, askfirst, wait, and once
+# process   == program to run
+
+# Startup the system
+::sysinit:/bin/mount -a
+::sysinit:/sbin/ifconfig lo 127.0.0.1 up
+::sysinit:/sbin/route add -net 127.0.0.0 netmask 255.0.0.0 lo
+# now run any rc scripts
+::sysinit:/etc/init.d/rcS
+
+# Set up a couple of getty's
+#tts/0::respawn:/sbin/getty -L tts/0 115200 vt100
+ttyS0::respawn:/sbin/getty -L ttyS0 115200 vt100
+#ttyS1::respawn:/sbin/getty 115200 ttyS1
+
+# Stuff to do before rebooting
+null::restart:/etc/init.d/Kreboot
+null::restart:/bin/sync
+null::restart:/usr/bin/killall klogd
+null::restart:/usr/bin/killall syslogd
+null::restart:/bin/umount -a -r
+
+# Stuff to do before rebooting
+null::shutdown:/etc/init.d/Kshutdown
+null::shutdown:/bin/sync
+null::shutdown:/usr/bin/killall klogd
+null::shutdown:/usr/bin/killall syslogd
+null::shutdown:/bin/umount -a -r
+

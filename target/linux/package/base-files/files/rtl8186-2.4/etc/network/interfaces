@@ -1,0 +1,37 @@
+# Configure Loopback
+#
+auto lo
+iface lo inet loopback
+
+auto eth0
+iface eth0 inet dhcp
+
+auto eth1
+iface eth1 inet static
+    address 192.168.1.1
+    netmask 255.255.255.0
+
+auto eth2
+iface eth2 inet static
+    address 192.168.2.1
+    netmask 255.255.255.0
+
+auto eth3
+iface eth3 inet static
+    address 192.168.3.1
+    netmask 255.255.255.0
+
+auto eth4
+iface eth4 inet static
+   address 192.168.4.1
+   netmask 255.255.255.0
+
+#auto brtun0
+#iface brtun0 inet static
+#   address 172.28.200.12
+#   netmask 255.255.255.240
+#   gateway 172.28.200.1
+#   pre-up /etc/network/brtun start brtun0 tap0 eth1 192.168.0.1 192.168.0.2
+
+#Examples:
+#   pre-up ifconfig eth0 hw ether 00:E0:4C:F3:43:7E

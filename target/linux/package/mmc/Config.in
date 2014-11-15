@@ -1,0 +1,9 @@
+config BR2_PACKAGE_KMOD_MMC
+        prompt "kmod-mmc.......................... SD/MMC support driver"
+        tristate
+	default m if CONFIG_DEVEL
+	default n
+        help
+          Kernel support for SD/MMC card
+	  
+	  http://kiel.kool.dk/

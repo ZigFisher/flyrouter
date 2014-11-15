@@ -1,0 +1,120 @@
+#!/bin/sh
+#
+# Version 1.01  2011-10-16
+
+help() {
+    echo "This script automatically shuts down the service: crond, dnrd, ipsec, webadmin, getty"
+    echo -e "\nPlease select menu:\n"
+    echo "h        - Get help"
+    echo "q        - Quit"
+    echo ""
+    echo "ks       - Configure network via Kyivstar"
+    echo "it       - Configure network via Intertelecom"
+    echo "mts      - Configure network via MTS"
+    echo "wl-free  - Configure WiFi bridge, no protect"
+    echo "wl-wpa   - Configure WiFi bridge, WPA-PSK protect"
+}
+
+unpack() {
+    mkdir -p /tmp/infocom
+    cd /tmp/infocom
+    tar xvzf /sbin/infocom.dat
+}
+
+reinstall() {
+    rm -f /etc/init.d/crond ; cp -a /tmp/infocom/etc/init.d/crond /etc/init.d/crond
+    rm -f /etc/init.d/dnrd ; cp -a /tmp/infocom/etc/init.d/dnrd /etc/init.d/dnrd
+    rm -f /etc/init.d/ipsec ; cp -a /tmp/infocom/etc/init.d/ipsec /etc/init.d/ipsec
+    rm -f /etc/ppp/ip-up ; cp -a /tmp/infocom/etc/ppp/ip-up /etc/ppp/ip-up
+    rm -f /etc/init.d/webadmin-menu ; cp -a /tmp/infocom/etc/init.d/webadmin-menu /etc/init.d/webadmin-menu
+    rm -f /etc/inetd.conf ; cp -a /tmp/infocom/etc/inetd.conf /etc/inetd.conf
+    rm -f /etc/inittab ; cp -a /tmp/infocom/etc/inittab /etc/inittab
+    rm -f /etc/hostname ; cp -a /tmp/infocom/etc/hostname /etc/hostname
+    rm -f /etc/network/fw ; cp -a /tmp/infocom/etc/network/fw /etc/network/fw
+    rm -f /etc/ppp/peers/gprs-ks ; cp -a /tmp/infocom/etc/ppp/peers/gprs-ks /etc/ppp/peers/gprs-ks
+    rm -f /etc/modules.d/61-usb-serial-cp210x
+    rm -f /etc/modules.d/61-usb-serial-ftdi
+    rm -f /etc/modules.d/61-usb-serial-pl2303
+}
+
+save() {
+    rm -rf /tmp/infocom
+    nvram set clkfreq=200
+    nvram commit
+    flash save
+}
+
+clear
+help
+
+while true ; do
+    echo -n -e "\n=>"
+    read COMMAND
+    ANSWER=`echo $COMMAND`
+case $ANSWER in
+
+    h)
+	help
+	;;
+
+    q)
+        echo ""
+	echo -e "\nGood bye, exiting..."
+	sleep 1
+	exit 0
+	;;
+
+    ks)
+	echo "Configure network via Kyivstar"
+	unpack
+	reinstall
+	rm -f /etc/init.d/modem_init ; cp -a /tmp/infocom/etc/init.d/modem_init.ks /etc/init.d/modem_init
+	rm -f /etc/init.d/ppp ; cp -a /tmp/infocom/etc/init.d/ppp.ks /etc/init.d/ppp
+	rm -f /etc/ppp/peers/gprs-ks ; cp -a /tmp/infocom/etc/ppp/peers/gprs-ks /etc/ppp/peers/gprs-ks
+	save
+	;;
+
+    it)
+	echo "Configure network via Intertelecom"
+	unpack
+	reinstall
+	rm -f /etc/init.d/modem_init ; cp -a /tmp/infocom/etc/init.d/modem_init.it /etc/init.d/modem_init
+	rm -f /etc/init.d/ppp ; cp -a /tmp/infocom/etc/init.d/ppp.it /etc/init.d/ppp
+	rm -f /etc/ppp/peers/cdma-intertelecom ; cp -a /tmp/infocom/etc/ppp/peers/cdma-intertelecom /etc/ppp/peers/cdma-intertelecom
+	save
+	;;
+
+    mts)
+	echo "Configure network via MTS"
+	unpack
+	reinstall
+	rm -f /etc/init.d/modem_init ; cp -a /tmp/infocom/etc/init.d/modem_init.mts /etc/init.d/modem_init
+	rm -f /etc/init.d/ppp ; cp -a /tmp/infocom/etc/init.d/ppp.mts /etc/init.d/ppp
+	save
+	;;
+
+wl-free)
+	echo "Configure WiFi bridge, no protect"
+	unpack
+	rm -f /etc/init.d/S45nas ; cp -a /rom/etc/init.d/S45nas /etc/init.d/S45nas
+	rm -f /etc/network/interfaces ; cp -a /tmp/infocom/etc/network/interfaces.wifi-bridge /etc/network/interfaces
+	rm -f /etc/udhcpd-br1.conf ; cp -a /etc/example.udhcpd-br1.conf /etc/udhcpd-br1.conf
+	rm -f /etc/modules.d/20-wifi ; echo "wl" >/etc/modules.d/20-wifi
+	save
+	;;
+
+ wl-wpa)
+	echo "Configure WiFi bridge, WPA-PSK protect"
+	unpack
+	rm -f /etc/init.d/S45nas ; cp -a /tmp/infocom/etc/init.d/S45nas /etc/init.d/S45nas
+	rm -f /etc/network/interfaces ; cp -a /tmp/infocom/etc/network/interfaces.wifi-bridge /etc/network/interfaces
+	rm -f /etc/udhcpd-br1.conf ; cp -a /etc/example.udhcpd-br1.conf /etc/udhcpd-br1.conf
+	rm -f /etc/modules.d/20-wifi ; echo "wl" >/etc/modules.d/20-wifi
+	save
+	;;
+
+    *)
+	;;
+
+esac
+done

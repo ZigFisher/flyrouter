@@ -1,0 +1,45 @@
+#!/bin/sh
+#
+# Starts crond.
+#
+
+test -r /etc/crontab || exit 0
+
+umask 077
+
+DIR=/var/spool/cron/crontabs
+
+start() {
+ 	echo -n "Starting crond: "
+    mkdir -p $DIR
+    cp /etc/crontab $DIR/root
+	start-stop-daemon --start --quiet --pidfile /var/run/crond.pid --exec /usr/sbin/crond
+	echo "OK"
+}
+stop() {
+	echo -n "Stopping crond: "
+	start-stop-daemon --stop --quiet --pidfile /var/run/crond.pid
+	echo "OK"
+}
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

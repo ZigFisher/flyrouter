@@ -1,0 +1,19 @@
+#!/bin/sh
+
+MODPROBE=`which modprobe`
+[ -z "$MODPROBE" ] && MODPROBE="insmod"
+
+loadmodule(){
+	local file=$1;
+	cat $file | grep -v '^#' | while read m; do 
+		$MODPROBE $m
+	done
+}
+
+if [ -r /etc/modules ]; then 
+	loadmodule /etc/modules
+fi
+
+for f in /etc/modules.d/*; do 
+	loadmodule $f
+done

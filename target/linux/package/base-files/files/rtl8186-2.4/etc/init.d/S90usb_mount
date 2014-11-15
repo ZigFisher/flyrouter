@@ -1,0 +1,22 @@
+#!/bin/sh
+
+test -r /etc/midge.conf && . /etc/midge.conf
+
+[ "$USB_MOUNT" = yes ] || exit 0
+
+# You must load modules: usbcore, usb-shci, scsi_mod, sd_mod, usb-storage, [ext2]
+
+[ "$USB_FSTYPE" ] && insmod $USB_FSTYPE
+
+if [ "$USB_DIR" -a "$USB_DEV" ]; then
+	mkdir -p $USB_DIR
+	sleep 2
+	echo "Mounting USB-Storage $USB_DEV to $USB_DIR..."
+	mount -t $USB_FSTYPE $USB_DEV $USB_DIR
+	if [ -d $USB_DIR/etc/init.d ]; then
+		for i in $USB_DIR/etc/init.d/S??*; do
+			$i start
+		done
+	fi
+fi
+

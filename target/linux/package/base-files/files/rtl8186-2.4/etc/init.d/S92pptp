@@ -1,0 +1,10 @@
+#!/bin/sh
+#
+# Starts pptp.
+#
+
+test -r /etc/ppp/options || exit 0
+test -x /usr/sbin/pppd || exit 0
+test -x /usr/sbin/pptp || exit 0
+
+#(sleep 5 ; while true ; do /usr/sbin/pptp 1.1.1.1 ; done) &

@@ -1,0 +1,16 @@
+;
+; BIND data file for local loopback interface
+;
+$TTL	604800
+@	IN	SOA	@ ns-admin.mail.sigr-2.ru. (
+			      1		; Serial
+			 604800		; Refresh
+			  86400		; Retry
+			2419200		; Expire
+			 604800 )	; Negative Cache TTL
+;
+@	IN	NS	ns
+ns	IN	A	192.168.2.222
+main-gw	IN	A	192.168.2.1
+dev-host1	IN	A	192.168.2.239
+dev-host2	IN	A	192.168.2.238

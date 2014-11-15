@@ -1,0 +1,47 @@
+#!/bin/ash
+#
+# Ruler  Ver.1.4  20100814
+
+test -f /bin/router_functions && . /bin/router_functions
+test -f /etc/sinus.conf && . /etc/sinus.conf
+
+case "$1" in
+  start)
+	# Check MAC interface
+	if ! ifconfig wl0 >/dev/null 2>&1 ; then
+	    IFACE=usb0
+	else
+	    IFACE=wl0
+	fi
+	MACID="`ifconfig $IFACE | head -n 1 | awk '{print $5}' | tr ':' '-' | tr 'a-z' 'A-Z'`"
+	# Update sinus.conf for flash save
+	if [ -z "$SINUS_MAC" ]; then
+	    echo "SINUS_MAC=`ifconfig $IFACE | head -n 1 | awk '{print $5}' | tr 'a-z' 'A-Z'`" >> /etc/sinus.conf
+	fi
+	while
+	    sleep 60; do
+	    # Update config from website
+	    if ! wget -q -O /tmp/remctl.sh $SINUS_HELPDESK/$MACID.sh >/dev/null 2>&1 ; then
+		#echo "Dowload $MACID config not possible" | logger -t ruler
+		echo "." | logger -t ruler
+	    else
+		#echo "Dowload $MACID config complete" | logger -t ruler
+		chmod 755 /tmp/remctl.sh && /tmp/remctl.sh run
+		while
+		    sleep 20; do
+		    if test -f /tmp/remctl.ok ; then
+			#echo "Update complete & exit now" | logger -t ruler
+			rm -f /tmp/remctl.ok
+			exit 0
+		    fi
+		    #echo "Exit file not found" | logger -t ruler
+		done
+	    fi;
+	done &
+	;;
+  *)
+	echo $"Usage: $0 {start}"
+	exit 1
+esac
+
+exit $?

@@ -1,0 +1,27 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2010 | http://www.flyrouter.net 
+# Hotplug script for BCM5354
+# Version 0.1 20100121
+
+
+log='logger -t "HOTPLUG" '
+subsys="$1"
+
+case "$subsys" in
+ button)
+    if [ "$BUTTON" = 'reset' ]; then
+      [ $ACTION = 'pressed' ] && date +%s >/tmp/.reset
+      if [ $ACTION = 'released' ]; then
+        prev=`cat /tmp/.reset`
+        now=`date +%s`
+        [ $(($now-$prev)) -gt 5 ] && flash erase && reboot
+        rm /tmp/.reset
+      fi
+    fi
+    if [ "$BUTTON" = 'reserved' ]; then
+      [ $ACTION = 'pressed' ] && /etc/scripts/run_button1.sh
+    fi
+
+    ;;
+esac

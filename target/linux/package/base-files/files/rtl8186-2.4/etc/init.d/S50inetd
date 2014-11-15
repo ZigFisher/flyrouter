@@ -1,0 +1,41 @@
+#!/bin/sh
+#
+# Starts inetd.
+#
+
+test -r /etc/inetd.conf || exit 0
+test -x /usr/sbin/inetd || exit 0
+
+
+start() {
+ 	echo -n "Starting inetd: "
+	start-stop-daemon --start --quiet --pidfile /var/run/inetd.pid --exec /usr/sbin/inetd
+	echo "OK"
+}
+stop() {
+	echo -n "Stopping inetd: "
+	start-stop-daemon --stop --quiet --pidfile /var/run/inetd.pid
+	echo "OK"
+}
+restart() {
+	stop
+	start
+}
+
+case "$1" in
+  start)
+  	start
+	;;
+  stop)
+  	stop
+	;;
+  restart|reload)
+  	restart
+	;;
+  *)
+	echo $"Usage: $0 {start|stop|restart}"
+	exit 1
+esac
+
+exit $?
+

@@ -1,0 +1,9 @@
+#!/bin/sh
+#
+# Starts pppd.
+#
+
+test -r /etc/ppp/options || exit 0
+test -x /usr/sbin/pppd || exit 0
+
+#(sleep 5 ; while true ; do /usr/sbin/pppd file /etc/ppp/options ; done) &

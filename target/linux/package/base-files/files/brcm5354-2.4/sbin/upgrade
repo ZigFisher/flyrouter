@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# FlyRouter Team (c) 2004-2011 | http://www.flyrouter.net
+# Upgrade firmware script
+# Version 0.7b 20111008
+
+. /bin/router_functions
+
+SITE=${SITE:=http://flyrouter.net/downloads/software/skyrouter/upgrade/}
+
+test -f /etc/skyrouter.conf && . /etc/skyrouter.conf || exit 1
+
+if [ "x$1" = x ]; then
+        echo "Usage: $0 [-c] <type>"
+        exit
+fi
+
+
+case $1 in
+  -c) 
+        clear_datafs=1;
+        shift
+        ;;
+
+esac
+
+image_name=$1
+url=$SITE/${image_name}.trx
+if echo ${image_name} | grep http:// 2>&1 >/dev/null; then
+  url=${image_name}
+fi 
+
+msgn "Download firmware..." 
+wget $url -O /tmp/firmware && ok || die
+if [ "$clear_datafs" = 1 ]; then
+	msgn "Clearing datafs partition..."
+	flash erase && ok || fail
+fi
+msg "Writing firmware and reboot. Plase wait..."
+mtd -r write /tmp/firmware linux && ok || fail

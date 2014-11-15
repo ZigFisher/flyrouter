@@ -1,0 +1,5 @@
+Package: kmod-usb-spca5xx-le
+Priority: optional
+Section: sys
+Depends: kmod-usb-core, kmod-videodev
+Description: Kernel driver for SPCA5XX based USB webcam support (Light Edition)

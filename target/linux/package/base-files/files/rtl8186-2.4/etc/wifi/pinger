@@ -1,0 +1,8 @@
+#!/bin/sh
+
+#Use this script when in AccessPoint mode to prevent reassociation and sleeping of clients
+# Just copy lines and change it to yours ip
+ping -s 1450 -q -c 4 192.168.0.50
+
+echo -n `date` >>/var/log/pinger.log
+echo "   Piged">>/var/log/pinger.log
